@@ -128,6 +128,58 @@ a:hover {
     margin: 16px 0;
 }
 
+/* ── Shiki syntax highlighting ── */
+/* Light theme (default) */
+.shiki, .shiki span {
+    color: var(--shiki-light) !important;
+    background-color: var(--shiki-light-bg) !important;
+    font-style: var(--shiki-light-font-style) !important;
+    font-weight: var(--shiki-light-font-weight) !important;
+    text-decoration: var(--shiki-light-text-decoration) !important;
+}
+/* Dark theme — toggled by body.dark-theme class */
+body.dark-theme .shiki, body.dark-theme .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+    font-style: var(--shiki-dark-font-style) !important;
+    font-weight: var(--shiki-dark-font-weight) !important;
+    text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+.shiki {
+    padding: 16px;
+    border-radius: 6px;
+    overflow: auto;
+    margin: 0 0 16px;
+    font-size: 0.875em;
+    line-height: 1.45;
+    font-family: var(--code-font);
+}
+.shiki code {
+    font-family: var(--code-font);
+    font-size: 1em;
+    background: transparent;
+}
+
+/* Code block wrapper (holds lang label + shiki pre) */
+.code-block-wrapper {
+    position: relative;
+    margin: 0 0 16px;
+}
+.code-block-wrapper .shiki {
+    margin-bottom: 0;
+}
+.code-lang-label {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-family: var(--code-font);
+    font-size: 0.72em;
+    color: #888;
+    user-select: none;
+    pointer-events: none;
+    z-index: 1;
+}
+
 /* Heading anchor highlight used by TOC scroll */
 .heading-anchor-target {
     animation: highlight-fade 2s ease-out;

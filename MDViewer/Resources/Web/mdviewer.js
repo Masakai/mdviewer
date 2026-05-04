@@ -4,6 +4,13 @@
 (function () {
     'use strict';
 
+    // -- Shiki highlighter (resolved async on page load)
+    let shikiHighlighter = null;
+
+    if (window.__shikiReady) {
+        window.__shikiReady.then(function (h) { shikiHighlighter = h; });
+    }
+
     // -- Mermaid init (must run before DOMContentLoaded diagrams)
     if (typeof mermaid !== 'undefined') {
         mermaid.initialize({
@@ -11,43 +18,6 @@
             theme: 'default',
             securityLevel: 'loose'
         });
-    }
-
-    // -- marked.js configuration
-    function buildMarked() {
-        const renderer = new marked.Renderer();
-
-        // Collect headings for TOC
-        const headings = [];
-        renderer.heading = function (text, level, raw) {
-            const anchor = slugify(raw);
-            headings.push({ level: level, title: raw, anchor: anchor });
-            return `<h${level} id="${anchor}">${text}</h${level}>\n`;
-        };
-
-        // Code blocks: highlight.js + mermaid detection
-        renderer.code = function (code, lang) {
-            if (lang === 'mermaid') {
-                return `<div class="mermaid">${escapeHtml(code)}</div>`;
-            }
-            if (typeof hljs !== 'undefined') {
-                const highlighted = lang
-                    ? hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
-                    : hljs.highlightAuto(code).value;
-                const langLabel = lang ? `<span class="code-lang-label">${escapeHtml(lang)}</span>` : '';
-                return `<pre>${langLabel}<code class="hljs">${highlighted}</code></pre>`;
-            }
-            return `<pre><code class="hljs">${escapeHtml(code)}</code></pre>`;
-        };
-
-        marked.use({
-            renderer: renderer,
-            gfm: true,
-            breaks: false,
-            pedantic: false,
-        });
-
-        return headings;
     }
 
     function slugify(text) {
@@ -67,35 +37,37 @@
             .replace(/"/g, '&quot;');
     }
 
-    // Pre-process KaTeX math before marked parses (to protect $ from being consumed)
-    function renderKaTeX(html) {
-        if (typeof katex === 'undefined') return html;
+    function highlightCode(code, lang) {
+        if (!shikiHighlighter) {
+            const label = lang ? `<span class="code-lang-label">${escapeHtml(lang)}</span>` : '';
+            return `<div class="code-block-wrapper">${label}<pre><code>${escapeHtml(code)}</code></pre></div>`;
+        }
 
-        // Block math: $$...$$
-        html = html.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
-            try {
-                return katex.renderToString(expr.trim(), { displayMode: true, throwOnError: false });
-            } catch (e) {
-                return `<span class="katex-error">${escapeHtml(expr)}</span>`;
-            }
+        const loaded = shikiHighlighter.getLoadedLanguages();
+        const resolvedLang = loaded.includes(lang) ? lang : 'text';
+
+        const html = shikiHighlighter.codeToHtml(code, {
+            lang: resolvedLang,
+            themes: { light: 'github-light', dark: 'github-dark' }
         });
 
-        // Inline math: $...$
-        html = html.replace(/\$([^$\n]+?)\$/g, function (_, expr) {
-            try {
-                return katex.renderToString(expr.trim(), { displayMode: false, throwOnError: false });
-            } catch (e) {
-                return `<span class="katex-error">${escapeHtml(expr)}</span>`;
-            }
-        });
-
+        if (lang) {
+            return html
+                .replace('<pre ', `<div class="code-block-wrapper"><span class="code-lang-label">${escapeHtml(lang)}</span><pre `)
+                .replace('</pre>', '</pre></div>');
+        }
         return html;
     }
 
     // -- Public MDViewer API (called from Swift via evaluateJavaScript)
     window.MDViewer = {
-        // Render markdown and update DOM
-        setContent: function (markdown) {
+
+        setContent: async function (markdown) {
+            // Wait for Shiki if not yet ready
+            if (!shikiHighlighter && window.__shikiReady) {
+                shikiHighlighter = await window.__shikiReady;
+            }
+
             const headingsRef = [];
             const renderer = new marked.Renderer();
 
@@ -109,28 +81,19 @@
                 if (lang === 'mermaid') {
                     return `<div class="mermaid">${escapeHtml(code)}</div>`;
                 }
-                if (typeof hljs !== 'undefined') {
-                    const highlighted = lang
-                        ? hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
-                        : hljs.highlightAuto(code).value;
-                    const langLabel = lang ? `<span class="code-lang-label">${escapeHtml(lang)}</span>` : '';
-                    return `<pre>${langLabel}<code class="hljs">${highlighted}</code></pre>`;
-                }
-                return `<pre><code class="hljs">${escapeHtml(code)}</code></pre>`;
+                return highlightCode(code, lang);
             };
 
-            // Pre-process math: protect $...$ blocks from marked parsing
+            // Pre-process math: protect $...$ from marked parsing
             const mathBlocks = [];
             let processed = markdown;
 
-            // Extract block math
             processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
                 const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
                 mathBlocks.push({ type: 'block', expr: expr.trim() });
                 return placeholder;
             });
 
-            // Extract inline math
             processed = processed.replace(/\$([^$\n]+?)\$/g, function (_, expr) {
                 const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
                 mathBlocks.push({ type: 'inline', expr: expr.trim() });
@@ -179,15 +142,17 @@
             }
         },
 
-        // Switch theme CSS
         setTheme: function (themeName) {
             const link = document.getElementById('theme-css');
             if (link) {
                 link.href = `themes/${themeName}.css`;
             }
+            // Toggle Shiki dark-theme class
+            const isDark = themeName.includes('dark');
+            document.body.classList.toggle('dark-theme', isDark);
+
             // Update mermaid theme
             if (typeof mermaid !== 'undefined') {
-                const isDark = themeName.includes('dark') || themeName === 'dracula' || themeName === 'nord';
                 mermaid.initialize({
                     startOnLoad: false,
                     theme: isDark ? 'dark' : 'default',
@@ -196,12 +161,10 @@
             }
         },
 
-        // Change font size via CSS variable
         setFontSize: function (size) {
             document.documentElement.style.setProperty('--font-size', size + 'px');
         },
 
-        // Scroll to a heading anchor
         scrollToAnchor: function (anchorId) {
             const el = document.getElementById(anchorId);
             if (el) {
@@ -213,14 +176,12 @@
             }
         },
 
-        // Search text
         findText: function (text) {
             if (window.find) {
                 window.find(text, false, false, true, false, true, false);
             }
         },
 
-        // Set <base href> so relative links resolve against the opened file's directory
         setBaseURL: function (url) {
             let base = document.getElementById('mdviewer-base');
             if (!base) {
@@ -246,7 +207,7 @@
         }, 100);
     });
 
-    // Link hover: notify Swift to display the URL in the status bar
+    // Link hover: notify Swift to display URL in status bar
     document.addEventListener('mouseover', function (e) {
         const link = e.target.closest('a[href]');
         if (link && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.linkHovered) {
@@ -260,7 +221,7 @@
         }
     });
 
-    // Link click: fragment links scroll in-page; all others are opened by Swift
+    // Link click: fragment links scroll in-page; all others handled by Swift
     document.addEventListener('click', function (e) {
         const link = e.target.closest('a[href]');
         if (!link) return;
@@ -268,7 +229,6 @@
         const href = link.getAttribute('href');
         if (!href) return;
 
-        // Fragment-only links (#section) — let the browser scroll natively
         if (href.startsWith('#')) return;
 
         e.preventDefault();
