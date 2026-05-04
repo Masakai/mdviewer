@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MDViewer — Markdown viewer for macOS</title>
+    <meta name="description" content="A beautiful, fast Markdown viewer for macOS with syntax highlighting, math equations, diagrams, and more.">
+    <meta property="og:title" content="MDViewer — Markdown viewer for macOS">
+    <meta property="og:description" content="A beautiful, fast Markdown viewer for macOS with syntax highlighting, math equations, diagrams, and more.">
+    <meta property="og:image" content="https://masakai.github.io/mdviewer/icon.png">
+    <meta name="twitter:card" content="summary">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --blue-1: #5B9BF8;
+            --blue-2: #2563EB;
+            --blue-3: #1A3FC0;
+            --text: #1a1a2e;
+            --text-muted: #555577;
+            --surface: #ffffff;
+            --surface-2: #f4f7ff;
+            --border: #dde4f5;
+            --radius: 16px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--text);
+            background: var(--surface);
+            line-height: 1.6;
+        }
+
+        /* ─── NAV ─── */
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 2rem;
+            height: 56px;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-brand {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 700; font-size: 1.05rem; text-decoration: none; color: var(--text);
+        }
+        .nav-brand img { width: 28px; height: 28px; border-radius: 7px; }
+        .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+        .nav-links a {
+            text-decoration: none; color: var(--text-muted);
+            font-size: 0.9rem; font-weight: 500;
+            transition: color .15s;
+        }
+        .nav-links a:hover { color: var(--blue-2); }
+
+        /* ─── HERO ─── */
+        .hero {
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            padding: 6rem 1.5rem 5rem;
+            background: linear-gradient(160deg, #eef4ff 0%, #f8fbff 55%, #ffffff 100%);
+        }
+        .hero-icon {
+            width: 128px; height: 128px; border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(37,99,235,.25), 0 4px 16px rgba(0,0,0,.08);
+            margin-bottom: 2rem;
+        }
+        .badge {
+            display: inline-block;
+            background: #e8f0fe; color: var(--blue-2);
+            border-radius: 99px; padding: 4px 14px;
+            font-size: 0.78rem; font-weight: 600; letter-spacing: .04em;
+            text-transform: uppercase; margin-bottom: 1.2rem;
+        }
+        h1 {
+            font-size: clamp(2.2rem, 5vw, 3.4rem);
+            font-weight: 800; letter-spacing: -.02em; line-height: 1.15;
+            margin-bottom: 1.2rem;
+        }
+        h1 span { color: var(--blue-2); }
+        .hero-sub {
+            font-size: 1.15rem; color: var(--text-muted);
+            max-width: 540px; margin-bottom: 2.5rem;
+        }
+        .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 13px 28px; border-radius: 12px;
+            font-size: 1rem; font-weight: 600; text-decoration: none;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--blue-1), var(--blue-3));
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(37,99,235,.35);
+        }
+        .btn-primary:hover { box-shadow: 0 12px 32px rgba(37,99,235,.45); }
+        .btn-secondary {
+            background: var(--surface); color: var(--text);
+            border: 1.5px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+        .btn-secondary:hover { border-color: var(--blue-1); }
+        .req {
+            margin-top: 1.4rem; font-size: 0.82rem; color: #8899bb;
+        }
+
+        /* ─── SCREENSHOT PLACEHOLDER ─── */
+        .preview-wrap {
+            width: 100%; max-width: 860px; margin: 4rem auto 0;
+            padding: 0 1.5rem;
+        }
+        .preview-frame {
+            background: var(--surface-2);
+            border: 1.5px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 24px 80px rgba(37,99,235,.12), 0 4px 20px rgba(0,0,0,.06);
+        }
+        .preview-chrome {
+            display: flex; align-items: center; gap: 6px;
+            padding: 10px 16px;
+            background: #e8eef8;
+            border-bottom: 1px solid var(--border);
+        }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-red { background: #ff5f57; }
+        .dot-yellow { background: #febc2e; }
+        .dot-green { background: #28c840; }
+        .preview-body {
+            display: grid; grid-template-columns: 220px 1fr;
+            min-height: 420px;
+        }
+        .sidebar-mock {
+            border-right: 1px solid var(--border);
+            padding: 1rem;
+            background: #f0f4fc;
+        }
+        .sidebar-mock .toc-item {
+            height: 10px; background: var(--border); border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .sidebar-mock .toc-item.l1 { width: 80%; }
+        .sidebar-mock .toc-item.l2 { width: 60%; margin-left: 12px; background: #d8e2f8; }
+        .sidebar-mock .toc-item.l3 { width: 45%; margin-left: 22px; background: #e4ebfc; }
+        .content-mock { padding: 1.5rem; }
+        .content-mock .h1-bar {
+            height: 22px; background: linear-gradient(90deg, var(--blue-1), var(--blue-2));
+            border-radius: 11px; width: 65%; margin-bottom: 1rem; opacity: .7;
+        }
+        .content-mock .line {
+            height: 10px; background: #dde4f5; border-radius: 5px; margin-bottom: 8px;
+        }
+        .content-mock .code-block {
+            background: #1e2a3a; border-radius: 10px;
+            padding: 12px 14px; margin: 1rem 0;
+        }
+        .content-mock .code-line {
+            height: 8px; border-radius: 4px; margin-bottom: 6px;
+        }
+
+        /* ─── FEATURES ─── */
+        .section { padding: 6rem 1.5rem; }
+        .section-inner { max-width: 1000px; margin: 0 auto; }
+        .section-label {
+            text-align: center; font-size: .78rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .1em;
+            color: var(--blue-2); margin-bottom: .7rem;
+        }
+        h2 {
+            text-align: center;
+            font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+            font-weight: 800; letter-spacing: -.02em;
+            margin-bottom: .9rem;
+        }
+        .section-sub {
+            text-align: center; color: var(--text-muted);
+            font-size: 1.05rem; max-width: 520px; margin: 0 auto 3.5rem;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature-card {
+            background: var(--surface-2);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            transition: box-shadow .2s, transform .2s;
+        }
+        .feature-card:hover {
+            box-shadow: 0 8px 32px rgba(37,99,235,.1);
+            transform: translateY(-3px);
+        }
+        .feature-icon {
+            font-size: 2rem; margin-bottom: 1rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 52px; height: 52px; border-radius: 14px;
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        }
+        .feature-card h3 {
+            font-size: 1.05rem; font-weight: 700; margin-bottom: .4rem;
+        }
+        .feature-card p { color: var(--text-muted); font-size: .92rem; }
+
+        /* ─── INSTALL ─── */
+        .install-section { background: var(--surface-2); }
+        .install-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem; margin-top: 3rem;
+        }
+        .step { text-align: center; }
+        .step-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue-1), var(--blue-3));
+            color: #fff; font-size: 1.1rem; font-weight: 800;
+            margin: 0 auto 1rem;
+            box-shadow: 0 4px 14px rgba(37,99,235,.35);
+        }
+        .step h3 { font-size: .95rem; font-weight: 700; margin-bottom: .3rem; }
+        .step p { font-size: .88rem; color: var(--text-muted); }
+        .code-inline {
+            background: #e0e8ff; color: var(--blue-3);
+            border-radius: 6px; padding: 2px 7px;
+            font-family: "SF Mono", ui-monospace, monospace;
+            font-size: .85em;
+        }
+
+        /* ─── FOOTER ─── */
+        footer {
+            text-align: center; padding: 3rem 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted); font-size: .88rem;
+        }
+        footer a { color: var(--blue-2); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+        .footer-links { display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 1.2rem; }
+
+        @media (max-width: 600px) {
+            .preview-body { grid-template-columns: 1fr; }
+            .sidebar-mock { display: none; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ─── NAV ─── -->
+<nav>
+    <a class="nav-brand" href="#">
+        <img src="icon.png" alt="MDViewer icon">
+        MDViewer
+    </a>
+    <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="https://github.com/Masakai/mdviewer">GitHub</a></li>
+    </ul>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+    <img class="hero-icon" src="icon.png" alt="MDViewer app icon">
+    <div class="badge">Free &amp; Open Source</div>
+    <h1>The <span>Markdown viewer</span><br>your Mac deserves.</h1>
+    <p class="hero-sub">
+        Beautiful rendering, instant preview, table of contents, syntax highlighting,
+        KaTeX math, Mermaid diagrams — all in a native macOS app.
+    </p>
+    <div class="cta-group">
+        <a class="btn btn-primary" href="https://github.com/Masakai/mdviewer/releases/latest">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for Mac
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/Masakai/mdviewer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            View on GitHub
+        </a>
+    </div>
+    <p class="req">Requires macOS 14 Sonoma or later</p>
+
+    <!-- App preview mockup -->
+    <div class="preview-wrap">
+        <div class="preview-frame">
+            <div class="preview-chrome">
+                <div class="dot dot-red"></div>
+                <div class="dot dot-yellow"></div>
+                <div class="dot dot-green"></div>
+            </div>
+            <div class="preview-body">
+                <div class="sidebar-mock">
+                    <div class="toc-item l1"></div>
+                    <div class="toc-item l2"></div>
+                    <div class="toc-item l2"></div>
+                    <div class="toc-item l1" style="margin-top:18px"></div>
+                    <div class="toc-item l2"></div>
+                    <div class="toc-item l3"></div>
+                    <div class="toc-item l3"></div>
+                    <div class="toc-item l2"></div>
+                    <div class="toc-item l1" style="margin-top:18px"></div>
+                    <div class="toc-item l2"></div>
+                </div>
+                <div class="content-mock">
+                    <div class="h1-bar"></div>
+                    <div class="line" style="width:90%"></div>
+                    <div class="line" style="width:82%"></div>
+                    <div class="line" style="width:75%"></div>
+                    <div class="code-block">
+                        <div class="code-line" style="width:55%;background:#4ade80;opacity:.7"></div>
+                        <div class="code-line" style="width:80%;background:#60a5fa;opacity:.7"></div>
+                        <div class="code-line" style="width:65%;background:#f472b6;opacity:.7"></div>
+                        <div class="code-line" style="width:45%;background:#fbbf24;opacity:.7"></div>
+                    </div>
+                    <div class="line" style="width:88%"></div>
+                    <div class="line" style="width:70%"></div>
+                    <div class="line" style="width:60%;margin-bottom:0"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── FEATURES ─── -->
+<section class="section" id="features">
+    <div class="section-inner">
+        <p class="section-label">Features</p>
+        <h2>Everything you need to read Markdown</h2>
+        <p class="section-sub">Designed for developers, writers, and anyone who works with Markdown files every day.</p>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">⚡️</div>
+                <h3>Instant rendering</h3>
+                <p>Opens and renders Markdown files instantly. Watches for file changes and live-reloads as you edit.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📑</div>
+                <h3>Table of contents</h3>
+                <p>Auto-generated TOC sidebar from headings. Click to jump to any section with smooth scrolling.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🖼️</div>
+                <h3>Page thumbnails</h3>
+                <p>Visual thumbnail strip lets you browse long documents at a glance and jump to any page.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Syntax highlighting</h3>
+                <p>130+ languages highlighted with highlight.js. Light and dark themes that follow macOS appearance.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">∑</div>
+                <h3>Math equations</h3>
+                <p>Render inline and block LaTeX math beautifully with KaTeX — no extra setup required.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Mermaid diagrams</h3>
+                <p>Flowcharts, sequence diagrams, Gantt charts, and more rendered directly in the document.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔗</div>
+                <h3>Smart link handling</h3>
+                <p>Local Markdown links open in the app. External links open in the browser. Images load from disk.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📤</div>
+                <h3>Export to PDF</h3>
+                <p>Print or export your document to PDF with a single click, preserving all styles and formatting.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Signed &amp; notarized</h3>
+                <p>Distributed with Developer ID signing and Apple notarization for safe, Gatekeeper-friendly installation.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── INSTALL ─── -->
+<section class="section install-section" id="install">
+    <div class="section-inner">
+        <p class="section-label">Get started</p>
+        <h2>Up and running in seconds</h2>
+        <p class="section-sub">No Homebrew, no setup, no configuration needed.</p>
+        <div class="install-steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Download</h3>
+                <p>Grab the latest <code class="code-inline">.zip</code> from the <a href="https://github.com/Masakai/mdviewer/releases/latest">Releases page</a>.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Unzip &amp; drag</h3>
+                <p>Unzip the archive and drag <code class="code-inline">MDViewer.app</code> to your <strong>Applications</strong> folder.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Open any .md file</h3>
+                <p>Double-click any Markdown file or drop it onto the MDViewer icon in the Dock.</p>
+            </div>
+        </div>
+        <div style="text-align:center;margin-top:3rem">
+            <a class="btn btn-primary" href="https://github.com/Masakai/mdviewer/releases/latest">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download MDViewer
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+    <div class="footer-links">
+        <a href="https://github.com/Masakai/mdviewer">GitHub</a>
+        <a href="https://github.com/Masakai/mdviewer/releases">Releases</a>
+        <a href="https://github.com/Masakai/mdviewer/issues">Issues</a>
+    </div>
+    <p>MDViewer is free and open source software released under the MIT License.</p>
+    <p style="margin-top:.5rem">Made with ♥ for macOS</p>
+</footer>
+
+</body>
+</html>
