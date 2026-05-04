@@ -1,0 +1,29 @@
+# Changelog
+
+All notable changes to MDViewer will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [1.0.0] — 2026-05-04
+
+### Added
+- Initial release
+- Markdown rendering via WKWebView + marked.js v12
+- Syntax highlighting for 27 languages via Shiki v1 (github-light / github-dark dual themes)
+- LaTeX math rendering via KaTeX v0.16 — inline `$…$` and block `$$…$$`
+- Mermaid diagram support — flowcharts, sequence diagrams, Gantt charts
+- Auto-generated table of contents sidebar from headings
+- Page thumbnail sidebar (generated via PDFKit)
+- Live file reload using `DispatchSource` (kqueue, 0.5 s debounce)
+- Local image loading via custom `mdviewer-local://` URL scheme handler
+- Theme switching — GitHub Light / GitHub Dark, follows macOS appearance
+- Font size control — increase, decrease, reset (⌘+, ⌘−, ⌘0)
+- PDF export via `WKWebView.createPDF()`
+- HTML export
+- Smart link handling — local `.md` links open in-app, external links open in browser
+- In-page text search (⌘F)
+- Japanese / English localization
+- Developer ID signing and Apple notarization
+- Landing page (English and Japanese) at https://masakai.github.io/mdviewer/
