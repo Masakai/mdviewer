@@ -190,6 +190,35 @@
             font-size: .85em;
         }
 
+        /* ─── LIBRARIES ─── */
+        .libraries-section { background: var(--surface); }
+        .lib-table {
+            width: 100%; border-collapse: collapse; margin-top: 2.5rem;
+            font-size: .93rem;
+        }
+        .lib-table th {
+            text-align: left; padding: 10px 16px;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted); font-size: .78rem;
+            text-transform: uppercase; letter-spacing: .08em;
+        }
+        .lib-table td {
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .lib-table tr:last-child td { border-bottom: none; }
+        .lib-table tr:hover td { background: var(--surface-2); }
+        .lib-name { font-weight: 700; }
+        .lib-name a { color: var(--blue-2); text-decoration: none; }
+        .lib-name a:hover { text-decoration: underline; }
+        .lib-ver { color: var(--text-muted); font-size: .83rem; margin-top: 2px; }
+        .license-badge {
+            display: inline-block;
+            background: #e8f0fe; color: var(--blue-3);
+            border-radius: 6px; padding: 2px 9px;
+            font-size: .78rem; font-weight: 600;
+        }
+
         /* ─── FOOTER ─── */
         footer {
             text-align: center; padding: 3rem 1.5rem;
@@ -218,6 +247,7 @@
     <ul class="nav-links">
         <li><a href="#features">機能</a></li>
         <li><a href="#install">インストール</a></li>
+        <li><a href="#libraries">ライブラリ</a></li>
         <li><a href="https://github.com/Masakai/mdviewer">GitHub</a></li>
         <li><a href="../" style="font-weight:700">English</a></li>
     </ul>
@@ -281,7 +311,7 @@
             <div class="feature-card">
                 <div class="feature-icon">🎨</div>
                 <h3>シンタックスハイライト</h3>
-                <p>highlight.js による 130 以上の言語に対応。macOS の外観設定に連動したライト・ダークテーマ。</p>
+                <p>Shiki による 27 言語のハイライトに対応。macOS の外観設定に連動したライト・ダークテーマ。</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">∑</div>
@@ -341,6 +371,58 @@
                 MDViewer をダウンロード
             </a>
         </div>
+    </div>
+</section>
+
+<!-- ─── LIBRARIES ─── -->
+<section class="section libraries-section" id="libraries">
+    <div class="section-inner">
+        <p class="section-label">オープンソース</p>
+        <h2>使用ライブラリ</h2>
+        <p class="section-sub">MDViewer は以下のオープンソースライブラリを使用しています。ライセンス全文はアプリバンドル内に同梱されています。</p>
+        <table class="lib-table">
+            <thead>
+                <tr>
+                    <th>ライブラリ</th>
+                    <th>使用目的</th>
+                    <th>ライセンス</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/markedjs/marked" target="_blank" rel="noopener">marked</a></div>
+                        <div class="lib-ver">v12.0.2</div>
+                    </td>
+                    <td>Markdown テキストをパースして HTML に変換します。</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/shikijs/shiki" target="_blank" rel="noopener">Shiki</a></div>
+                        <div class="lib-ver">v1.x</div>
+                    </td>
+                    <td>VS Code と同じ文法ファイルを使い、27 言語のシンタックスハイライトを提供します。CSS 変数によるライト・ダーク両テーマに対応。</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/KaTeX/KaTeX" target="_blank" rel="noopener">KaTeX</a></div>
+                        <div class="lib-ver">v0.16.11</div>
+                    </td>
+                    <td>インライン <code class="code-inline">$…$</code> およびブロック <code class="code-inline">$$…$$</code> 形式の LaTeX 数式を高品質な HTML としてレンダリングします。</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/mermaid-js/mermaid" target="_blank" rel="noopener">Mermaid</a></div>
+                        <div class="lib-ver">v10.x</div>
+                    </td>
+                    <td>テキスト定義からフローチャート・シーケンス図・ガントチャートなどのダイアグラムをレンダリングします。</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </section>
 

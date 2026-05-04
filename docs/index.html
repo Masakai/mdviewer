@@ -190,6 +190,35 @@
             font-size: .85em;
         }
 
+        /* ─── LIBRARIES ─── */
+        .libraries-section { background: var(--surface); }
+        .lib-table {
+            width: 100%; border-collapse: collapse; margin-top: 2.5rem;
+            font-size: .93rem;
+        }
+        .lib-table th {
+            text-align: left; padding: 10px 16px;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted); font-size: .78rem;
+            text-transform: uppercase; letter-spacing: .08em;
+        }
+        .lib-table td {
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .lib-table tr:last-child td { border-bottom: none; }
+        .lib-table tr:hover td { background: var(--surface-2); }
+        .lib-name { font-weight: 700; }
+        .lib-name a { color: var(--blue-2); text-decoration: none; }
+        .lib-name a:hover { text-decoration: underline; }
+        .lib-ver { color: var(--text-muted); font-size: .83rem; margin-top: 2px; }
+        .license-badge {
+            display: inline-block;
+            background: #e8f0fe; color: var(--blue-3);
+            border-radius: 6px; padding: 2px 9px;
+            font-size: .78rem; font-weight: 600;
+        }
+
         /* ─── FOOTER ─── */
         footer {
             text-align: center; padding: 3rem 1.5rem;
@@ -218,6 +247,7 @@
     <ul class="nav-links">
         <li><a href="#features">Features</a></li>
         <li><a href="#install">Install</a></li>
+        <li><a href="#libraries">Libraries</a></li>
         <li><a href="https://github.com/Masakai/mdviewer">GitHub</a></li>
         <li><a href="ja/" style="font-weight:700">日本語</a></li>
     </ul>
@@ -281,7 +311,7 @@
             <div class="feature-card">
                 <div class="feature-icon">🎨</div>
                 <h3>Syntax highlighting</h3>
-                <p>130+ languages highlighted with highlight.js. Light and dark themes that follow macOS appearance.</p>
+                <p>27 languages highlighted with Shiki. Light and dark themes that follow macOS appearance.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">∑</div>
@@ -341,6 +371,58 @@
                 Download MDViewer
             </a>
         </div>
+    </div>
+</section>
+
+<!-- ─── LIBRARIES ─── -->
+<section class="section libraries-section" id="libraries">
+    <div class="section-inner">
+        <p class="section-label">Open Source</p>
+        <h2>Libraries used</h2>
+        <p class="section-sub">MDViewer is built on these open-source libraries. Full license texts are included in the app bundle.</p>
+        <table class="lib-table">
+            <thead>
+                <tr>
+                    <th>Library</th>
+                    <th>Purpose</th>
+                    <th>License</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/markedjs/marked" target="_blank" rel="noopener">marked</a></div>
+                        <div class="lib-ver">v12.0.2</div>
+                    </td>
+                    <td>Parses Markdown text and converts it to HTML for rendering.</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/shikijs/shiki" target="_blank" rel="noopener">Shiki</a></div>
+                        <div class="lib-ver">v1.x</div>
+                    </td>
+                    <td>Syntax highlighting for 27 programming languages using VS Code grammar. Supports dual light/dark themes via CSS variables.</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/KaTeX/KaTeX" target="_blank" rel="noopener">KaTeX</a></div>
+                        <div class="lib-ver">v0.16.11</div>
+                    </td>
+                    <td>Renders LaTeX math expressions — both inline <code class="code-inline">$…$</code> and block <code class="code-inline">$$…$$</code> — as high-quality HTML.</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="lib-name"><a href="https://github.com/mermaid-js/mermaid" target="_blank" rel="noopener">Mermaid</a></div>
+                        <div class="lib-ver">v10.x</div>
+                    </td>
+                    <td>Renders diagrams from text definitions — flowcharts, sequence diagrams, Gantt charts, and more.</td>
+                    <td><span class="license-badge">MIT</span></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </section>
 
