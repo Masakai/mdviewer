@@ -109,58 +109,15 @@
             margin-top: 1.4rem; font-size: 0.82rem; color: #8899bb;
         }
 
-        /* ─── SCREENSHOT PLACEHOLDER ─── */
+        /* ─── SCREENSHOT ─── */
         .preview-wrap {
-            width: 100%; max-width: 860px; margin: 4rem auto 0;
+            width: 100%; max-width: 900px; margin: 4rem auto 0;
             padding: 0 1.5rem;
         }
-        .preview-frame {
-            background: var(--surface-2);
-            border: 1.5px solid var(--border);
-            border-radius: 18px;
-            overflow: hidden;
-            box-shadow: 0 24px 80px rgba(37,99,235,.12), 0 4px 20px rgba(0,0,0,.06);
-        }
-        .preview-chrome {
-            display: flex; align-items: center; gap: 6px;
-            padding: 10px 16px;
-            background: #e8eef8;
-            border-bottom: 1px solid var(--border);
-        }
-        .dot { width: 10px; height: 10px; border-radius: 50%; }
-        .dot-red { background: #ff5f57; }
-        .dot-yellow { background: #febc2e; }
-        .dot-green { background: #28c840; }
-        .preview-body {
-            display: grid; grid-template-columns: 220px 1fr;
-            min-height: 420px;
-        }
-        .sidebar-mock {
-            border-right: 1px solid var(--border);
-            padding: 1rem;
-            background: #f0f4fc;
-        }
-        .sidebar-mock .toc-item {
-            height: 10px; background: var(--border); border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .sidebar-mock .toc-item.l1 { width: 80%; }
-        .sidebar-mock .toc-item.l2 { width: 60%; margin-left: 12px; background: #d8e2f8; }
-        .sidebar-mock .toc-item.l3 { width: 45%; margin-left: 22px; background: #e4ebfc; }
-        .content-mock { padding: 1.5rem; }
-        .content-mock .h1-bar {
-            height: 22px; background: linear-gradient(90deg, var(--blue-1), var(--blue-2));
-            border-radius: 11px; width: 65%; margin-bottom: 1rem; opacity: .7;
-        }
-        .content-mock .line {
-            height: 10px; background: #dde4f5; border-radius: 5px; margin-bottom: 8px;
-        }
-        .content-mock .code-block {
-            background: #1e2a3a; border-radius: 10px;
-            padding: 12px 14px; margin: 1rem 0;
-        }
-        .content-mock .code-line {
-            height: 8px; border-radius: 4px; margin-bottom: 6px;
+        .preview-wrap img {
+            width: 100%; border-radius: 18px;
+            box-shadow: 0 24px 80px rgba(37,99,235,.15), 0 4px 20px rgba(0,0,0,.10);
+            display: block;
         }
 
         /* ─── FEATURES ─── */
@@ -287,44 +244,8 @@
     </div>
     <p class="req">Requires macOS 14 Sonoma or later &nbsp;·&nbsp; Apple Silicon only</p>
 
-    <!-- App preview mockup -->
     <div class="preview-wrap">
-        <div class="preview-frame">
-            <div class="preview-chrome">
-                <div class="dot dot-red"></div>
-                <div class="dot dot-yellow"></div>
-                <div class="dot dot-green"></div>
-            </div>
-            <div class="preview-body">
-                <div class="sidebar-mock">
-                    <div class="toc-item l1"></div>
-                    <div class="toc-item l2"></div>
-                    <div class="toc-item l2"></div>
-                    <div class="toc-item l1" style="margin-top:18px"></div>
-                    <div class="toc-item l2"></div>
-                    <div class="toc-item l3"></div>
-                    <div class="toc-item l3"></div>
-                    <div class="toc-item l2"></div>
-                    <div class="toc-item l1" style="margin-top:18px"></div>
-                    <div class="toc-item l2"></div>
-                </div>
-                <div class="content-mock">
-                    <div class="h1-bar"></div>
-                    <div class="line" style="width:90%"></div>
-                    <div class="line" style="width:82%"></div>
-                    <div class="line" style="width:75%"></div>
-                    <div class="code-block">
-                        <div class="code-line" style="width:55%;background:#4ade80;opacity:.7"></div>
-                        <div class="code-line" style="width:80%;background:#60a5fa;opacity:.7"></div>
-                        <div class="code-line" style="width:65%;background:#f472b6;opacity:.7"></div>
-                        <div class="code-line" style="width:45%;background:#fbbf24;opacity:.7"></div>
-                    </div>
-                    <div class="line" style="width:88%"></div>
-                    <div class="line" style="width:70%"></div>
-                    <div class="line" style="width:60%;margin-bottom:0"></div>
-                </div>
-            </div>
-        </div>
+        <img src="screenshot.png" alt="MDViewer showing KaTeX math equations and a Mermaid diagram with TOC sidebar">
     </div>
 </section>
 
