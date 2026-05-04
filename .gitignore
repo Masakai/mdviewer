@@ -28,3 +28,6 @@ fastlane/test_output
 # Generated
 *.generated.swift
 
+# Claude Code
+.claude/
+
