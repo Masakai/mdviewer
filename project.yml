@@ -1,0 +1,59 @@
+name: MDViewer
+options:
+  bundleIdPrefix: com.mdviewer
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+packages:
+  swift-markdown:
+    url: https://github.com/swiftlang/swift-markdown
+    from: "0.5.0"
+
+targets:
+  MDViewer:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: MDViewer
+        excludes:
+          - Resources
+        createIntermediateGroups: true
+    resources:
+      - path: MDViewer/Resources/Assets.xcassets
+    postCompileScripts:
+      - name: "Copy Web Resources"
+        script: |
+          set -e
+          DEST="${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources"
+          mkdir -p "${DEST}"
+          cp -R "${SRCROOT}/MDViewer/Resources/Web" "${DEST}/"
+          cp -R "${SRCROOT}/MDViewer/en.lproj" "${DEST}/"
+          cp -R "${SRCROOT}/MDViewer/ja.lproj" "${DEST}/"
+        inputFiles:
+          - $(SRCROOT)/MDViewer/Resources/Web
+          - $(SRCROOT)/MDViewer/en.lproj
+          - $(SRCROOT)/MDViewer/ja.lproj
+        outputFiles:
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Web
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/en.lproj
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ja.lproj
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mdviewer.app
+        SWIFT_VERSION: 5.9
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "YES"
+        ENABLE_HARDENED_RUNTIME: "NO"
+        CODE_SIGN_ENTITLEMENTS: MDViewer/MDViewer.entitlements
+        INFOPLIST_FILE: MDViewer/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: swift-markdown
+        product: Markdown
+    entitlements:
+      path: MDViewer/MDViewer.entitlements

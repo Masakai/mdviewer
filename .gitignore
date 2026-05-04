@@ -1,0 +1,30 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+.DS_Store
+
+# Build
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods
+Pods/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Generated
+*.generated.swift
+

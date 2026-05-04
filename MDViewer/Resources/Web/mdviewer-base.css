@@ -1,0 +1,139 @@
+:root {
+    --font-size: 16px;
+    --content-max-width: 860px;
+    --code-font: Menlo, "SF Mono", "JetBrains Mono", monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: var(--font-size);
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    padding: 0 24px 48px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+#content {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding-top: 24px;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+h1 { font-size: 2em; border-bottom: 1px solid var(--border-color, #e1e4e8); padding-bottom: 0.3em; }
+h2 { font-size: 1.5em; border-bottom: 1px solid var(--border-color, #e1e4e8); padding-bottom: 0.3em; }
+h3 { font-size: 1.25em; }
+h4 { font-size: 1em; }
+h5 { font-size: 0.875em; }
+h6 { font-size: 0.85em; }
+
+/* Code */
+code, pre {
+    font-family: var(--code-font);
+    font-size: 0.875em;
+}
+
+pre {
+    padding: 16px;
+    overflow: auto;
+    border-radius: 6px;
+    line-height: 1.45;
+    margin: 0 0 16px;
+}
+
+pre code {
+    font-size: 1em;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+}
+
+code:not(pre code) {
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+}
+
+/* Blockquote */
+blockquote {
+    padding: 0 1em;
+    margin: 0 0 16px;
+    border-left: 0.25em solid var(--blockquote-border, #dfe2e5);
+    color: var(--blockquote-color, #6a737d);
+}
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    width: 100%;
+    overflow: auto;
+    display: block;
+}
+
+th, td {
+    padding: 6px 13px;
+    border: 1px solid var(--table-border, #dfe2e5);
+}
+
+tr:nth-child(2n) {
+    background-color: var(--table-row-alt, #f6f8fa);
+}
+
+/* Task lists */
+input[type="checkbox"] {
+    margin-right: 0.4em;
+    vertical-align: middle;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Horizontal rule */
+hr {
+    border: 0;
+    border-top: 1px solid var(--border-color, #e1e4e8);
+    margin: 24px 0;
+}
+
+/* Links */
+a {
+    color: var(--link-color, #0366d6);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+/* Mermaid diagrams */
+.mermaid {
+    text-align: center;
+    margin: 16px 0;
+}
+
+/* Heading anchor highlight used by TOC scroll */
+.heading-anchor-target {
+    animation: highlight-fade 2s ease-out;
+}
+
+@keyframes highlight-fade {
+    0%   { background-color: var(--highlight-bg, rgba(255, 220, 0, 0.4)); }
+    100% { background-color: transparent; }
+}

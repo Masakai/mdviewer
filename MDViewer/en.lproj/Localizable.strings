@@ -1,0 +1,47 @@
+/* Menu - File */
+"Open…" = "Open…";
+"Open File…" = "Open File…";
+"Open Markdown File (⌘O)" = "Open Markdown File (⌘O)";
+"Open" = "Open";
+"Reload" = "Reload";
+"Open a Markdown file to get started" = "Open a Markdown file to get started";
+
+/* Menu - View */
+"View" = "View";
+"Toggle Sidebar" = "Toggle Sidebar";
+"TOC Mode" = "TOC Mode";
+"Thumbnails Mode" = "Thumbnails Mode";
+"Find…" = "Find…";
+"Increase Font Size" = "Increase Font Size";
+"Decrease Font Size" = "Decrease Font Size";
+"Reset Font Size" = "Reset Font Size";
+"Increase Font Size (⌘+)" = "Increase Font Size (⌘+)";
+"Decrease Font Size (⌘-)" = "Decrease Font Size (⌘-)";
+"Reset Font Size (⌘0)" = "Reset Font Size (⌘0)";
+
+/* Menu - Export */
+"Export" = "Export";
+"Export or Print" = "Export or Print";
+"Export as PDF…" = "Export as PDF…";
+"Export as HTML…" = "Export as HTML…";
+"Print…" = "Print…";
+
+/* Sidebar */
+"No headings found" = "No headings found";
+"Generating thumbnails…" = "Generating thumbnails…";
+"Page %lld" = "Page %lld";
+
+/* Toolbar & Search */
+"Search" = "Search";
+"Done" = "Done";
+
+/* Preferences */
+"Select Theme" = "Select Theme";
+"Theme" = "Theme";
+"Font" = "Font";
+"Size" = "Size";
+"Code Font" = "Code Font";
+
+/* Alerts */
+"Error" = "Error";
+"OK" = "OK";

@@ -1,0 +1,34 @@
+/* GitHub Dark Theme */
+:root {
+    --bg-color: #0d1117;
+    --text-color: #c9d1d9;
+    --link-color: #58a6ff;
+    --border-color: #30363d;
+    --blockquote-border: #3b434b;
+    --blockquote-color: #8b949e;
+    --table-border: #30363d;
+    --table-row-alt: #161b22;
+    --code-bg: #161b22;
+    --code-inline-bg: rgba(240, 246, 252, 0.15);
+    --highlight-bg: rgba(255, 220, 0, 0.2);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+code:not(pre code) {
+    background-color: var(--code-inline-bg);
+    color: var(--text-color);
+}
+
+pre {
+    background-color: var(--code-bg);
+}
+
+/* Override highlight.js colors for dark mode */
+.hljs {
+    background: var(--code-bg);
+    color: #c9d1d9;
+}

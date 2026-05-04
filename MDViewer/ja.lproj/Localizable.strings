@@ -1,0 +1,47 @@
+/* Menu - File */
+"Open…" = "開く…";
+"Open File…" = "ファイルを開く…";
+"Open Markdown File (⌘O)" = "Markdownファイルを開く (⌘O)";
+"Open" = "開く";
+"Reload" = "再読み込み";
+"Open a Markdown file to get started" = "Markdownファイルを開いてください";
+
+/* Menu - View */
+"View" = "表示";
+"Toggle Sidebar" = "サイドバーの表示/非表示";
+"TOC Mode" = "目次モード";
+"Thumbnails Mode" = "サムネイルモード";
+"Find…" = "検索…";
+"Increase Font Size" = "文字を大きくする";
+"Decrease Font Size" = "文字を小さくする";
+"Reset Font Size" = "文字サイズをリセット";
+"Increase Font Size (⌘+)" = "文字を大きくする (⌘+)";
+"Decrease Font Size (⌘-)" = "文字を小さくする (⌘-)";
+"Reset Font Size (⌘0)" = "文字サイズをリセット (⌘0)";
+
+/* Menu - Export */
+"Export" = "書き出し";
+"Export or Print" = "書き出し・印刷";
+"Export as PDF…" = "PDFとして書き出し…";
+"Export as HTML…" = "HTMLとして書き出し…";
+"Print…" = "プリント…";
+
+/* Sidebar */
+"No headings found" = "見出しが見つかりません";
+"Generating thumbnails…" = "サムネイル生成中…";
+"Page %lld" = "%lldページ";
+
+/* Toolbar & Search */
+"Search" = "検索";
+"Done" = "完了";
+
+/* Preferences */
+"Select Theme" = "テーマを選択";
+"Theme" = "テーマ";
+"Font" = "フォント";
+"Size" = "サイズ";
+"Code Font" = "コードフォント";
+
+/* Alerts */
+"Error" = "エラー";
+"OK" = "OK";
