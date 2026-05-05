@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.2] — 2026-05-05
+
+### Changed
+- PDF export: replaced `WKWebView.createPDF()` (single-page) with `NSPrintOperation.runModal` to correctly apply print CSS and generate properly paginated multi-page PDFs
+
+### Fixed
+- PDF export hang-up resolved by switching to `NSPrintOperation.runModal`
+- Sidebar: thumbnail tab temporarily hidden (TOC-only display)
+
+---
+
 ## [1.0.1] — 2026-05-05
 
 ### Added
