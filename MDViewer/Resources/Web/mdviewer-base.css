@@ -198,6 +198,13 @@ body.dark-theme .shiki, body.dark-theme .shiki span {
         padding: 0;
         color: #000;
         background: #fff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    pre, code, .shiki, .code-block-wrapper {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 
     #content {

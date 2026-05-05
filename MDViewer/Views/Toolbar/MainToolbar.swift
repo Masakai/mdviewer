@@ -60,7 +60,7 @@ struct MainToolbar: ToolbarContent {
             Menu {
                 Button("Export as PDF…") {
                     if let wv = renderVM.webView {
-                        exportVM.exportToPDF(webView: wv, sourceURL: documentVM.fileURL)
+                        exportVM.exportToPDF(webView: wv, renderVM: renderVM, sourceURL: documentVM.fileURL)
                     }
                 }
                 .keyboardShortcut("p", modifiers: [.command, .shift])

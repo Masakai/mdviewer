@@ -5,6 +5,7 @@ import Combine
 final class DocumentViewModel: ObservableObject {
     @Published var text: String = ""
     @Published var fileURL: URL?
+    @Published var fileFormat: String = "markdown"
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
 
@@ -21,9 +22,14 @@ final class DocumentViewModel: ObservableObject {
         }
     }
 
+    var isAsciidoc: Bool {
+        guard let ext = fileURL?.pathExtension.lowercased() else { return false }
+        return ext == "adoc" || ext == "asciidoc" || ext == "asc"
+    }
+
     func openFile() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.markdown, .plainText]
+        panel.allowedContentTypes = [.markdown, .asciidoc, .plainText]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
 
@@ -42,7 +48,9 @@ final class DocumentViewModel: ObservableObject {
 
         do {
             let contents = try String(contentsOf: url, encoding: .utf8)
+            let ext = url.pathExtension.lowercased()
             self.fileURL = url
+            self.fileFormat = (ext == "adoc" || ext == "asciidoc" || ext == "asc") ? "asciidoc" : "markdown"
             self.text = contents
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)

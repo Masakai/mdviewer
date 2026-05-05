@@ -12,7 +12,7 @@ final class ExportViewModel: ObservableObject {
         return raw.removingPercentEncoding ?? raw
     }
 
-    func exportToPDF(webView: WKWebView, sourceURL: URL? = nil, pageSize: PDFPageSize = .a4) {
+    func exportToPDF(webView: WKWebView, renderVM: RenderViewModel, sourceURL: URL? = nil, pageSize: PDFPageSize = .a4) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
         panel.nameFieldStringValue = "\(baseName(for: sourceURL)).pdf"
@@ -21,28 +21,38 @@ final class ExportViewModel: ObservableObject {
 
         isExporting = true
 
-        let info = NSPrintInfo.shared.copy() as! NSPrintInfo
-        let pt = pageSize.pointSize
-        info.paperSize = pt
-        info.topMargin = 0
-        info.bottomMargin = 0
-        info.leftMargin = 0
-        info.rightMargin = 0
-        info.isHorizontallyCentered = false
-        info.isVerticallyCentered = false
-        info.jobDisposition = .save
-        info.dictionary().setValue(url, forKey: NSPrintInfo.AttributeKey.jobSavingURL.rawValue)
+        let doExport = { [weak self, weak webView] in
+            guard let self, let webView else { return }
+            webView.evaluateJavaScript("MDViewer.preparePrint()", completionHandler: nil)
+            let info = NSPrintInfo.shared.copy() as! NSPrintInfo
+            let pt = pageSize.pointSize
+            info.paperSize = pt
+            info.topMargin = 0
+            info.bottomMargin = 0
+            info.leftMargin = 0
+            info.rightMargin = 0
+            info.isHorizontallyCentered = false
+            info.isVerticallyCentered = false
+            info.jobDisposition = .save
+            info.dictionary().setValue(url, forKey: NSPrintInfo.AttributeKey.jobSavingURL.rawValue)
 
-        let op = webView.printOperation(with: info)
-        op.showsPrintPanel = false
-        op.showsProgressPanel = false
+            let op = webView.printOperation(with: info)
+            op.showsPrintPanel = false
+            op.showsProgressPanel = false
 
-        guard let window = webView.window else {
-            _ = op.run()
-            isExporting = false
-            return
+            guard let window = webView.window else {
+                _ = op.run()
+                self.isExporting = false
+                return
+            }
+            op.runModal(for: window, delegate: self, didRun: #selector(self.printOperationDidRun(_:success:contextInfo:)), contextInfo: UnsafeMutableRawPointer(bitPattern: 0))
         }
-        op.runModal(for: window, delegate: self, didRun: #selector(printOperationDidRun(_:success:contextInfo:)), contextInfo: UnsafeMutableRawPointer(bitPattern: 0))
+
+        if renderVM.isContentReady {
+            doExport()
+        } else {
+            renderVM.pendingExport = doExport
+        }
     }
 
     @objc private func printOperationDidRun(_ op: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?) {
