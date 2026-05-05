@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.1] — 2026-05-05
+
+### Added
+- PDF/print layout: `@media print` styles for A4 page size, margins, and page-break control
+- Build and notarization script (`build-notarize.sh`)
+
+### Fixed
+- Shiki syntax highlighter: added try/catch with fallback and 8-second initialization timeout
+- Removed redundant light-theme CSS overrides for Shiki (inline styles take precedence)
+
+---
+
 ## [1.0.0] — 2026-05-04
 
 ### Added
