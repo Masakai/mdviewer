@@ -46,6 +46,20 @@
         <dict>
             <key>CFBundleTypeExtensions</key>
             <array>
+                <string>adoc</string>
+                <string>asciidoc</string>
+                <string>asc</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>AsciiDoc Document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Default</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
                 <string>txt</string>
             </array>
             <key>CFBundleTypeName</key>
@@ -54,6 +68,28 @@
             <string>Viewer</string>
             <key>LSHandlerRank</key>
             <string>Alternate</string>
+        </dict>
+    </array>
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.asciidoc.asciidoc</string>
+            <key>UTTypeDescription</key>
+            <string>AsciiDoc Document</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>adoc</string>
+                    <string>asciidoc</string>
+                    <string>asc</string>
+                </array>
+            </dict>
         </dict>
     </array>
     <key>LSMinimumSystemVersion</key>

@@ -1,0 +1,240 @@
+= AsciiDoc フルサンプル
+著者名 <author@example.com>
+v1.0, 2026-05-06
+:toc: left
+:toc-title: 目次
+:sectids:
+:icons: font
+:source-highlighter: highlight.js
+
+== テキスト書式
+
+通常のテキスト、*太字*、_イタリック_、`等幅フォント`、*_太字イタリック_*。
+
+上付き文字: E=mc^2^、下付き文字: H~2~O。
+
+[.line-through]#取り消し線#、#ハイライト#。
+
+リンク: https://asciidoc.org[AsciiDoc 公式サイト]
+
+== 見出し階層
+
+=== レベル3
+
+==== レベル4
+
+===== レベル5
+
+== リスト
+
+=== 箇条書きリスト
+
+* 項目 1
+** 入れ子 1-1
+** 入れ子 1-2
+* 項目 2
+* 項目 3
+
+=== 番号付きリスト
+
+. 最初の手順
+. 次の手順
+.. サブ手順 a
+.. サブ手順 b
+. 最後の手順
+
+=== 定義リスト
+
+AsciiDoc::
+  軽量マークアップ言語の一つ。
+Markdown::
+  最もポピュラーな軽量マークアップ言語。
+reStructuredText::
+  Python コミュニティで広く使われるマークアップ言語。
+
+=== チェックリスト
+
+* [x] 完了したタスク
+* [x] こちらも完了
+* [ ] 未完了のタスク
+* [ ] こちらも未完了
+
+== コードブロック
+
+=== インラインコード
+
+変数 `count` に `42` を代入する。
+
+=== シンタックスハイライト付きコードブロック
+
+[source,python]
+----
+def fibonacci(n):
+    """フィボナッチ数列を返す"""
+    if n <= 1:
+        return n
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
+
+for i in range(10):
+    print(f"fib({i}) = {fibonacci(i)}")
+----
+
+[source,swift]
+----
+import Foundation
+
+struct Stack<Element> {
+    private var storage: [Element] = []
+
+    mutating func push(_ element: Element) {
+        storage.append(element)
+    }
+
+    mutating func pop() -> Element? {
+        storage.popLast()
+    }
+
+    var isEmpty: Bool { storage.isEmpty }
+}
+
+var stack = Stack<Int>()
+stack.push(1)
+stack.push(2)
+print(stack.pop() ?? "empty")
+----
+
+[source,javascript]
+----
+const fetchData = async (url) => {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Fetch failed:', error);
+        return null;
+    }
+};
+----
+
+=== プレーンコードブロック
+
+----
+$ git clone https://github.com/example/repo.git
+$ cd repo
+$ make build
+----
+
+== 表
+
+[cols="1,2,1", options="header"]
+|===
+| 言語       | 特徴                         | 用途
+
+| Python
+| シンプルな構文、豊富なライブラリ
+| データ分析、AI、Web
+
+| Swift
+| 型安全、高速、モダンな構文
+| iOS/macOS アプリ開発
+
+| JavaScript
+| ブラウザネイティブ、非同期処理
+| Web フロントエンド・バックエンド
+
+| Rust
+| メモリ安全、ゼロコスト抽象化
+| システムプログラミング
+|===
+
+== 引用とコールアウト
+
+[quote, Donald Knuth, The Art of Computer Programming]
+____
+Premature optimization is the root of all evil.
+____
+
+[NOTE]
+====
+これは注意事項のアドモニションブロックです。重要な補足情報を記載します。
+====
+
+[TIP]
+====
+ヒント: AsciiDoc は技術文書の執筆に非常に適しています。
+====
+
+[WARNING]
+====
+警告: 本番環境での変更は十分にテストしてから行ってください。
+====
+
+[IMPORTANT]
+====
+重要: データのバックアップを必ず取ってから作業を開始してください。
+====
+
+[CAUTION]
+====
+注意: このコマンドは元に戻せない操作を実行します。
+====
+
+== 水平線
+
+上のセクション
+
+'''
+
+下のセクション
+
+== リンクと参照
+
+内部リンク: <<コードブロック,コードブロックセクション>> を参照。
+
+外部リンク: https://docs.asciidoctor.org[Asciidoctor ドキュメント^] (新しいタブで開く)
+
+== 画像
+
+// 実際の画像パスに変更してください
+// image::screenshot.png[スクリーンショット, 600, 400]
+
+（画像はファイルパスに応じて設定してください）
+
+== パッセージとサイドバー
+
+[sidebar]
+****
+これはサイドバーブロックです。本文とは独立した補足情報を記載するのに適しています。
+****
+
+[pass]
+++++
+<p style="color: #e74c3c; font-weight: bold;">
+  パッセージブロック: 生のHTMLを直接埋め込めます。
+</p>
+++++
+
+== 番号なし見出しと目次
+
+[discrete]
+=== この見出しは目次に含まれません
+
+discrete 属性を付けた見出しは番号付けや目次生成の対象外になります。
+
+== まとめ
+
+このドキュメントでは AsciiDoc の主要な要素を一通り紹介しました。
+
+* テキスト書式（太字、イタリック、等幅、上付き、下付き）
+* リスト（箇条書き、番号付き、定義、チェックリスト）
+* コードブロック（シンタックスハイライト付き）
+* 表
+* 引用・アドモニション（NOTE/TIP/WARNING/IMPORTANT/CAUTION）
+* リンク・参照
+* サイドバー・パッセージ

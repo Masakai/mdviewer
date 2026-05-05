@@ -3,13 +3,14 @@ import UniformTypeIdentifiers
 
 extension UTType {
     static let markdown = UTType(importedAs: "net.daringfireball.markdown")
+    static let asciidoc = UTType(importedAs: "org.asciidoc.asciidoc")
 }
 
 struct MarkdownDocument: FileDocument {
     var text: String
 
     static var readableContentTypes: [UTType] {
-        [.markdown, .plainText]
+        [.markdown, .asciidoc, .plainText]
     }
 
     init(text: String = "") {
