@@ -10,7 +10,6 @@
 "View" = "表示";
 "Toggle Sidebar" = "サイドバーの表示/非表示";
 "TOC Mode" = "目次モード";
-"Thumbnails Mode" = "サムネイルモード";
 "Find…" = "検索…";
 "Increase Font Size" = "文字を大きくする";
 "Decrease Font Size" = "文字を小さくする";
@@ -28,8 +27,6 @@
 
 /* Sidebar */
 "No headings found" = "見出しが見つかりません";
-"Generating thumbnails…" = "サムネイル生成中…";
-"Page %lld" = "%lldページ";
 
 /* Toolbar & Search */
 "Search" = "検索";

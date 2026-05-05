@@ -10,7 +10,6 @@
 "View" = "View";
 "Toggle Sidebar" = "Toggle Sidebar";
 "TOC Mode" = "TOC Mode";
-"Thumbnails Mode" = "Thumbnails Mode";
 "Find…" = "Find…";
 "Increase Font Size" = "Increase Font Size";
 "Decrease Font Size" = "Decrease Font Size";
@@ -28,8 +27,6 @@
 
 /* Sidebar */
 "No headings found" = "No headings found";
-"Generating thumbnails…" = "Generating thumbnails…";
-"Page %lld" = "Page %lld";
 
 /* Toolbar & Search */
 "Search" = "Search";

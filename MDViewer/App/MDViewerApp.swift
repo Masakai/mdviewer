@@ -31,18 +31,6 @@ struct MDViewerApp: App {
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
 
-                Button("TOC Mode") {
-                    NotificationCenter.default.post(name: .setSidebarModeTOC, object: nil)
-                }
-                .keyboardShortcut("1", modifiers: .command)
-
-                Button("Thumbnails Mode") {
-                    NotificationCenter.default.post(name: .setSidebarModeThumbnails, object: nil)
-                }
-                .keyboardShortcut("2", modifiers: .command)
-
-                Divider()
-
                 Button("Find…") {
                     NotificationCenter.default.post(name: .showSearchBar, object: nil)
                 }
@@ -88,8 +76,6 @@ struct MDViewerApp: App {
 // MARK: - Additional Notification names
 
 extension Notification.Name {
-    static let setSidebarModeTOC        = Notification.Name("MDViewer.setSidebarModeTOC")
-    static let setSidebarModeThumbnails = Notification.Name("MDViewer.setSidebarModeThumbnails")
     static let increaseFontSize         = Notification.Name("MDViewer.increaseFontSize")
     static let decreaseFontSize         = Notification.Name("MDViewer.decreaseFontSize")
     static let resetFontSize            = Notification.Name("MDViewer.resetFontSize")

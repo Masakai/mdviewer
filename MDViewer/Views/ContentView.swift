@@ -47,6 +47,7 @@ struct ContentView: View {
             // NavigationSplitView handles its own sidebar toggle
         }
         // Keyboard shortcuts via Commands are declared in MDViewerApp
+        .navigationTitle(documentVM.fileURL?.lastPathComponent ?? "MDViewer")
         .frame(minWidth: 800, minHeight: 600)
         .alert("Error", isPresented: Binding(
             get: { documentVM.errorMessage != nil },

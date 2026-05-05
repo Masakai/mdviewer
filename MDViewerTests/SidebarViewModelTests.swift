@@ -169,40 +169,4 @@ final class SidebarViewModelTests: XCTestCase {
         XCTAssertEqual(sut.tocItems[0].anchor, "chapter-2")
     }
 
-    // MARK: - TOC thumbnail management
-
-    func test_clearThumbnails_setsIsGeneratingTrue() {
-        // Arrange
-        sut.addThumbnail(ThumbnailItem(pageNumber: 1, image: NSImage()))
-
-        // Act
-        sut.clearThumbnails()
-
-        // Assert
-        XCTAssertTrue(sut.thumbnails.isEmpty)
-        XCTAssertTrue(sut.isGeneratingThumbnails)
-    }
-
-    func test_finishGeneratingThumbnails_setsIsGeneratingFalse() {
-        // Arrange
-        sut.clearThumbnails()
-
-        // Act
-        sut.finishGeneratingThumbnails()
-
-        // Assert
-        XCTAssertFalse(sut.isGeneratingThumbnails)
-    }
-
-    func test_addThumbnail_appendsToThumbnails() {
-        // Arrange
-        let item = ThumbnailItem(pageNumber: 1, image: NSImage())
-
-        // Act
-        sut.addThumbnail(item)
-
-        // Assert
-        XCTAssertEqual(sut.thumbnails.count, 1)
-        XCTAssertEqual(sut.thumbnails[0].pageNumber, 1)
-    }
 }

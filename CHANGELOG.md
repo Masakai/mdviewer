@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.3] — 2026-05-05
+
+### Added
+- Export: default filename now inherits the source Markdown filename (e.g. `README.pdf` instead of `document.pdf`); percent-encoded characters (Japanese, spaces) are decoded correctly
+- Title bar now displays the open filename instead of "MDViewer"
+
+### Removed
+- Page thumbnail sidebar removed; TOC sidebar only
+
+---
+
 ## [1.0.2] — 2026-05-05
 
 ### Changed
@@ -38,7 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - LaTeX math rendering via KaTeX v0.16 — inline `$…$` and block `$$…$$`
 - Mermaid diagram support — flowcharts, sequence diagrams, Gantt charts
 - Auto-generated table of contents sidebar from headings
-- Page thumbnail sidebar (generated via PDFKit)
+- Page thumbnail sidebar (generated via PDFKit) — removed in v1.0.3
 - Live file reload using `DispatchSource` (kqueue, 0.5 s debounce)
 - Local image loading via custom `mdviewer-local://` URL scheme handler
 - Theme switching — GitHub Light / GitHub Dark, follows macOS appearance

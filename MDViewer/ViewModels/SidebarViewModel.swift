@@ -3,16 +3,12 @@ import Markdown
 
 enum SidebarMode: String, CaseIterable {
     case toc
-    case thumbnails
 }
 
 @MainActor
 final class SidebarViewModel: ObservableObject {
     @Published var mode: SidebarMode = .toc
     @Published var tocItems: [TOCItem] = []
-    @Published var thumbnails: [ThumbnailItem] = []
-    @Published var isGeneratingThumbnails: Bool = false
-
     @AppStorage("sidebarMode") private var storedMode: String = SidebarMode.toc.rawValue
 
     init() {
@@ -76,19 +72,6 @@ final class SidebarViewModel: ObservableObject {
         // For simplicity, store flat list with indentation level — hierarchy is visual only
         stack.append(child)
         result.append(child)
-    }
-
-    func addThumbnail(_ thumbnail: ThumbnailItem) {
-        thumbnails.append(thumbnail)
-    }
-
-    func clearThumbnails() {
-        thumbnails.removeAll()
-        isGeneratingThumbnails = true
-    }
-
-    func finishGeneratingThumbnails() {
-        isGeneratingThumbnails = false
     }
 
     private func slugify(_ text: String) -> String {
