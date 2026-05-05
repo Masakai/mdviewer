@@ -1,6 +1,5 @@
 import SwiftUI
 import WebKit
-import PDFKit
 
 extension Notification.Name {
     static let openLocalDocument = Notification.Name("MDViewer.openLocalDocument")
@@ -115,39 +114,6 @@ struct WebRendererView: NSViewRepresentable {
         }
 
         private func handleRenderComplete() {
-            guard let wv = webView else { return }
-            Task { @MainActor in
-                await self.generateThumbnails(from: wv)
-            }
-        }
-
-        @MainActor
-        private func generateThumbnails(from webView: WKWebView) async {
-            sidebarVM.clearThumbnails()
-
-            let pdfResult: Result<Data, Error> = await withCheckedContinuation { continuation in
-                webView.createPDF(configuration: WKPDFConfiguration()) { continuation.resume(returning: $0) }
-            }
-
-            guard case .success(let pdfData) = pdfResult,
-                  let pdfDoc = PDFDocument(data: pdfData)
-            else {
-                sidebarVM.finishGeneratingThumbnails()
-                return
-            }
-
-            for i in 0..<pdfDoc.pageCount {
-                guard let page = pdfDoc.page(at: i) else { continue }
-                let bounds = page.bounds(for: .mediaBox)
-                let scale = 800.0 / bounds.width
-                let thumbnailSize = CGSize(width: 800, height: bounds.height * scale)
-                sidebarVM.addThumbnail(ThumbnailItem(
-                    pageNumber: i + 1,
-                    image: page.thumbnail(of: thumbnailSize, for: .mediaBox)
-                ))
-            }
-
-            sidebarVM.finishGeneratingThumbnails()
         }
 
         // MARK: - WKUIDelegate

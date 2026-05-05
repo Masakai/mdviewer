@@ -23,7 +23,6 @@
 		3D236439325C18E3F4A43422 /* DocumentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B662477F06988DCEF0BC7EFB /* DocumentViewModel.swift */; };
 		50CB997E51753CCA3001D8F3 /* HTMLBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A3AE79AFE1540DF1E64E63 /* HTMLBuilder.swift */; };
 		5F7C02E485197F76BA452735 /* TOCItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A361BBB972E658735E9D463A /* TOCItem.swift */; };
-		641BCDC68DD252BBD6F0021D /* ThumbnailGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E23B52EDE008CE75CF0F281F /* ThumbnailGridView.swift */; };
 		70D7AEF2D01DFE1F3B8D1CFD /* Markdown in Frameworks */ = {isa = PBXBuildFile; productRef = E19D4B1994888C01C4FF4641 /* Markdown */; };
 		7222D1C7E490636DDBAA7983 /* MainToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 199C7853071F731C2A69FF1A /* MainToolbar.swift */; };
 		7B5540C5920804A889333E1F /* ExportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE6CB25EB1DBEEF56BD07F65 /* ExportViewModel.swift */; };
@@ -31,7 +30,6 @@
 		A525A3D209D48DA76E6AF7A2 /* RenderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF0507FC7630CC161B17A4AC /* RenderViewModel.swift */; };
 		A68A96B026F1AF057C8DA634 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F06389C0B223D8C40FFAFF15 /* Localizable.strings */; };
 		A739EF050629669FD0DF7D9C /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09A371577BF803F4ACDBAC2 /* FileWatcher.swift */; };
-		AF0F67B859D9B4ED9100D55D /* ThumbnailItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7B84A419626ABAC0706D744 /* ThumbnailItem.swift */; };
 		BD552CED92488D339AEC4229 /* AppearancePrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298DB17004CE01CE37DC9066 /* AppearancePrefsView.swift */; };
 		C1DD0EBC2146C7AB379CA57C /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78804F6494175E634ED2FBB5 /* SidebarView.swift */; };
 		CB6D21A84509A808B489811E /* LocalSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F2A86EAF01F5135A7441D62 /* LocalSchemeHandler.swift */; };
@@ -71,9 +69,7 @@
 		C3D60B85CA1549F05A60B461 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		CE6CB25EB1DBEEF56BD07F65 /* ExportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportViewModel.swift; sourceTree = "<group>"; };
 		CF0507FC7630CC161B17A4AC /* RenderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderViewModel.swift; sourceTree = "<group>"; };
-		E23B52EDE008CE75CF0F281F /* ThumbnailGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailGridView.swift; sourceTree = "<group>"; };
 		F1A3AE79AFE1540DF1E64E63 /* HTMLBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLBuilder.swift; sourceTree = "<group>"; };
-		F7B84A419626ABAC0706D744 /* ThumbnailItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailItem.swift; sourceTree = "<group>"; };
 		FA57A9AF263F96706D2631FC /* MDViewer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MDViewer.entitlements; sourceTree = "<group>"; };
 		FDA18E02CB68528189A02F10 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AA100001AA100001AA100001 /* SidebarViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarViewModelTests.swift; sourceTree = "<group>"; };
@@ -141,7 +137,6 @@
 			children = (
 				B2BC8B805337C838B55437E1 /* MarkdownDocument.swift */,
 				C0EA5A08877B327149428960 /* MarkdownTheme.swift */,
-				F7B84A419626ABAC0706D744 /* ThumbnailItem.swift */,
 				A361BBB972E658735E9D463A /* TOCItem.swift */,
 			);
 			path = Models;
@@ -206,7 +201,6 @@
 			children = (
 				78804F6494175E634ED2FBB5 /* SidebarView.swift */,
 				15C32AB1D1B8488860BE2C2E /* TableOfContentsView.swift */,
-				E23B52EDE008CE75CF0F281F /* ThumbnailGridView.swift */,
 			);
 			path = Sidebar;
 			sourceTree = "<group>";
@@ -383,8 +377,6 @@
 				045452C77584D754FCA4A30C /* SidebarViewModel.swift in Sources */,
 				5F7C02E485197F76BA452735 /* TOCItem.swift in Sources */,
 				CC2660065413D1F67A6CC940 /* TableOfContentsView.swift in Sources */,
-				641BCDC68DD252BBD6F0021D /* ThumbnailGridView.swift in Sources */,
-				AF0F67B859D9B4ED9100D55D /* ThumbnailItem.swift in Sources */,
 				D57F5DB29E92668C7B550374 /* WebRendererView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

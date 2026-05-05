@@ -13,7 +13,6 @@ MDViewer was created out of a simple need: a fast, minimal way to read `.md` fil
 - **Instant rendering** — opens and renders Markdown files immediately
 - **Live reload** — watches for file changes and re-renders as you save
 - **Table of contents** — auto-generated sidebar from headings with smooth scroll
-- **Page thumbnails** — visual thumbnail strip for navigating long documents
 - **Syntax highlighting** — 27 languages via [Shiki v1](https://github.com/shikijs/shiki)
 - **Math equations** — inline and block LaTeX via [KaTeX](https://github.com/KaTeX/KaTeX)
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, and more

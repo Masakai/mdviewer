@@ -6,10 +6,16 @@ final class ExportViewModel: ObservableObject {
     @Published var isExporting: Bool = false
     @Published var errorMessage: String?
 
-    func exportToPDF(webView: WKWebView, pageSize: PDFPageSize = .a4) {
+    func baseName(for url: URL?) -> String {
+        guard let url else { return "document" }
+        let raw = url.deletingPathExtension().lastPathComponent
+        return raw.removingPercentEncoding ?? raw
+    }
+
+    func exportToPDF(webView: WKWebView, sourceURL: URL? = nil, pageSize: PDFPageSize = .a4) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
-        panel.nameFieldStringValue = "document.pdf"
+        panel.nameFieldStringValue = "\(baseName(for: sourceURL)).pdf"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
@@ -43,10 +49,10 @@ final class ExportViewModel: ObservableObject {
         isExporting = false
     }
 
-    func exportToHTML(webView: WKWebView) {
+    func exportToHTML(webView: WKWebView, sourceURL: URL? = nil) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.html]
-        panel.nameFieldStringValue = "document.html"
+        panel.nameFieldStringValue = "\(baseName(for: sourceURL)).html"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
