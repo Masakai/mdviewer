@@ -129,14 +129,7 @@ a:hover {
 }
 
 /* ── Shiki syntax highlighting ── */
-/* Light theme (default) */
-.shiki, .shiki span {
-    color: var(--shiki-light) !important;
-    background-color: var(--shiki-light-bg) !important;
-    font-style: var(--shiki-light-font-style) !important;
-    font-weight: var(--shiki-light-font-weight) !important;
-    text-decoration: var(--shiki-light-text-decoration) !important;
-}
+/* Light theme: Shiki sets colors as inline styles directly — no CSS override needed */
 /* Dark theme — toggled by body.dark-theme class */
 body.dark-theme .shiki, body.dark-theme .shiki span {
     color: var(--shiki-dark) !important;
@@ -188,4 +181,71 @@ body.dark-theme .shiki, body.dark-theme .shiki span {
 @keyframes highlight-fade {
     0%   { background-color: var(--highlight-bg, rgba(255, 220, 0, 0.4)); }
     100% { background-color: transparent; }
+}
+
+/* ── Print / PDF layout ── */
+@media print {
+    @page {
+        size: A4;
+        margin: 20mm 18mm;
+    }
+
+    html {
+        font-size: 10pt;
+    }
+
+    body {
+        padding: 0;
+        color: #000;
+        background: #fff;
+    }
+
+    #content {
+        max-width: 100%;
+        padding-top: 0;
+    }
+
+    /* Avoid page break inside these elements */
+    pre, blockquote, table, figure,
+    .mermaid, .code-block-wrapper {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Keep headings with the content that follows */
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+
+    /* Avoid orphaned first/last lines */
+    p {
+        orphans: 3;
+        widows: 3;
+    }
+
+    /* Force page break before h1 (except the very first one) */
+    h1 + * ~ h1 {
+        page-break-before: always;
+        break-before: page;
+    }
+
+    /* Ensure images don't overflow the page */
+    img {
+        max-width: 100%;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Remove link underline decoration in print */
+    a {
+        color: inherit;
+        text-decoration: underline;
+    }
+
+    /* Hide scroll-only decorations */
+    .heading-anchor-target {
+        animation: none;
+        background: none;
+    }
 }

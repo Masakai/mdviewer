@@ -38,34 +38,42 @@
     }
 
     function highlightCode(code, lang) {
-        if (!shikiHighlighter) {
+        const fallback = function () {
             const label = lang ? `<span class="code-lang-label">${escapeHtml(lang)}</span>` : '';
             return `<div class="code-block-wrapper">${label}<pre><code>${escapeHtml(code)}</code></pre></div>`;
+        };
+
+        if (!shikiHighlighter) { return fallback(); }
+
+        try {
+            const loaded = shikiHighlighter.getLoadedLanguages();
+            const resolvedLang = loaded.includes(lang) ? lang : 'text';
+
+            const html = shikiHighlighter.codeToHtml(code, {
+                lang: resolvedLang,
+                themes: { light: 'github-light', dark: 'github-dark' }
+            });
+
+            if (lang) {
+                return html
+                    .replace('<pre ', `<div class="code-block-wrapper"><span class="code-lang-label">${escapeHtml(lang)}</span><pre `)
+                    .replace('</pre>', '</pre></div>');
+            }
+            return html;
+        } catch (_) {
+            return fallback();
         }
-
-        const loaded = shikiHighlighter.getLoadedLanguages();
-        const resolvedLang = loaded.includes(lang) ? lang : 'text';
-
-        const html = shikiHighlighter.codeToHtml(code, {
-            lang: resolvedLang,
-            themes: { light: 'github-light', dark: 'github-dark' }
-        });
-
-        if (lang) {
-            return html
-                .replace('<pre ', `<div class="code-block-wrapper"><span class="code-lang-label">${escapeHtml(lang)}</span><pre `)
-                .replace('</pre>', '</pre></div>');
-        }
-        return html;
     }
 
     // -- Public MDViewer API (called from Swift via evaluateJavaScript)
     window.MDViewer = {
 
         setContent: async function (markdown) {
-            // Wait for Shiki if not yet ready
             if (!shikiHighlighter && window.__shikiReady) {
-                shikiHighlighter = await window.__shikiReady;
+                shikiHighlighter = await Promise.race([
+                    window.__shikiReady,
+                    new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 8000); })
+                ]);
             }
 
             const headingsRef = [];
