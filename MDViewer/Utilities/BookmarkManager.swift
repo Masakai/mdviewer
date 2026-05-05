@@ -9,9 +9,6 @@ final class BookmarkManager {
     private init() {}
 
     func save(url: URL) {
-        guard url.startAccessingSecurityScopedResource() else { return }
-        defer { url.stopAccessingSecurityScopedResource() }
-
         do {
             let data = try url.bookmarkData(
                 options: .withSecurityScope,

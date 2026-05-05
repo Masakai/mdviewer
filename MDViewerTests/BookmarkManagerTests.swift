@@ -4,15 +4,16 @@ import XCTest
 final class BookmarkManagerTests: XCTestCase {
 
     var sut: BookmarkManager!
-    private let testSuiteName = "com.mdviewer.tests.bookmark"
+    private var writtenKeys: [String] = []
 
     override func setUp() {
         super.setUp()
         sut = BookmarkManager.shared
+        writtenKeys = []
     }
 
     override func tearDown() {
-        UserDefaults.standard.removePersistentDomain(forName: testSuiteName)
+        writtenKeys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
         sut = nil
         super.tearDown()
     }
@@ -48,8 +49,9 @@ final class BookmarkManagerTests: XCTestCase {
     func test_save_fileOutsideSandbox_doesNotCrash() {
         // Arrange — normal temp file (not security-scoped, startAccessingSecurityScopedResource returns false)
         let url = URL(fileURLWithPath: "/tmp/test_bookmark_\(UUID().uuidString).md")
+        writtenKeys.append("bookmark_" + url.path)
 
-        // Act — should silently fail (guard returns false) without crashing
+        // Act — should silently fail without crashing
         sut.save(url: url)
 
         // Assert — no crash is the expectation

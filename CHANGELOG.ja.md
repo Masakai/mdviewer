@@ -6,6 +6,21 @@ MDViewer の主な変更はこのファイルに記録されます。
 
 ---
 
+## [1.0.4] — 2026-05-06
+
+### 追加
+- App Sandbox を有効化（`com.apple.security.app-sandbox`）。Entitlements に `user-selected.read-write` および `app-scope bookmarks` を設定
+- Hardened Runtime を有効化（`ENABLE_HARDENED_RUNTIME = YES`）
+- `DocumentViewModel` にセキュリティスコープのライフタイム管理を追加 — エラー時および `deinit` 時にスコープを正しく解放
+
+### 修正
+- `startAccessingSecurityScopedResource()` 成功後にファイル読み込みが失敗した場合のセキュリティスコープリークを修正
+- `saveLastOpened` / `restoreLastOpened` が `.withSecurityScope` オプションを使用するよう修正（再起動後の Sandbox 環境での復元に対応）
+- `BookmarkManager.save()`: 誤った `startAccessingSecurityScopedResource()` ガードを削除（スコープの管理は呼び出し元の責務）
+- テスト分離の修正: `BookmarkManagerTests` が存在しない UserDefaults スイートではなく、書き込んだキーのみを削除するよう変更
+
+---
+
 ## [1.0.3] — 2026-05-06
 
 ### 追加

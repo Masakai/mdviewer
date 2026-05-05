@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.4] — 2026-05-06
+
+### Added
+- App Sandbox enabled (`com.apple.security.app-sandbox`); entitlements set to `user-selected.read-write` and `app-scope bookmarks`
+- Hardened Runtime enabled (`ENABLE_HARDENED_RUNTIME = YES`)
+- Security-scoped bookmark lifetime management in `DocumentViewModel` — scope is correctly released on error and on `deinit`
+
+### Fixed
+- Security-scoped resource leak when file read fails after `startAccessingSecurityScopedResource()` succeeds
+- `saveLastOpened` / `restoreLastOpened` now use `.withSecurityScope` bookmark option for correct Sandbox behaviour after app restart
+- `BookmarkManager.save()`: removed erroneous `startAccessingSecurityScopedResource()` guard (caller owns the scope)
+- Test isolation: `BookmarkManagerTests` now removes only the keys it writes instead of a non-existent UserDefaults suite
+
+---
+
 ## [1.0.3] — 2026-05-05
 
 ### Added
