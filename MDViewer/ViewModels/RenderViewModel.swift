@@ -15,11 +15,8 @@ final class RenderViewModel: ObservableObject {
     weak var webView: WKWebView?
 
     private(set) var isRendererReady = false
-    private(set) var isContentReady = false
     private var pendingMarkdown: String? = nil
-    private var pendingFormat: String = "markdown"
     private var pendingBaseURL: URL? = nil
-    var pendingExport: (() -> Void)? = nil
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -59,27 +56,9 @@ final class RenderViewModel: ObservableObject {
     }
 
     func renderMarkdown(_ markdown: String) {
-        renderContent(markdown, format: "markdown")
-    }
-
-    func renderContent(_ text: String, format: String) {
-        isContentReady = false
-        guard isRendererReady else { pendingMarkdown = text; pendingFormat = format; return }
-        webView?.callAsyncJavaScript(
-            "return MDViewer.setContent(text, format)",
-            arguments: ["text": text, "format": format],
-            in: nil,
-            in: .page,
-            completionHandler: nil
-        )
-    }
-
-    func contentDidRender() {
-        isContentReady = true
-        if let export = pendingExport {
-            pendingExport = nil
-            export()
-        }
+        guard isRendererReady else { pendingMarkdown = markdown; return }
+        let escaped = escapeForJS(markdown)
+        webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
     }
 
     func rendererDidLoad() {
@@ -92,15 +71,9 @@ final class RenderViewModel: ObservableObject {
             webView?.evaluateJavaScript("MDViewer.setBaseURL('\(urlString)')", completionHandler: nil)
         }
         if let md = pendingMarkdown {
-            let fmt = pendingFormat
             pendingMarkdown = nil
-            webView?.callAsyncJavaScript(
-                "return MDViewer.setContent(text, format)",
-                arguments: ["text": md, "format": fmt],
-                in: nil,
-                in: .page,
-                completionHandler: nil
-            )
+            let escaped = escapeForJS(md)
+            webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
         }
     }
 

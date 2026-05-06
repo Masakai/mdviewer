@@ -22,30 +22,12 @@ final class SidebarViewModel: ObservableObject {
         storedMode = newMode.rawValue
     }
 
-    func extractTOC(from text: String, isAsciidoc: Bool = false) {
-        if isAsciidoc {
-            tocItems = extractAsciidocHeadings(from: text)
-        } else {
-            let document = Document(parsing: text)
-            var flat: [TOCItem] = []
-            collectHeadings(markup: document, into: &flat)
-            tocItems = buildHierarchy(from: flat)
-        }
-    }
-
-    private func extractAsciidocHeadings(from text: String) -> [TOCItem] {
+    // Parse headings from raw Markdown using swift-markdown
+    func extractTOC(from markdown: String) {
+        let document = Document(parsing: markdown)
         var flat: [TOCItem] = []
-        let pattern = try? NSRegularExpression(pattern: #"^(={1,6})\s+(.+)$"#, options: .anchorsMatchLines)
-        let nsText = text as NSString
-        pattern?.enumerateMatches(in: text, range: NSRange(location: 0, length: nsText.length)) { match, _, _ in
-            guard let match else { return }
-            let eqMarks = nsText.substring(with: match.range(at: 1))
-            let title = nsText.substring(with: match.range(at: 2))
-            let level = eqMarks.count
-            let anchor = slugify(title)
-            flat.append(TOCItem(level: level, title: title, anchor: "_" + anchor))
-        }
-        return flat
+        collectHeadings(markup: document, into: &flat)
+        tocItems = buildHierarchy(from: flat)
     }
 
     private func collectHeadings(markup: some Markup, into items: inout [TOCItem]) {

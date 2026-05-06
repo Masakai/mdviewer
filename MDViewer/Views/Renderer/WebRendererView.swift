@@ -114,7 +114,6 @@ struct WebRendererView: NSViewRepresentable {
         }
 
         private func handleRenderComplete() {
-            Task { @MainActor in self.renderVM.contentDidRender() }
         }
 
         // MARK: - WKUIDelegate

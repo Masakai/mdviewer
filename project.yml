@@ -36,6 +36,10 @@ targets:
           - $(SRCROOT)/MDViewer/Resources/Web
           - $(SRCROOT)/MDViewer/en.lproj
           - $(SRCROOT)/MDViewer/ja.lproj
+        outputFiles:
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Web
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/en.lproj
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ja.lproj
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mdviewer.app
