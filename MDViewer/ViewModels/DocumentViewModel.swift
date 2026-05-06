@@ -11,7 +11,6 @@ final class DocumentViewModel: ObservableObject {
     @AppStorage("lastOpenedBookmark") private var lastOpenedBookmarkData: Data = Data()
 
     private let fileWatcher = FileWatcher()
-    private var activeSecurityScopedURL: URL?
 
     init() {
         fileWatcher.onChange = { [weak self] in
@@ -36,10 +35,6 @@ final class DocumentViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        activeSecurityScopedURL?.stopAccessingSecurityScopedResource()
-        let scopeOpened = url.startAccessingSecurityScopedResource()
-        activeSecurityScopedURL = scopeOpened ? url : nil
-
         do {
             let contents = try String(contentsOf: url, encoding: .utf8)
             self.fileURL = url
@@ -48,16 +43,10 @@ final class DocumentViewModel: ObservableObject {
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
         } catch {
-            url.stopAccessingSecurityScopedResource()
-            activeSecurityScopedURL = nil
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
-    }
-
-    deinit {
-        activeSecurityScopedURL?.stopAccessingSecurityScopedResource()
     }
 
     func reload() {
@@ -75,7 +64,7 @@ final class DocumentViewModel: ObservableObject {
         var isStale = false
         if let url = try? URL(
             resolvingBookmarkData: lastOpenedBookmarkData,
-            options: .withSecurityScope,
+            options: [],
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         ) {
@@ -84,11 +73,7 @@ final class DocumentViewModel: ObservableObject {
     }
 
     private func saveLastOpened(url: URL) {
-        if let data = try? url.bookmarkData(
-            options: .withSecurityScope,
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        ) {
+        if let data = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
             lastOpenedBookmarkData = data
         }
     }
