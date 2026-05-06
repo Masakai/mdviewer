@@ -65,61 +65,10 @@
         }
     }
 
-    // -- Asciidoctor instance (lazy init)
-    let asciidoctorInstance = null;
-    function getAsciidoctor() {
-        if (!asciidoctorInstance && typeof Asciidoctor !== 'undefined') {
-            asciidoctorInstance = Asciidoctor();
-        }
-        return asciidoctorInstance;
-    }
-
-    function renderAsciidoc(text) {
-        const asciidoctor = getAsciidoctor();
-        if (!asciidoctor) { return '<pre>' + escapeHtml(text) + '</pre>'; }
-        return asciidoctor.convert(text, {
-            safe: 'safe',
-            attributes: { 'showtitle': true, 'sectids': true }
-        });
-    }
-
-    async function highlightAsciidocCodeBlocks(container) {
-        if (!shikiHighlighter) { return; }
-        const blocks = container.querySelectorAll('pre.highlight > code[data-lang]');
-        for (const codeEl of blocks) {
-            const lang = codeEl.getAttribute('data-lang') || 'text';
-            const code = codeEl.textContent;
-            const wrapper = codeEl.closest('.listingblock') || codeEl.parentElement;
-            try {
-                const loaded = shikiHighlighter.getLoadedLanguages();
-                const resolvedLang = loaded.includes(lang) ? lang : 'text';
-                const highlighted = shikiHighlighter.codeToHtml(code, {
-                    lang: resolvedLang,
-                    themes: { light: 'github-light', dark: 'github-dark' }
-                });
-                const div = document.createElement('div');
-                div.className = 'code-block-wrapper';
-                div.innerHTML = `<span class="code-lang-label">${escapeHtml(lang)}</span>` + highlighted;
-                wrapper.replaceWith(div);
-            } catch (_) {}
-        }
-    }
-
-    function collectHeadingsFromDOM(container) {
-        const headings = [];
-        container.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(function (el) {
-            const level = parseInt(el.tagName.charAt(1), 10);
-            const anchor = el.id || slugify(el.textContent);
-            if (!el.id && anchor) { el.id = anchor; }
-            headings.push({ level: level, title: el.textContent.trim(), anchor: anchor });
-        });
-        return headings;
-    }
-
     // -- Public MDViewer API (called from Swift via evaluateJavaScript)
     window.MDViewer = {
 
-        setContent: async function (text, format) {
+        setContent: async function (markdown) {
             if (!shikiHighlighter && window.__shikiReady) {
                 shikiHighlighter = await Promise.race([
                     window.__shikiReady,
@@ -127,74 +76,66 @@
                 ]);
             }
 
-            const contentEl = document.getElementById('content');
-            let headingsRef = [];
+            const headingsRef = [];
+            const renderer = new marked.Renderer();
 
-            if (format === 'asciidoc') {
-                contentEl.innerHTML = renderAsciidoc(text);
-                await highlightAsciidocCodeBlocks(contentEl);
-                headingsRef = collectHeadingsFromDOM(contentEl);
-            } else {
-                const renderer = new marked.Renderer();
+            renderer.heading = function (text, level, raw) {
+                const anchor = slugify(typeof raw === 'string' ? raw : text);
+                headingsRef.push({ level: level, title: typeof raw === 'string' ? raw : text, anchor: anchor });
+                return `<h${level} id="${anchor}">${text}</h${level}>\n`;
+            };
 
-                renderer.heading = function (text, level, raw) {
-                    const anchor = slugify(typeof raw === 'string' ? raw : text);
-                    headingsRef.push({ level: level, title: typeof raw === 'string' ? raw : text, anchor: anchor });
-                    return `<h${level} id="${anchor}">${text}</h${level}>\n`;
-                };
-
-                renderer.code = function (code, lang) {
-                    if (lang === 'mermaid') {
-                        return `<div class="mermaid">${escapeHtml(code)}</div>`;
-                    }
-                    return highlightCode(code, lang);
-                };
-
-                // Pre-process math: protect $...$ from marked parsing
-                const mathBlocks = [];
-                let processed = text;
-
-                processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
-                    const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
-                    mathBlocks.push({ type: 'block', expr: expr.trim() });
-                    return placeholder;
-                });
-
-                processed = processed.replace(/\$([^$\n]+?)\$/g, function (_, expr) {
-                    const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
-                    mathBlocks.push({ type: 'inline', expr: expr.trim() });
-                    return placeholder;
-                });
-
-                let html = marked.parse(processed, { renderer: renderer });
-
-                // Restore math
-                if (typeof katex !== 'undefined') {
-                    mathBlocks.forEach(function (m, i) {
-                        const blockPh = new RegExp(`MATHBLOCK_${i}_END`, 'g');
-                        const inlinePh = new RegExp(`MATHINLINE_${i}_END`, 'g');
-                        try {
-                            const rendered = katex.renderToString(m.expr, {
-                                displayMode: m.type === 'block',
-                                throwOnError: false
-                            });
-                            html = html.replace(blockPh, rendered).replace(inlinePh, rendered);
-                        } catch (e) {
-                            html = html.replace(blockPh, escapeHtml(m.expr))
-                                       .replace(inlinePh, escapeHtml(m.expr));
-                        }
-                    });
+            renderer.code = function (code, lang) {
+                if (lang === 'mermaid') {
+                    return `<div class="mermaid">${escapeHtml(code)}</div>`;
                 }
+                return highlightCode(code, lang);
+            };
 
-                contentEl.innerHTML = html;
+            // Pre-process math: protect $...$ from marked parsing
+            const mathBlocks = [];
+            let processed = markdown;
 
-                // Render Mermaid diagrams
-                if (typeof mermaid !== 'undefined') {
+            processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
+                const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
+                mathBlocks.push({ type: 'block', expr: expr.trim() });
+                return placeholder;
+            });
+
+            processed = processed.replace(/\$([^$\n]+?)\$/g, function (_, expr) {
+                const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
+                mathBlocks.push({ type: 'inline', expr: expr.trim() });
+                return placeholder;
+            });
+
+            let html = marked.parse(processed, { renderer: renderer });
+
+            // Restore math
+            if (typeof katex !== 'undefined') {
+                mathBlocks.forEach(function (m, i) {
+                    const blockPh = new RegExp(`MATHBLOCK_${i}_END`, 'g');
+                    const inlinePh = new RegExp(`MATHINLINE_${i}_END`, 'g');
                     try {
-                        mermaid.run({ querySelector: '.mermaid' });
+                        const rendered = katex.renderToString(m.expr, {
+                            displayMode: m.type === 'block',
+                            throwOnError: false
+                        });
+                        html = html.replace(blockPh, rendered).replace(inlinePh, rendered);
                     } catch (e) {
-                        console.warn('Mermaid render error:', e);
+                        html = html.replace(blockPh, escapeHtml(m.expr))
+                                   .replace(inlinePh, escapeHtml(m.expr));
                     }
+                });
+            }
+
+            document.getElementById('content').innerHTML = html;
+
+            // Render Mermaid diagrams
+            if (typeof mermaid !== 'undefined') {
+                try {
+                    mermaid.run({ querySelector: '.mermaid' });
+                } catch (e) {
+                    console.warn('Mermaid render error:', e);
                 }
             }
 
@@ -230,24 +171,6 @@
 
         setFontSize: function (size) {
             document.documentElement.style.setProperty('--font-size', size + 'px');
-        },
-
-        preparePrint: function () {
-            // ShikiのdualテーマはCSS変数(--shiki-light/--shiki-dark)で色指定するため
-            // 印刷時に色が消える。印刷前にinlineスタイルの変数を実際の値に解決する。
-            const isDark = document.body.classList.contains('dark-theme');
-            const varName = isDark ? '--shiki-dark' : '--shiki-light';
-            const bgVarName = isDark ? '--shiki-dark-bg' : '--shiki-light-bg';
-            document.querySelectorAll('.shiki span[style]').forEach(function (el) {
-                const style = el.getAttribute('style');
-                const match = style.match(new RegExp(varName + ':\\s*([^;]+)'));
-                if (match) { el.style.color = match[1].trim(); }
-            });
-            document.querySelectorAll('.shiki').forEach(function (el) {
-                const style = el.getAttribute('style') || '';
-                const match = style.match(new RegExp(bgVarName + ':\\s*([^;]+)'));
-                if (match) { el.style.backgroundColor = match[1].trim(); }
-            });
         },
 
         scrollToAnchor: function (anchorId) {
@@ -314,12 +237,7 @@
         const href = link.getAttribute('href');
         if (!href) return;
 
-        if (href.startsWith('#')) {
-            e.preventDefault();
-            const target = document.getElementById(href.slice(1));
-            if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-            return;
-        }
+        if (href.startsWith('#')) return;
 
         e.preventDefault();
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.linkClicked) {

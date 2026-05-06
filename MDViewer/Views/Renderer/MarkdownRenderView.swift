@@ -34,9 +34,8 @@ struct MarkdownRenderView: View {
                     if let fileURL = documentVM.fileURL {
                         renderVM.setBaseURL(fileURL.deletingLastPathComponent())
                     }
-                    let format = documentVM.fileFormat
-                    renderVM.renderContent(newText, format: format)
-                    sidebarVM.extractTOC(from: newText, isAsciidoc: format == "asciidoc")
+                    renderVM.renderMarkdown(newText)
+                    sidebarVM.extractTOC(from: newText)
                 }
                 .onChange(of: colorScheme) { _, newScheme in
                     renderVM.applySystemAppearance(isDark: newScheme == .dark)
@@ -61,9 +60,8 @@ struct MarkdownRenderView: View {
         .onAppear {
             renderVM.applyCurrentThemeAndFontSize()
             if !documentVM.text.isEmpty {
-                let format = documentVM.fileFormat
-                renderVM.renderContent(documentVM.text, format: format)
-                sidebarVM.extractTOC(from: documentVM.text, isAsciidoc: format == "asciidoc")
+                renderVM.renderMarkdown(documentVM.text)
+                sidebarVM.extractTOC(from: documentVM.text)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .showSearchBar)) { _ in
