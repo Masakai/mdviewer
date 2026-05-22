@@ -4,7 +4,9 @@
 "Open Markdown File (⌘O)" = "Open Markdown File (⌘O)";
 "Open" = "Open";
 "Reload" = "Reload";
+"Save" = "Save";
 "Open a Markdown file to get started" = "Open a Markdown file to get started";
+"Toggle Editor Mode" = "Toggle Editor Mode";
 
 /* Menu - View */
 "View" = "View";
@@ -42,3 +44,10 @@
 /* Alerts */
 "Error" = "Error";
 "OK" = "OK";
+
+/* Unsaved changes dialog */
+"unsaved_changes_title" = "Save changes to this document?";
+"unsaved_changes_message" = "Your changes will be lost if you close this window without saving.";
+"save_button" = "Save";
+"discard_button" = "Don't Save";
+"cancel_button" = "Cancel";

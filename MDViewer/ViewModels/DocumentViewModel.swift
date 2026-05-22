@@ -7,6 +7,7 @@ final class DocumentViewModel: ObservableObject {
     @Published var fileURL: URL?
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var isDirty: Bool = false
 
     @AppStorage("lastOpenedBookmark") private var lastOpenedBookmarkData: Data = Data()
 
@@ -39,6 +40,7 @@ final class DocumentViewModel: ObservableObject {
             let contents = try String(contentsOf: url, encoding: .utf8)
             self.fileURL = url
             self.text = contents
+            self.isDirty = false
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
@@ -53,7 +55,24 @@ final class DocumentViewModel: ObservableObject {
         guard let url = fileURL else { return }
         do {
             let contents = try String(contentsOf: url, encoding: .utf8)
+            self.isDirty = false
             self.text = contents
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func updateText(_ newText: String) {
+        guard text != newText else { return }
+        isDirty = true
+        text = newText
+    }
+
+    func save() {
+        guard let url = fileURL else { return }
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            isDirty = false
         } catch {
             errorMessage = error.localizedDescription
         }
