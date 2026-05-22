@@ -4,6 +4,7 @@ struct MainToolbar: ToolbarContent {
     @ObservedObject var documentVM: DocumentViewModel
     @ObservedObject var renderVM: RenderViewModel
     @ObservedObject var exportVM: ExportViewModel
+    var isEditorMode: Bool
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
@@ -16,6 +17,26 @@ struct MainToolbar: ToolbarContent {
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
+            // Editor toggle button
+            Button {
+                NotificationCenter.default.post(name: .toggleEditorMode, object: nil)
+            } label: {
+                Label("Editor", systemImage: "pencil")
+            }
+            .foregroundColor(isEditorMode ? .accentColor : .primary)
+            .help("Toggle Editor Mode (⌘E)")
+
+            // Save button
+            Button {
+                NotificationCenter.default.post(name: .saveFile, object: nil)
+            } label: {
+                Label("Save", systemImage: "externaldrive")
+            }
+            .disabled(!documentVM.isDirty)
+            .help("Save (⌘S)")
+
+            Divider()
+
             // Font size controls
             HStack(spacing: 4) {
                 Button {

@@ -8,6 +8,8 @@ A lightweight, native macOS Markdown viewer built for developers.
 
 MDViewer was created out of a simple need: a fast, minimal way to read `.md` files when working from the terminal with tools like Claude Code or Codex. It renders Markdown beautifully without the overhead of a browser or a full editor.
 
+MDViewer started as a viewer — but we wanted editing too, so it now includes a built-in split-view editor.
+
 ## Features
 
 - **Instant rendering** — opens and renders Markdown files immediately
@@ -19,6 +21,15 @@ MDViewer was created out of a simple need: a fast, minimal way to read `.md` fil
 - **Smart link handling** — local `.md` links open in-app; external links open in the browser
 - **Export to PDF** — one-click PDF export preserving all styles
 - **Signed & notarized** — Developer ID signing and Apple notarization
+
+### Editor Mode
+
+Toggle the built-in editor with **⌘E** or the pencil button in the toolbar.
+
+- **Split view**: Editor on the left, live preview on the right
+- **Save**: ⌘S saves changes to the current file
+- Unsaved changes are indicated by the Save button becoming active
+- Closing the window with unsaved changes prompts Save / Discard / Cancel
 
 ## Requirements
 

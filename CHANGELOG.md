@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.0] — 2026-05-22
+
+### Added
+- Split-view editor mode: toggle with ⌘E or the toolbar pencil button
+- Left editor pane with monospaced text input and live preview on the right
+- Save support: ⌘S saves changes to the current file (read-write sandbox entitlement)
+- Unsaved-change guard: closing the window with unsaved changes prompts Save / Discard / Cancel
+
+---
+
 ## [1.0.3] — 2026-05-05
 
 ### Added
