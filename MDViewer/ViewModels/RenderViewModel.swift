@@ -13,6 +13,7 @@ final class RenderViewModel: ObservableObject {
     @AppStorage("pdfPageSize") private var storedPDFPageSize: String = PDFPageSize.a4.rawValue
 
     weak var webView: WKWebView?
+    weak var schemeHandler: LocalSchemeHandler?
 
     private(set) var isRendererReady = false
     private var pendingMarkdown: String? = nil
@@ -50,9 +51,17 @@ final class RenderViewModel: ObservableObject {
     func resetFontSize()    { setFontSize(16) }
 
     func setBaseURL(_ directoryURL: URL) {
+        // The Markdown file's directory is served to the WebView through the
+        // custom mdviewer-local:// scheme handler, which enforces path security.
+        schemeHandler?.baseDirectory = directoryURL.standardizedFileURL
         guard isRendererReady else { pendingBaseURL = directoryURL; return }
-        let urlString = directoryURL.absoluteString.replacingOccurrences(of: "'", with: "\\'")
-        webView?.evaluateJavaScript("MDViewer.setBaseURL('\(urlString)')", completionHandler: nil)
+        applyBaseURL()
+    }
+
+    private func applyBaseURL() {
+        // Relative resource URLs in the rendered HTML resolve against this base,
+        // so `image.png` becomes `mdviewer-local://localhost/image.png`.
+        webView?.evaluateJavaScript("MDViewer.setBaseURL('mdviewer-local://localhost/')", completionHandler: nil)
     }
 
     func renderMarkdown(_ markdown: String) {
@@ -65,10 +74,9 @@ final class RenderViewModel: ObservableObject {
         isRendererReady = true
         applyCurrentThemeAndFontSize()
         applyPDFPageSize()
-        if let url = pendingBaseURL {
+        if pendingBaseURL != nil {
             pendingBaseURL = nil
-            let urlString = url.absoluteString.replacingOccurrences(of: "'", with: "\\'")
-            webView?.evaluateJavaScript("MDViewer.setBaseURL('\(urlString)')", completionHandler: nil)
+            applyBaseURL()
         }
         if let md = pendingMarkdown {
             pendingMarkdown = nil

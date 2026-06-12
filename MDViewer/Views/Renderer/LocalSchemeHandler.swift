@@ -7,24 +7,34 @@ final class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
     var baseDirectory: URL?
 
     func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
-        guard let url = urlSchemeTask.request.url,
-              let host = url.host
-        else {
+        guard let url = urlSchemeTask.request.url else {
             urlSchemeTask.didFailWithError(URLError(.badURL))
             return
         }
 
-        // Reconstruct file path from the scheme URL: mdviewer-local://path/to/image.png
-        let relativePath = url.path.isEmpty ? host : host + url.path
         guard let base = baseDirectory else {
             urlSchemeTask.didFailWithError(URLError(.fileDoesNotExist))
             return
         }
 
+        // URL form: mdviewer-local://localhost/<relative-path>
+        // The relative path lives in url.path; strip the leading slash and
+        // percent-decode it before resolving against the base directory.
+        let rawPath = url.path.hasPrefix("/") ? String(url.path.dropFirst()) : url.path
+        let relativePath = rawPath.removingPercentEncoding ?? rawPath
+        guard !relativePath.isEmpty else {
+            urlSchemeTask.didFailWithError(URLError(.badURL))
+            return
+        }
+
         let fileURL = base.appendingPathComponent(relativePath).standardized
 
-        // Security: ensure the resolved path stays within the base directory
-        guard fileURL.path.hasPrefix(base.standardized.path) else {
+        // Security: ensure the resolved path stays within the base directory.
+        // Append a trailing slash to the base so a sibling directory whose name
+        // shares a prefix (e.g. /a/b vs /a/bc) cannot pass the check.
+        let basePath = base.standardized.path
+        let baseBoundary = basePath.hasSuffix("/") ? basePath : basePath + "/"
+        guard fileURL.path == basePath || fileURL.path.hasPrefix(baseBoundary) else {
             urlSchemeTask.didFailWithError(URLError(.noPermissionsToReadFile))
             return
         }

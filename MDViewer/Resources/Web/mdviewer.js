@@ -65,6 +65,30 @@
         }
     }
 
+    // Base directory for resolving relative image paths, served via the
+    // mdviewer-local:// custom scheme. Set by Swift through setBaseURL().
+    let localBaseURL = null;
+
+    // Rewrite relative image sources (and other local resources) to the
+    // mdviewer-local:// scheme so the Swift scheme handler can serve them.
+    // Absolute URLs (http, https, data, file, the scheme itself) are left alone.
+    function rewriteLocalResources(root) {
+        if (!localBaseURL) { return; }
+
+        const isAbsolute = function (src) {
+            return /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith('//') || src.startsWith('#');
+        };
+
+        root.querySelectorAll('img[src]').forEach(function (img) {
+            const src = img.getAttribute('src');
+            if (!src || isAbsolute(src)) { return; }
+            // Encode each path segment but preserve slashes.
+            const encoded = src.split('/').map(encodeURIComponent).join('/');
+            const path = encoded.startsWith('/') ? encoded.slice(1) : encoded;
+            img.setAttribute('src', localBaseURL + path);
+        });
+    }
+
     // -- Public MDViewer API (called from Swift via evaluateJavaScript)
     window.MDViewer = {
 
@@ -128,7 +152,11 @@
                 });
             }
 
-            document.getElementById('content').innerHTML = html;
+            const contentEl = document.getElementById('content');
+            contentEl.innerHTML = html;
+
+            // Resolve relative image paths against the Markdown file's directory
+            rewriteLocalResources(contentEl);
 
             // Render Mermaid diagrams
             if (typeof mermaid !== 'undefined') {
@@ -191,13 +219,14 @@
         },
 
         setBaseURL: function (url) {
-            let base = document.getElementById('mdviewer-base');
-            if (!base) {
-                base = document.createElement('base');
-                base.id = 'mdviewer-base';
-                document.head.insertBefore(base, document.head.firstChild);
-            }
-            base.href = url;
+            // Store the base for relative image resolution. We do NOT set a
+            // <base> element, since that would also redirect the renderer's own
+            // relative resources (theme CSS, vendor scripts) and break them.
+            localBaseURL = url;
+
+            // Re-resolve any images already in the DOM (base may arrive after content).
+            const contentEl = document.getElementById('content');
+            if (contentEl) { rewriteLocalResources(contentEl); }
         }
     };
 
