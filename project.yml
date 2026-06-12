@@ -12,6 +12,25 @@ packages:
     from: "0.5.0"
 
 targets:
+  MDViewerQL:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: MDViewer/MDViewerQL
+        createIntermediateGroups: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mdviewer.app.qlextension
+        SWIFT_VERSION: 5.9
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "YES"
+        ENABLE_HARDENED_RUNTIME: "NO"
+        CODE_SIGN_ENTITLEMENTS: MDViewer/MDViewerQL/MDViewerQL.entitlements
+        INFOPLIST_FILE: MDViewer/MDViewerQL/Info.plist
+
   MDViewer:
     type: application
     platform: macOS
@@ -20,9 +39,16 @@ targets:
       - path: MDViewer
         excludes:
           - Resources
+          - MDViewerQL
         createIntermediateGroups: true
-    resources:
+      # アセットカタログ（アプリアイコン）はビルドでコンパイルする必要があるため
+      # 明示的にソースへ含める。Resources 全体は上で excludes しているので個別指定。
       - path: MDViewer/Resources/Assets.xcassets
+    dependencies:
+      - package: swift-markdown
+        product: Markdown
+      - target: MDViewerQL
+        embed: true
     postCompileScripts:
       - name: "Copy Web Resources"
         script: |
@@ -52,8 +78,5 @@ targets:
         CODE_SIGN_ENTITLEMENTS: MDViewer/MDViewer.entitlements
         INFOPLIST_FILE: MDViewer/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    dependencies:
-      - package: swift-markdown
-        product: Markdown
     entitlements:
       path: MDViewer/MDViewer.entitlements
