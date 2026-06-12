@@ -38,6 +38,7 @@ struct WebRendererView: NSViewRepresentable {
 
         context.coordinator.webView = webView
         renderVM.webView = webView
+        renderVM.schemeHandler = context.coordinator.schemeHandler
 
         loadRenderer(webView: webView)
 

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.1] — 2026-06-12
+
+### Fixed
+- Local images stored alongside the Markdown file are now rendered correctly. Relative image paths are served through the `mdviewer-local://` scheme handler instead of `file://`, which the WebView sandbox had been blocking (images previously appeared as broken links).
+
+---
+
 ## [1.1.0] — 2026-05-22
 
 ### Added
