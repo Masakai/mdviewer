@@ -1,8 +1,8 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct ContentView: View {
-    var initialURL: URL? = nil
+    var initialURL: URL?
 
     @StateObject private var documentVM = DocumentViewModel()
     @StateObject private var sidebarVM = SidebarViewModel()
@@ -21,7 +21,7 @@ struct ContentView: View {
             },
             detail: {
                 Group {
-                    if documentVM.text.isEmpty && documentVM.fileURL == nil {
+                    if documentVM.text.isEmpty, documentVM.fileURL == nil {
                         WelcomeView(documentVM: documentVM)
                     } else {
                         HSplitView {
@@ -91,9 +91,8 @@ struct ContentView: View {
 private struct WindowCloseInterceptor: NSViewRepresentable {
     let documentVM: DocumentViewModel
 
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        return view
+    func makeNSView(context _: Context) -> NSView {
+        NSView()
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
@@ -114,7 +113,7 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
             self.documentVM = documentVM
         }
 
-        func windowShouldClose(_ sender: NSWindow) -> Bool {
+        func windowShouldClose(_: NSWindow) -> Bool {
             guard documentVM.isDirty else { return true }
 
             let alert = NSAlert()
@@ -181,9 +180,9 @@ struct WelcomeView: View {
 // MARK: - Notification names
 
 extension Notification.Name {
-    static let openFile        = Notification.Name("MDViewer.openFile")
-    static let reloadFile      = Notification.Name("MDViewer.reloadFile")
-    static let saveFile        = Notification.Name("MDViewer.saveFile")
-    static let toggleSidebar   = Notification.Name("MDViewer.toggleSidebar")
+    static let openFile = Notification.Name("MDViewer.openFile")
+    static let reloadFile = Notification.Name("MDViewer.reloadFile")
+    static let saveFile = Notification.Name("MDViewer.saveFile")
+    static let toggleSidebar = Notification.Name("MDViewer.toggleSidebar")
     static let toggleEditorMode = Notification.Name("MDViewer.toggleEditorMode")
 }

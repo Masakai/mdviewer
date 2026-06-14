@@ -1,5 +1,5 @@
-import SwiftUI
 import Combine
+import SwiftUI
 import WebKit
 
 @MainActor
@@ -16,8 +16,8 @@ final class RenderViewModel: ObservableObject {
     weak var schemeHandler: LocalSchemeHandler?
 
     private(set) var isRendererReady = false
-    private var pendingMarkdown: String? = nil
-    private var pendingBaseURL: URL? = nil
+    private var pendingMarkdown: String?
+    private var pendingBaseURL: URL?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -46,9 +46,17 @@ final class RenderViewModel: ObservableObject {
         webView?.evaluateJavaScript("MDViewer.setFontSize(\(Int(clamped)))", completionHandler: nil)
     }
 
-    func increaseFontSize() { setFontSize(fontSize + 2) }
-    func decreaseFontSize() { setFontSize(fontSize - 2) }
-    func resetFontSize()    { setFontSize(16) }
+    func increaseFontSize() {
+        setFontSize(fontSize + 2)
+    }
+
+    func decreaseFontSize() {
+        setFontSize(fontSize - 2)
+    }
+
+    func resetFontSize() {
+        setFontSize(16)
+    }
 
     func setBaseURL(_ directoryURL: URL) {
         // The Markdown file's directory is served to the WebView through the
@@ -118,9 +126,9 @@ final class RenderViewModel: ObservableObject {
     }
 
     func applySystemAppearance(isDark: Bool) {
-        if storedThemeId == MarkdownTheme.githubLight.id && isDark {
+        if storedThemeId == MarkdownTheme.githubLight.id, isDark {
             setTheme(.githubDark)
-        } else if storedThemeId == MarkdownTheme.githubDark.id && !isDark {
+        } else if storedThemeId == MarkdownTheme.githubDark.id, !isDark {
             setTheme(.githubLight)
         }
     }
@@ -128,7 +136,7 @@ final class RenderViewModel: ObservableObject {
     private func escapeForJS(_ text: String) -> String {
         text
             .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "'",  with: "\\'")
+            .replacingOccurrences(of: "'", with: "\\'")
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\r", with: "\\r")
             .replacingOccurrences(of: "</", with: "<\\/")

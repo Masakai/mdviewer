@@ -1,5 +1,5 @@
-import SwiftUI
 import Combine
+import SwiftUI
 
 @MainActor
 final class DocumentViewModel: ObservableObject {
@@ -9,7 +9,7 @@ final class DocumentViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isDirty: Bool = false
 
-    @AppStorage("lastOpenedBookmark") private var lastOpenedBookmarkData: Data = Data()
+    @AppStorage("lastOpenedBookmark") private var lastOpenedBookmarkData: Data = .init()
 
     private let fileWatcher = FileWatcher()
 
@@ -38,9 +38,9 @@ final class DocumentViewModel: ObservableObject {
 
         do {
             let contents = try String(contentsOf: url, encoding: .utf8)
-            self.fileURL = url
-            self.text = contents
-            self.isDirty = false
+            fileURL = url
+            text = contents
+            isDirty = false
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
@@ -55,8 +55,8 @@ final class DocumentViewModel: ObservableObject {
         guard let url = fileURL else { return }
         do {
             let contents = try String(contentsOf: url, encoding: .utf8)
-            self.isDirty = false
-            self.text = contents
+            isDirty = false
+            text = contents
         } catch {
             errorMessage = error.localizedDescription
         }

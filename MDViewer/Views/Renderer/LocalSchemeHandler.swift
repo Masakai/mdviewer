@@ -1,12 +1,12 @@
 import WebKit
 
-// Handles `mdviewer-local://` scheme requests to serve local image files
-// to WKWebView while enforcing path security.
+/// Handles `mdviewer-local://` scheme requests to serve local image files
+/// to WKWebView while enforcing path security.
 final class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
-    // The directory that contains the currently opened Markdown file.
+    /// The directory that contains the currently opened Markdown file.
     var baseDirectory: URL?
 
-    func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
+    func webView(_: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
         guard let url = urlSchemeTask.request.url else {
             urlSchemeTask.didFailWithError(URLError(.badURL))
             return
@@ -56,18 +56,18 @@ final class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
         }
     }
 
-    func webView(_ webView: WKWebView, stop urlSchemeTask: any WKURLSchemeTask) {
+    func webView(_: WKWebView, stop _: any WKURLSchemeTask) {
         // No-op: tasks complete synchronously
     }
 
     private func mimeType(for ext: String) -> String {
         switch ext.lowercased() {
-        case "png":  return "image/png"
-        case "jpg", "jpeg": return "image/jpeg"
-        case "gif":  return "image/gif"
-        case "svg":  return "image/svg+xml"
-        case "webp": return "image/webp"
-        default:     return "application/octet-stream"
+        case "png": "image/png"
+        case "jpg", "jpeg": "image/jpeg"
+        case "gif": "image/gif"
+        case "svg": "image/svg+xml"
+        case "webp": "image/webp"
+        default: "application/octet-stream"
         }
     }
 }

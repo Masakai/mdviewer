@@ -41,9 +41,9 @@ struct TableOfContentsView: View {
 
     private func fontForLevel(_ level: Int) -> Font {
         switch level {
-        case 1: return .headline
-        case 2: return .subheadline
-        default: return .caption
+        case 1: .headline
+        case 2: .subheadline
+        default: .caption
         }
     }
 }

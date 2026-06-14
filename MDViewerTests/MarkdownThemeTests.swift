@@ -2,7 +2,6 @@ import XCTest
 @testable import MDViewer
 
 final class MarkdownThemeTests: XCTestCase {
-
     // MARK: - Theme list completeness
 
     func test_allThemes_isNotEmpty() {

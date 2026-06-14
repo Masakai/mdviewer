@@ -1,9 +1,8 @@
 import Cocoa
 import Quartz
 
-// Phase 1 スパイク: .mdファイルの認識確認と親ディレクトリ画像アクセスの可否確認
+/// Phase 1 スパイク: .mdファイルの認識確認と親ディレクトリ画像アクセスの可否確認
 final class PreviewViewController: NSViewController, QLPreviewingController {
-
     private let label = NSTextField(labelWithString: "")
 
     override func loadView() {
@@ -18,7 +17,7 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
             label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             label.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, constant: -40),
         ])
-        self.view = container
+        view = container
     }
 
     func preparePreviewOfFile(at url: URL, completionHandler handler: @escaping (Error?) -> Void) {
