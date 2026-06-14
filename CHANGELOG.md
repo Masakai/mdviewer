@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.2] — 2026-06-14
+
+### Changed
+- Internal code formatting only: the entire Swift codebase was reformatted with SwiftFormat to enforce the 4-space indentation convention. No functional or behavioral changes.
+
+---
+
 ## [1.1.1] — 2026-06-12
 
 ### Fixed
