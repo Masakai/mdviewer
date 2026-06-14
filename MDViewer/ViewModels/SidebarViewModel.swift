@@ -1,5 +1,5 @@
-import SwiftUI
 import Markdown
+import SwiftUI
 
 enum SidebarMode: String, CaseIterable {
     case toc
@@ -22,7 +22,7 @@ final class SidebarViewModel: ObservableObject {
         storedMode = newMode.rawValue
     }
 
-    // Parse headings from raw Markdown using swift-markdown
+    /// Parse headings from raw Markdown using swift-markdown
     func extractTOC(from markdown: String) {
         let document = Document(parsing: markdown)
         var flat: [TOCItem] = []
@@ -42,7 +42,7 @@ final class SidebarViewModel: ObservableObject {
         }
     }
 
-    // Build a tree from a flat heading list (H1 > H2 > H3...)
+    /// Build a tree from a flat heading list (H1 > H2 > H3...)
     private func buildHierarchy(from flat: [TOCItem]) -> [TOCItem] {
         var result: [TOCItem] = []
         var stack: [TOCItem] = []
@@ -84,7 +84,7 @@ final class SidebarViewModel: ObservableObject {
     }
 }
 
-// Provide plainText on Heading
+/// Provide plainText on Heading
 private extension Heading {
     var plainText: String {
         children.compactMap { ($0 as? Markdown.Text)?.string }.joined()

@@ -2,7 +2,6 @@ import XCTest
 @testable import MDViewer
 
 final class HTMLBuilderTests: XCTestCase {
-
     // MARK: - rendererURL
 
     func test_rendererURL_inTestBundle_returnsNilOrURL() {

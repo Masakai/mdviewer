@@ -30,16 +30,16 @@ struct MarkdownRenderView: View {
                 }
             }
             .onReceive(documentVM.$text) { newText in
-                    guard !newText.isEmpty else { return }
-                    if let fileURL = documentVM.fileURL {
-                        renderVM.setBaseURL(fileURL.deletingLastPathComponent())
-                    }
-                    renderVM.renderMarkdown(newText)
-                    sidebarVM.extractTOC(from: newText)
+                guard !newText.isEmpty else { return }
+                if let fileURL = documentVM.fileURL {
+                    renderVM.setBaseURL(fileURL.deletingLastPathComponent())
                 }
-                .onChange(of: colorScheme) { _, newScheme in
-                    renderVM.applySystemAppearance(isDark: newScheme == .dark)
-                }
+                renderVM.renderMarkdown(newText)
+                sidebarVM.extractTOC(from: newText)
+            }
+            .onChange(of: colorScheme) { _, newScheme in
+                renderVM.applySystemAppearance(isDark: newScheme == .dark)
+            }
 
             if isSearchVisible {
                 SearchBarView(

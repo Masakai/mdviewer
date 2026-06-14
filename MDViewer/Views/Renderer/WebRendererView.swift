@@ -45,7 +45,7 @@ struct WebRendererView: NSViewRepresentable {
         return webView
     }
 
-    func updateNSView(_ webView: WKWebView, context: Context) {
+    func updateNSView(_: WKWebView, context _: Context) {
         // Content updates are driven by RenderViewModel, not SwiftUI updates
     }
 
@@ -70,8 +70,8 @@ struct WebRendererView: NSViewRepresentable {
             self.sidebarVM = sidebarVM
         }
 
-        // Called when the renderer HTML finishes loading — push initial content
-        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        /// Called when the renderer HTML finishes loading — push initial content
+        func userContentController(_: WKUserContentController, didReceive message: WKScriptMessage) {
             switch message.name {
             case "headingsExtracted":
                 handleHeadingsExtracted(message.body)
@@ -87,7 +87,8 @@ struct WebRendererView: NSViewRepresentable {
                       let url = URL(string: urlString) else { break }
                 Task { @MainActor in
                     if url.scheme == "file",
-                       ["md", "markdown"].contains(url.pathExtension.lowercased()) {
+                       ["md", "markdown"].contains(url.pathExtension.lowercased())
+                    {
                         NotificationCenter.default.post(name: .openLocalDocument, object: url)
                     } else {
                         NSWorkspace.shared.open(url)
@@ -114,12 +115,16 @@ struct WebRendererView: NSViewRepresentable {
             }
         }
 
-        private func handleRenderComplete() {
-        }
+        private func handleRenderComplete() {}
 
         // MARK: - WKUIDelegate
 
-        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        func webView(
+            _: WKWebView,
+            createWebViewWith _: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures _: WKWindowFeatures
+        ) -> WKWebView? {
             guard let url = navigationAction.request.url else { return nil }
             Task { @MainActor in
                 if url.scheme == "file", ["md", "markdown"].contains(url.pathExtension.lowercased()) {
@@ -133,7 +138,7 @@ struct WebRendererView: NSViewRepresentable {
 
         // MARK: - WKNavigationDelegate
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        func webView(_: WKWebView, didFinish _: WKNavigation!) {
             Task { @MainActor in
                 self.renderVM.rendererDidLoad()
             }
@@ -145,7 +150,8 @@ struct WebRendererView: NSViewRepresentable {
             decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
         ) {
             guard navigationAction.navigationType == .linkActivated,
-                  let url = navigationAction.request.url else {
+                  let url = navigationAction.request.url
+            else {
                 decisionHandler(.allow)
                 return
             }
@@ -153,14 +159,16 @@ struct WebRendererView: NSViewRepresentable {
             // Fragment-only navigation stays in-page
             if url.fragment != nil,
                url.scheme == webView.url?.scheme,
-               url.host == webView.url?.host {
+               url.host == webView.url?.host
+            {
                 decisionHandler(.allow)
                 return
             }
 
             // Local Markdown file → open in MDViewer
             if url.scheme == "file",
-               ["md", "markdown"].contains(url.pathExtension.lowercased()) {
+               ["md", "markdown"].contains(url.pathExtension.lowercased())
+            {
                 NotificationCenter.default.post(name: .openLocalDocument, object: url)
                 decisionHandler(.cancel)
                 return
@@ -168,7 +176,8 @@ struct WebRendererView: NSViewRepresentable {
 
             // http / https / mailto → open in default app
             if let scheme = url.scheme,
-               ["http", "https", "mailto"].contains(scheme) {
+               ["http", "https", "mailto"].contains(scheme)
+            {
                 NSWorkspace.shared.open(url)
                 decisionHandler(.cancel)
                 return

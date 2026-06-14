@@ -27,9 +27,9 @@ final class FileWatcher {
 
         source?.setCancelHandler { [weak self] in
             guard let self else { return }
-            if self.fileDescriptor != -1 {
-                close(self.fileDescriptor)
-                self.fileDescriptor = -1
+            if fileDescriptor != -1 {
+                close(fileDescriptor)
+                fileDescriptor = -1
             }
         }
 

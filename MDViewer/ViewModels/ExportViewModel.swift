@@ -42,10 +42,19 @@ final class ExportViewModel: ObservableObject {
             isExporting = false
             return
         }
-        op.runModal(for: window, delegate: self, didRun: #selector(printOperationDidRun(_:success:contextInfo:)), contextInfo: UnsafeMutableRawPointer(bitPattern: 0))
+        op.runModal(
+            for: window,
+            delegate: self,
+            didRun: #selector(printOperationDidRun(_:success:contextInfo:)),
+            contextInfo: UnsafeMutableRawPointer(bitPattern: 0)
+        )
     }
 
-    @objc private func printOperationDidRun(_ op: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?) {
+    @objc private func printOperationDidRun(
+        _: NSPrintOperation,
+        success _: Bool,
+        contextInfo _: UnsafeMutableRawPointer?
+    ) {
         isExporting = false
     }
 

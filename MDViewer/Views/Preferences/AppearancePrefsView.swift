@@ -21,7 +21,7 @@ struct AppearancePrefsView: View {
             Section("Font") {
                 HStack {
                     Text("Size")
-                    Slider(value: $fontSize, in: 10...32, step: 1)
+                    Slider(value: $fontSize, in: 10 ... 32, step: 1)
                     Text("\(Int(fontSize))pt")
                         .frame(width: 36, alignment: .trailing)
                 }

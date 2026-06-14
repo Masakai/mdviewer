@@ -3,7 +3,6 @@ import XCTest
 
 @MainActor
 final class ExportViewModelTests: XCTestCase {
-
     var sut: ExportViewModel!
 
     override func setUp() async throws {

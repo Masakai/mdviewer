@@ -90,10 +90,10 @@ struct MDViewerApp: App {
 // MARK: - Additional Notification names
 
 extension Notification.Name {
-    static let increaseFontSize         = Notification.Name("MDViewer.increaseFontSize")
-    static let decreaseFontSize         = Notification.Name("MDViewer.decreaseFontSize")
-    static let resetFontSize            = Notification.Name("MDViewer.resetFontSize")
-    static let exportPDF                = Notification.Name("MDViewer.exportPDF")
-    static let exportHTML               = Notification.Name("MDViewer.exportHTML")
-    static let pdfPageSizeChanged       = Notification.Name("MDViewer.pdfPageSizeChanged")
+    static let increaseFontSize = Notification.Name("MDViewer.increaseFontSize")
+    static let decreaseFontSize = Notification.Name("MDViewer.decreaseFontSize")
+    static let resetFontSize = Notification.Name("MDViewer.resetFontSize")
+    static let exportPDF = Notification.Name("MDViewer.exportPDF")
+    static let exportHTML = Notification.Name("MDViewer.exportHTML")
+    static let pdfPageSizeChanged = Notification.Name("MDViewer.pdfPageSizeChanged")
 }

@@ -3,7 +3,6 @@ import XCTest
 
 @MainActor
 final class RenderViewModelTests: XCTestCase {
-
     var sut: RenderViewModel!
 
     override func setUp() async throws {
@@ -184,9 +183,9 @@ final class RenderViewModelTests: XCTestCase {
         XCTAssertEqual(sut.theme, .githubLight)
     }
 
-    func test_applySystemAppearance_nonGithubThemeAndDarkMode_doesNotChangeTheme() {
+    func test_applySystemAppearance_nonGithubThemeAndDarkMode_doesNotChangeTheme() throws {
         // Arrange
-        sut.setTheme(MarkdownTheme.all.first(where: { $0.id == "dracula" })!)
+        try sut.setTheme(XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "dracula" })))
 
         // Act
         sut.applySystemAppearance(isDark: true)
@@ -195,9 +194,9 @@ final class RenderViewModelTests: XCTestCase {
         XCTAssertEqual(sut.theme.id, "dracula")
     }
 
-    func test_applySystemAppearance_nonGithubThemeAndLightMode_doesNotChangeTheme() {
+    func test_applySystemAppearance_nonGithubThemeAndLightMode_doesNotChangeTheme() throws {
         // Arrange
-        sut.setTheme(MarkdownTheme.all.first(where: { $0.id == "nord" })!)
+        try sut.setTheme(XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "nord" })))
 
         // Act
         sut.applySystemAppearance(isDark: false)

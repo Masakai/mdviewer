@@ -2,7 +2,6 @@ import XCTest
 @testable import MDViewer
 
 final class BookmarkManagerTests: XCTestCase {
-
     var sut: BookmarkManager!
     private let testSuiteName = "com.mdviewer.tests.bookmark"
 
