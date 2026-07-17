@@ -21,6 +21,16 @@
 ### アプリパスワード・公証の設定
 
 - Keychainプロファイル名: `notarytool-password`
-- Apple ID: REDACTED-APPLE-ID
-- Team ID: REDACTED-TEAM-ID
+- Apple ID・Team IDは `CLAUDE.local.md`（gitignore対象）を参照
 - パスワードを再生成した場合は `xcrun notarytool store-credentials "notarytool-password"` で再登録
+
+### 公証の落とし穴：get-task-allow の自動注入
+
+Releaseビルドでも `com.apple.security.get-task-allow` エンタイトルメントが自動注入される場合がある。これが含まれると公証が `Invalid` になる。
+
+`xcodebuild` コマンドには必ず `CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO` を付けること。
+
+```bash
+# 確認方法
+codesign --display --entitlements - build/MDViewer.app
+```

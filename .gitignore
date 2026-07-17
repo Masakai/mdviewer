@@ -34,3 +34,6 @@ fastlane/test_output
 # Private scripts
 build-notarize.sh
 
+# Local-only instructions (contains personal info / credentials)
+CLAUDE.local.md
+
