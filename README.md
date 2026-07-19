@@ -32,6 +32,10 @@ Toggle the built-in editor with **⌘E** or the pencil button in the toolbar.
 - Unsaved changes are indicated by the Save button becoming active
 - Closing the window, or starting a new file, with unsaved changes prompts Save / Discard / Cancel
 
+### Help
+
+Open "MDViewer Help" from the Help menu for a live-rendered reference covering all Markdown syntax and every Mermaid diagram type (flowchart, sequence, class, state, ER, Gantt, pie, user journey, mindmap, timeline).
+
 ## Requirements
 
 - macOS 14 Sonoma or later
