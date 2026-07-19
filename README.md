@@ -27,9 +27,10 @@ MDViewer started as a viewer — but we wanted editing too, so it now includes a
 Toggle the built-in editor with **⌘E** or the pencil button in the toolbar.
 
 - **Split view**: Editor on the left, live preview on the right
-- **Save**: ⌘S saves changes to the current file
+- **New file**: ⌘N, the toolbar button, or the welcome screen starts a blank document in editor mode
+- **Save**: ⌘S saves changes to the current file; for a new (untitled) document it shows a save panel
 - Unsaved changes are indicated by the Save button becoming active
-- Closing the window with unsaved changes prompts Save / Discard / Cancel
+- Closing the window, or starting a new file, with unsaved changes prompts Save / Discard / Cancel
 
 ## Requirements
 

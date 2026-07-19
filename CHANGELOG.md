@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0] — 2026-07-19
+
+### Added
+- New Markdown file creation: ⌘N, the toolbar "New" button, or the "New File" button on the welcome screen all start a blank document in split-view editor mode
+- Saving a new (untitled) document now shows a save panel (⌘S falls back to Save As when no file is associated yet)
+- Unsaved-change guard also applies to ⌘N: creating a new document while there are unsaved edits prompts Save / Discard / Cancel before discarding
+
+---
+
 ## [1.1.2] — 2026-06-14
 
 ### Changed
