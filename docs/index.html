@@ -138,6 +138,12 @@
             text-align: center; color: var(--text-muted);
             font-size: 1.05rem; max-width: 520px; margin: 0 auto 3.5rem;
         }
+        .feature-group + .feature-group { margin-top: 3rem; }
+        .feature-group-label {
+            font-size: .82rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .08em;
+            color: var(--text-muted); margin-bottom: 1rem;
+        }
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -259,8 +265,8 @@
     <div class="badge">Free &amp; Open Source</div>
     <h1>The <span>Markdown viewer</span><br>your Mac deserves.</h1>
     <p class="hero-sub">
-        Beautiful rendering, instant preview, table of contents, syntax highlighting,
-        KaTeX math, Mermaid diagrams — and a built-in split-view editor. All in a native macOS app.
+        Beautiful, instant rendering — plus a built-in split-view editor with
+        syntax highlighting, math, and diagrams built in. All in a native macOS app.
     </p>
     <div class="cta-group">
         <a class="btn btn-primary" href="https://github.com/Masakai/mdviewer/releases/latest">
@@ -283,7 +289,7 @@
 <section style="padding:3.5rem 1.5rem 0;text-align:center">
     <p style="max-width:600px;margin:0 auto;font-size:1rem;color:#555577;line-height:1.8;border-left:3px solid #93c5fd;padding-left:1.2rem;text-align:left">
         The idea for MDViewer came from wanting a lightweight way to read <code style="background:#e0e8ff;color:#1A3FC0;border-radius:5px;padding:1px 6px;font-size:.9em">.md</code> files when working with Claude Code or Codex from the terminal.
-        Then we wanted to edit them too — so v1.1 adds a built-in split-view editor. Viewer on the right, editor on the left, live preview as you type.
+        Then <strong>we wanted to edit them too</strong> — so we added a built-in split-view editor. Viewer on the right, editor on the left, live preview as you type.
     </p>
 </section>
 
@@ -293,56 +299,61 @@
         <p class="section-label">Features</p>
         <h2>Everything you need to read Markdown</h2>
         <p class="section-sub">Designed for developers, writers, and anyone who works with Markdown files every day.</p>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">⚡️</div>
-                <h3>Instant rendering</h3>
-                <p>Opens and renders Markdown files instantly. Watches for file changes and live-reloads as you edit.</p>
+
+        <div class="feature-group">
+            <p class="feature-group-label">Read</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡️</div>
+                    <h3>Instant rendering</h3>
+                    <p>Opens and renders Markdown files instantly. Watches for file changes and live-reloads as you edit.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📑</div>
+                    <h3>Table of contents</h3>
+                    <p>Auto-generated TOC sidebar from headings. Click to jump to any section with smooth scrolling.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Syntax highlighting</h3>
+                    <p>27 languages highlighted with Shiki. Light and dark themes that follow macOS appearance.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">∑</div>
+                    <h3>Math equations</h3>
+                    <p>Render inline and block LaTeX math beautifully with KaTeX — no extra setup required.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Mermaid diagrams</h3>
+                    <p>Flowcharts, sequence diagrams, Gantt charts, and more rendered directly in the document.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3>Smart link handling</h3>
+                    <p>Local Markdown links open in the app. External links open in the browser. Images load from disk.</p>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">📑</div>
-                <h3>Table of contents</h3>
-                <p>Auto-generated TOC sidebar from headings. Click to jump to any section with smooth scrolling.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎨</div>
-                <h3>Syntax highlighting</h3>
-                <p>27 languages highlighted with Shiki. Light and dark themes that follow macOS appearance.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">∑</div>
-                <h3>Math equations</h3>
-                <p>Render inline and block LaTeX math beautifully with KaTeX — no extra setup required.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Mermaid diagrams</h3>
-                <p>Flowcharts, sequence diagrams, Gantt charts, and more rendered directly in the document.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔗</div>
-                <h3>Smart link handling</h3>
-                <p>Local Markdown links open in the app. External links open in the browser. Images load from disk.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📤</div>
-                <h3>Export to PDF</h3>
-                <p>Print or export your document to PDF with a single click, preserving all styles and formatting.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">✏️</div>
-                <h3>Built-in editor</h3>
-                <p>Toggle a split-view editor with ⌘E. Edit on the left, live preview on the right. Start a new document with ⌘N, save with ⌘S.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">❓</div>
-                <h3>Syntax reference</h3>
-                <p>Open "MDViewer Help" from the Help menu for a live-rendered reference covering Markdown syntax and every Mermaid diagram type.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔒</div>
-                <h3>Signed &amp; notarized</h3>
-                <p>Distributed with Developer ID signing and Apple notarization for safe, Gatekeeper-friendly installation.</p>
+        </div>
+
+        <div class="feature-group">
+            <p class="feature-group-label">Edit &amp; export</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <h3>Built-in editor</h3>
+                    <p>Toggle a split-view editor with ⌘E. Edit on the left, live preview on the right. Start a new document with ⌘N, save with ⌘S.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">❓</div>
+                    <h3>Syntax reference</h3>
+                    <p>Open "MDViewer Help" from the Help menu for a live-rendered reference covering Markdown syntax and every Mermaid diagram type.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📤</div>
+                    <h3>Export to PDF</h3>
+                    <p>Print or export your document to PDF with a single click, preserving all styles and formatting.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -376,6 +387,7 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download MDViewer
             </a>
+            <p class="req" style="margin-top:1rem">🔒 Signed with a Developer ID and notarized by Apple — Gatekeeper won't get in your way.</p>
         </div>
     </div>
 </section>
@@ -434,6 +446,7 @@
 
 <!-- ─── FOOTER ─── -->
 <footer>
+    <p style="font-size:.95rem;color:var(--text);margin-bottom:1.4rem">Built by one person who just wanted to read <code style="background:#e0e8ff;color:#1A3FC0;border-radius:5px;padding:1px 6px;font-size:.9em">.md</code> files without opening a browser.</p>
     <div class="footer-links">
         <a href="https://github.com/Masakai/mdviewer">GitHub</a>
         <a href="https://github.com/Masakai/mdviewer/releases">Releases</a>

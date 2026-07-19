@@ -138,6 +138,12 @@
             text-align: center; color: var(--text-muted);
             font-size: 1.05rem; max-width: 520px; margin: 0 auto 3.5rem;
         }
+        .feature-group + .feature-group { margin-top: 3rem; }
+        .feature-group-label {
+            font-size: .82rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .08em;
+            color: var(--text-muted); margin-bottom: 1rem;
+        }
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -259,8 +265,8 @@
     <div class="badge">無料 &amp; オープンソース</div>
     <h1>Mac のための<br><span>Markdown ビューア</span></h1>
     <p class="hero-sub">
-        美しいレンダリング、即時プレビュー、目次サイドバー、シンタックスハイライト、
-        KaTeX 数式、Mermaid ダイアグラム、そして分割ビューエディタ — すべてネイティブ macOS アプリで。
+        美しく即座にレンダリング — そこに、シンタックスハイライト・数式・図表まで
+        内蔵した分割ビューエディタを添えて。すべてネイティブ macOS アプリで。
     </p>
     <div class="cta-group">
         <a class="btn btn-primary" href="https://github.com/Masakai/mdviewer/releases/latest">
@@ -283,7 +289,7 @@
 <section style="padding:3.5rem 1.5rem 0;text-align:center">
     <p style="max-width:600px;margin:0 auto;font-size:1rem;color:#555577;line-height:1.8;border-left:3px solid #93c5fd;padding-left:1.2rem;text-align:left">
         ターミナルから Claude Code や Codex を使用した際に、<code style="background:#e0e8ff;color:#1A3FC0;border-radius:5px;padding:1px 6px;font-size:.9em">.md</code> ファイルを読むための軽量なビューアが欲しいというのが、開発のきっかけでした。
-        そのうち「やっぱり編集機能も欲しい」となり、v1.1 では分割ビューエディタを内蔵しました。左で編集、右でリアルタイムプレビュー。
+        そのうち<strong>「やっぱり編集機能も欲しい」</strong>となり、分割ビューエディタを内蔵しました。左で編集、右でリアルタイムプレビュー。
     </p>
 </section>
 
@@ -293,56 +299,61 @@
         <p class="section-label">機能</p>
         <h2>Markdown を読むために必要なすべて</h2>
         <p class="section-sub">開発者、ライター、そして日々 Markdown ファイルを扱うすべての人のために設計されています。</p>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">⚡️</div>
-                <h3>即時レンダリング</h3>
-                <p>Markdown ファイルを即座に開いて表示します。ファイルの変更を監視し、編集と同時にライブリロードします。</p>
+
+        <div class="feature-group">
+            <p class="feature-group-label">読む</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡️</div>
+                    <h3>即時レンダリング</h3>
+                    <p>Markdown ファイルを即座に開いて表示します。ファイルの変更を監視し、編集と同時にライブリロードします。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📑</div>
+                    <h3>目次サイドバー</h3>
+                    <p>見出しから目次を自動生成。クリックするとスムーズスクロールで該当セクションへジャンプします。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>シンタックスハイライト</h3>
+                    <p>Shiki による 27 言語のハイライトに対応。macOS の外観設定に連動したライト・ダークテーマ。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">∑</div>
+                    <h3>数式レンダリング</h3>
+                    <p>KaTeX によるインライン・ブロック LaTeX 数式を美しく表示。追加設定は不要です。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Mermaid ダイアグラム</h3>
+                    <p>フローチャート、シーケンス図、ガントチャートなどをドキュメント内で直接レンダリングします。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3>スマートなリンク処理</h3>
+                    <p>ローカルの Markdown リンクはアプリ内で開き、外部リンクはブラウザで開きます。画像もディスクから読み込み。</p>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">📑</div>
-                <h3>目次サイドバー</h3>
-                <p>見出しから目次を自動生成。クリックするとスムーズスクロールで該当セクションへジャンプします。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎨</div>
-                <h3>シンタックスハイライト</h3>
-                <p>Shiki による 27 言語のハイライトに対応。macOS の外観設定に連動したライト・ダークテーマ。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">∑</div>
-                <h3>数式レンダリング</h3>
-                <p>KaTeX によるインライン・ブロック LaTeX 数式を美しく表示。追加設定は不要です。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Mermaid ダイアグラム</h3>
-                <p>フローチャート、シーケンス図、ガントチャートなどをドキュメント内で直接レンダリングします。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔗</div>
-                <h3>スマートなリンク処理</h3>
-                <p>ローカルの Markdown リンクはアプリ内で開き、外部リンクはブラウザで開きます。画像もディスクから読み込み。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📤</div>
-                <h3>PDF 書き出し</h3>
-                <p>スタイルと書式を保持したまま、ワンクリックで PDF に印刷・書き出しできます。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">✏️</div>
-                <h3>内蔵エディタ</h3>
-                <p>⌘E で分割ビューエディタに切り替え。左で編集、右でリアルタイムプレビュー。⌘N で新規作成、⌘S で保存。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">❓</div>
-                <h3>記法リファレンス</h3>
-                <p>ヘルプメニューの「MDViewer ヘルプ」から、Markdown記法とMermaidの全図種を実例付きで確認できます。</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔒</div>
-                <h3>署名 &amp; 公証済み</h3>
-                <p>Developer ID 署名と Apple 公証を取得済み。Gatekeeper に認められた安全なインストールが可能です。</p>
+        </div>
+
+        <div class="feature-group">
+            <p class="feature-group-label">編集・書き出し</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">✏️</div>
+                    <h3>内蔵エディタ</h3>
+                    <p>⌘E で分割ビューエディタに切り替え。左で編集、右でリアルタイムプレビュー。⌘N で新規作成、⌘S で保存。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">❓</div>
+                    <h3>記法リファレンス</h3>
+                    <p>ヘルプメニューの「MDViewer ヘルプ」から、Markdown記法とMermaidの全図種を実例付きで確認できます。</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📤</div>
+                    <h3>PDF 書き出し</h3>
+                    <p>スタイルと書式を保持したまま、ワンクリックで PDF に印刷・書き出しできます。</p>
+                </div>
             </div>
         </div>
     </div>
@@ -376,6 +387,7 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 MDViewer をダウンロード
             </a>
+            <p class="req" style="margin-top:1rem">🔒 Developer ID 署名と Apple 公証を取得済み。Gatekeeper に止められる心配はありません。</p>
         </div>
     </div>
 </section>
@@ -434,6 +446,7 @@
 
 <!-- ─── FOOTER ─── -->
 <footer>
+    <p style="font-size:.95rem;color:var(--text);margin-bottom:1.4rem">ブラウザを開かずに <code style="background:#e0e8ff;color:#1A3FC0;border-radius:5px;padding:1px 6px;font-size:.9em">.md</code> ファイルを読みたかった、それだけの理由で一人で作っています。</p>
     <div class="footer-links">
         <a href="https://github.com/Masakai/mdviewer">GitHub</a>
         <a href="https://github.com/Masakai/mdviewer/releases">リリース</a>
