@@ -31,6 +31,9 @@
 "Export as HTML…" = "Export as HTML…";
 "Print…" = "Print…";
 
+/* Menu - Help */
+"MDViewer Help" = "MDViewer Help";
+
 /* Sidebar */
 "No headings found" = "No headings found";
 

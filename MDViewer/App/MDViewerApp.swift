@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct MDViewerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup {
@@ -11,6 +12,12 @@ struct MDViewerApp: App {
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
+            CommandGroup(replacing: .help) {
+                Button("MDViewer Help") {
+                    openWindow(id: "help")
+                }
+            }
+
             CommandGroup(replacing: .newItem) {
                 Button("New") {
                     NotificationCenter.default.post(name: .newFile, object: nil)
@@ -89,6 +96,13 @@ struct MDViewerApp: App {
         Settings {
             PreferencesView()
         }
+
+        Window("MDViewer Help", id: "help") {
+            HelpView()
+        }
+        .windowStyle(.titleBar)
+        .windowToolbarStyle(.unified(showsTitle: true))
+        .defaultSize(width: 900, height: 700)
     }
 }
 
@@ -102,4 +116,46 @@ extension Notification.Name {
     static let exportHTML = Notification.Name("MDViewer.exportHTML")
     static let pdfPageSizeChanged = Notification.Name("MDViewer.pdfPageSizeChanged")
     static let newFile = Notification.Name("MDViewer.newFile")
+}
+
+// MARK: - Help window
+
+/// Markdown/Mermaid記法のリファレンスを表示する読み取り専用ウィンドウ。
+/// DocumentViewModelには一切触れず、独自のRenderViewModel/SidebarViewModelで
+/// 既存のレンダリングパイプライン（WebRendererView）を再利用する。
+struct HelpView: View {
+    @StateObject private var renderVM = RenderViewModel()
+    @StateObject private var sidebarVM = SidebarViewModel()
+    @State private var helpText: String = ""
+
+    var body: some View {
+        NavigationSplitView(
+            sidebar: {
+                SidebarView(sidebarVM: sidebarVM, renderVM: renderVM)
+                    .frame(minWidth: 180, idealWidth: 220, maxWidth: 320)
+            },
+            detail: {
+                WebRendererView(renderVM: renderVM, sidebarVM: sidebarVM)
+                    .frame(minWidth: 500, minHeight: 400)
+            }
+        )
+        .onAppear {
+            helpText = Self.loadHelpMarkdown()
+            renderVM.applyCurrentThemeAndFontSize()
+            renderVM.renderMarkdown(helpText)
+            sidebarVM.extractTOC(from: helpText)
+        }
+    }
+
+    private static func loadHelpMarkdown() -> String {
+        let languageCode = Locale.preferredLanguages.first?.hasPrefix("ja") == true ? "ja" : "en"
+        let fileName = "help.\(languageCode)"
+        guard
+            let url = Bundle.main.url(forResource: fileName, withExtension: "md", subdirectory: "Web/help"),
+            let contents = try? String(contentsOf: url, encoding: .utf8)
+        else {
+            return "# Help content not found"
+        }
+        return contents
+    }
 }

@@ -31,6 +31,9 @@
 "Export as HTML…" = "HTMLとして書き出し…";
 "Print…" = "プリント…";
 
+/* Menu - Help */
+"MDViewer Help" = "MDViewer ヘルプ";
+
 /* Sidebar */
 "No headings found" = "見出しが見つかりません";
 
