@@ -1,4 +1,7 @@
 /* Menu - File */
+"New" = "New";
+"New File" = "New File";
+"New Markdown File (⌘N)" = "New Markdown File (⌘N)";
 "Open…" = "Open…";
 "Open File…" = "Open File…";
 "Open Markdown File (⌘O)" = "Open Markdown File (⌘O)";
@@ -7,6 +10,7 @@
 "Save" = "Save";
 "Open a Markdown file to get started" = "Open a Markdown file to get started";
 "Toggle Editor Mode" = "Toggle Editor Mode";
+"Untitled" = "Untitled";
 
 /* Menu - View */
 "View" = "View";

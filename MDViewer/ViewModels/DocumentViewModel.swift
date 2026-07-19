@@ -8,6 +8,7 @@ final class DocumentViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var isDirty: Bool = false
+    @Published var hasDocument: Bool = false
 
     @AppStorage("lastOpenedBookmark") private var lastOpenedBookmarkData: Data = .init()
 
@@ -41,6 +42,7 @@ final class DocumentViewModel: ObservableObject {
             fileURL = url
             text = contents
             isDirty = false
+            hasDocument = true
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
@@ -49,6 +51,15 @@ final class DocumentViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    /// 新規の空Markdownドキュメントを開く。既存の未保存確認は呼び出し側（ContentView）で行う。
+    func newDocument() {
+        fileWatcher.stop()
+        fileURL = nil
+        text = ""
+        isDirty = false
+        hasDocument = true
     }
 
     func reload() {
@@ -69,10 +80,32 @@ final class DocumentViewModel: ObservableObject {
     }
 
     func save() {
-        guard let url = fileURL else { return }
+        guard let url = fileURL else {
+            saveAs()
+            return
+        }
         do {
             try text.write(to: url, atomically: true, encoding: .utf8)
             isDirty = false
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func saveAs() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.markdown]
+        panel.nameFieldStringValue = "Untitled.md"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            fileURL = url
+            isDirty = false
+            fileWatcher.start(url: url)
+            BookmarkManager.shared.save(url: url)
+            saveLastOpened(url: url)
         } catch {
             errorMessage = error.localizedDescription
         }

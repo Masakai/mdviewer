@@ -9,6 +9,15 @@ struct MainToolbar: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
             Button {
+                NotificationCenter.default.post(name: .newFile, object: nil)
+            } label: {
+                Label("New", systemImage: "doc.badge.plus")
+            }
+            .help("New Markdown File (⌘N)")
+        }
+
+        ToolbarItem(placement: .navigation) {
+            Button {
                 documentVM.openFile()
             } label: {
                 Label("Open", systemImage: "folder")

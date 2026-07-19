@@ -1,4 +1,7 @@
 /* Menu - File */
+"New" = "新規";
+"New File" = "新規作成";
+"New Markdown File (⌘N)" = "新規Markdownファイル (⌘N)";
 "Open…" = "開く…";
 "Open File…" = "ファイルを開く…";
 "Open Markdown File (⌘O)" = "Markdownファイルを開く (⌘O)";
@@ -7,6 +10,7 @@
 "Save" = "保存";
 "Open a Markdown file to get started" = "Markdownファイルを開いてください";
 "Toggle Editor Mode" = "エディタモード切替";
+"Untitled" = "無題";
 
 /* Menu - View */
 "View" = "表示";

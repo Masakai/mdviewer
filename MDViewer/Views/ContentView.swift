@@ -21,7 +21,7 @@ struct ContentView: View {
             },
             detail: {
                 Group {
-                    if documentVM.text.isEmpty, documentVM.fileURL == nil {
+                    if !documentVM.hasDocument {
                         WelcomeView(documentVM: documentVM)
                     } else {
                         HSplitView {
@@ -49,6 +49,9 @@ struct ContentView: View {
         .onOpenURL { url in
             documentVM.load(url: url)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .newFile)) { _ in
+            requestNewDocument()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openFile)) { _ in
             documentVM.openFile()
         }
@@ -65,7 +68,10 @@ struct ContentView: View {
             // NavigationSplitView handles its own sidebar toggle
         }
         // Keyboard shortcuts via Commands are declared in MDViewerApp
-        .navigationTitle(documentVM.fileURL?.lastPathComponent ?? "MDViewer")
+        .navigationTitle(
+            documentVM.fileURL.map { Text(verbatim: $0.lastPathComponent) }
+                ?? (documentVM.hasDocument ? Text("Untitled") : Text("MDViewer"))
+        )
         .frame(minWidth: 800, minHeight: 600)
         .alert("Error", isPresented: Binding(
             get: { documentVM.errorMessage != nil },
@@ -81,6 +87,39 @@ struct ContentView: View {
             } else {
                 documentVM.restoreLastOpened()
             }
+        }
+    }
+
+    /// Cmd+N / Welcome画面からの新規作成。未保存の変更があれば確認してから空ドキュメントに切り替える。
+    private func requestNewDocument() {
+        guard documentVM.isDirty else {
+            documentVM.newDocument()
+            isEditorMode = true
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("unsaved_changes_title", comment: "")
+        alert.informativeText = NSLocalizedString("unsaved_changes_message", comment: "")
+        alert.addButton(withTitle: NSLocalizedString("save_button", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("discard_button", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("cancel_button", comment: ""))
+        alert.alertStyle = .warning
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            documentVM.save()
+            // saveAs()がパネルでキャンセルされた場合はisDirtyがtrueのまま残るため、
+            // 保存が実際に完了したときだけ新規ドキュメントに切り替える。
+            if !documentVM.isDirty {
+                documentVM.newDocument()
+                isEditorMode = true
+            }
+        case .alertSecondButtonReturn:
+            documentVM.newDocument()
+            isEditorMode = true
+        default:
+            break
         }
     }
 }
@@ -156,11 +195,18 @@ struct WelcomeView: View {
             Text("Open a Markdown file to get started")
                 .foregroundColor(.secondary)
 
-            Button("Open File…") {
-                documentVM.openFile()
+            HStack(spacing: 12) {
+                Button("New File") {
+                    NotificationCenter.default.post(name: .newFile, object: nil)
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .buttonStyle(.borderedProminent)
+
+                Button("Open File…") {
+                    documentVM.openFile()
+                }
+                .keyboardShortcut("o", modifiers: .command)
             }
-            .keyboardShortcut("o", modifiers: .command)
-            .buttonStyle(.borderedProminent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())

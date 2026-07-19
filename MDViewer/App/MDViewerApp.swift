@@ -12,6 +12,11 @@ struct MDViewerApp: App {
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             CommandGroup(replacing: .newItem) {
+                Button("New") {
+                    NotificationCenter.default.post(name: .newFile, object: nil)
+                }
+                .keyboardShortcut("n", modifiers: .command)
+
                 Button("Open…") {
                     NotificationCenter.default.post(name: .openFile, object: nil)
                 }
@@ -96,4 +101,5 @@ extension Notification.Name {
     static let exportPDF = Notification.Name("MDViewer.exportPDF")
     static let exportHTML = Notification.Name("MDViewer.exportHTML")
     static let pdfPageSizeChanged = Notification.Name("MDViewer.pdfPageSizeChanged")
+    static let newFile = Notification.Name("MDViewer.newFile")
 }
