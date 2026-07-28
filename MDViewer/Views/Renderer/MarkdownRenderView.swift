@@ -30,7 +30,6 @@ struct MarkdownRenderView: View {
                 }
             }
             .onReceive(documentVM.$text) { newText in
-                guard !newText.isEmpty else { return }
                 if let fileURL = documentVM.fileURL {
                     renderVM.setBaseURL(fileURL.deletingLastPathComponent())
                 }
