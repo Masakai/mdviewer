@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.2] — 2026-07-29
+
+### Fixed
+- New document editing and preview no longer go out of sync. The editor's separate internal text buffer could momentarily revert to the previously open file's content right after creating a new document, so saving could write stale content instead of what was typed. The editor now binds directly to the document's text state instead of maintaining a duplicate copy.
+- The preview pane now clears immediately when starting a new document, instead of continuing to display the previously open file's rendered content.
+
+---
+
 ## [1.2.1] — 2026-07-19
 
 ### Added
