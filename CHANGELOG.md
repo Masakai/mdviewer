@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.3] — 2026-08-02
+
+### Fixed
+- Closing all windows now quits the app instead of leaving the process running in the background. Clicking the Dock icon while the app has no open windows now opens a new document, matching standard macOS behavior.
+
+---
+
 ## [1.2.2] — 2026-07-29
 
 ### Fixed
