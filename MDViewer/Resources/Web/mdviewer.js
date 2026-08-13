@@ -89,92 +89,121 @@
         });
     }
 
+    // Renders the Markdown. Exceptions are caught by the calling setContent.
+    async function renderContent(markdown) {
+        if (!shikiHighlighter && window.__shikiReady) {
+            shikiHighlighter = await Promise.race([
+                window.__shikiReady,
+                new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 8000); })
+            ]);
+        }
+
+        const headingsRef = [];
+        const renderer = new marked.Renderer();
+
+        renderer.heading = function (text, level, raw) {
+            const anchor = slugify(typeof raw === 'string' ? raw : text);
+            headingsRef.push({ level: level, title: typeof raw === 'string' ? raw : text, anchor: anchor });
+            return `<h${level} id="${anchor}">${text}</h${level}>\n`;
+        };
+
+        renderer.code = function (code, lang) {
+            if (lang === 'mermaid') {
+                return `<div class="mermaid">${escapeHtml(code)}</div>`;
+            }
+            return highlightCode(code, lang);
+        };
+
+        // Pre-process math: protect $...$ from marked parsing
+        const mathBlocks = [];
+        let processed = markdown;
+
+        processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
+            const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
+            mathBlocks.push({ type: 'block', expr: expr.trim() });
+            return placeholder;
+        });
+
+        processed = processed.replace(/\$([^$\n]+?)\$/g, function (_, expr) {
+            const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
+            mathBlocks.push({ type: 'inline', expr: expr.trim() });
+            return placeholder;
+        });
+
+        let html = marked.parse(processed, { renderer: renderer });
+
+        // Restore math
+        if (typeof katex !== 'undefined') {
+            mathBlocks.forEach(function (m, i) {
+                const blockPh = new RegExp(`MATHBLOCK_${i}_END`, 'g');
+                const inlinePh = new RegExp(`MATHINLINE_${i}_END`, 'g');
+                try {
+                    const rendered = katex.renderToString(m.expr, {
+                        displayMode: m.type === 'block',
+                        throwOnError: false
+                    });
+                    html = html.replace(blockPh, rendered).replace(inlinePh, rendered);
+                } catch (e) {
+                    html = html.replace(blockPh, escapeHtml(m.expr))
+                               .replace(inlinePh, escapeHtml(m.expr));
+                }
+            });
+        }
+
+        const contentEl = document.getElementById('content');
+
+        // #content is the only element in <body>, so replacing it with an
+        // empty string turns the page white. If marked returned nothing
+        // (a failed read, a file caught mid-write), keep the previous
+        // render. Only clear when the document is genuinely empty.
+        //
+        // Tested with a regex rather than trim(), which would copy the whole
+        // rendered HTML just to check it for emptiness.
+        const hasContent = /\S/;
+        if (!hasContent.test(html) && hasContent.test(markdown)) {
+            return;
+        }
+
+        contentEl.innerHTML = html;
+
+        // Resolve relative image paths against the Markdown file's directory
+        rewriteLocalResources(contentEl);
+
+        // Render Mermaid diagrams
+        if (typeof mermaid !== 'undefined') {
+            try {
+                mermaid.run({ querySelector: '.mermaid' });
+            } catch (e) {
+                console.warn('Mermaid render error:', e);
+            }
+        }
+
+        // Notify Swift with heading list
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.headingsExtracted) {
+            window.webkit.messageHandlers.headingsExtracted.postMessage(headingsRef);
+        }
+
+        // Notify Swift render complete
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.renderComplete) {
+            window.webkit.messageHandlers.renderComplete.postMessage(null);
+        }
+    }
+
     // -- Public MDViewer API (called from Swift via evaluateJavaScript)
     window.MDViewer = {
 
         setContent: async function (markdown) {
-            if (!shikiHighlighter && window.__shikiReady) {
-                shikiHighlighter = await Promise.race([
-                    window.__shikiReady,
-                    new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 8000); })
-                ]);
-            }
-
-            const headingsRef = [];
-            const renderer = new marked.Renderer();
-
-            renderer.heading = function (text, level, raw) {
-                const anchor = slugify(typeof raw === 'string' ? raw : text);
-                headingsRef.push({ level: level, title: typeof raw === 'string' ? raw : text, anchor: anchor });
-                return `<h${level} id="${anchor}">${text}</h${level}>\n`;
-            };
-
-            renderer.code = function (code, lang) {
-                if (lang === 'mermaid') {
-                    return `<div class="mermaid">${escapeHtml(code)}</div>`;
+            try {
+                await renderContent(markdown);
+            } catch (e) {
+                // Swallowing the exception would leave the preview white while
+                // Swift believes the render succeeded. Log it and tell Swift.
+                console.error('MDViewer render error:', e);
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.renderFailed) {
+                    window.webkit.messageHandlers.renderFailed.postMessage(
+                        String(e && e.message ? e.message : e)
+                    );
                 }
-                return highlightCode(code, lang);
-            };
-
-            // Pre-process math: protect $...$ from marked parsing
-            const mathBlocks = [];
-            let processed = markdown;
-
-            processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
-                const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
-                mathBlocks.push({ type: 'block', expr: expr.trim() });
-                return placeholder;
-            });
-
-            processed = processed.replace(/\$([^$\n]+?)\$/g, function (_, expr) {
-                const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
-                mathBlocks.push({ type: 'inline', expr: expr.trim() });
-                return placeholder;
-            });
-
-            let html = marked.parse(processed, { renderer: renderer });
-
-            // Restore math
-            if (typeof katex !== 'undefined') {
-                mathBlocks.forEach(function (m, i) {
-                    const blockPh = new RegExp(`MATHBLOCK_${i}_END`, 'g');
-                    const inlinePh = new RegExp(`MATHINLINE_${i}_END`, 'g');
-                    try {
-                        const rendered = katex.renderToString(m.expr, {
-                            displayMode: m.type === 'block',
-                            throwOnError: false
-                        });
-                        html = html.replace(blockPh, rendered).replace(inlinePh, rendered);
-                    } catch (e) {
-                        html = html.replace(blockPh, escapeHtml(m.expr))
-                                   .replace(inlinePh, escapeHtml(m.expr));
-                    }
-                });
-            }
-
-            const contentEl = document.getElementById('content');
-            contentEl.innerHTML = html;
-
-            // Resolve relative image paths against the Markdown file's directory
-            rewriteLocalResources(contentEl);
-
-            // Render Mermaid diagrams
-            if (typeof mermaid !== 'undefined') {
-                try {
-                    mermaid.run({ querySelector: '.mermaid' });
-                } catch (e) {
-                    console.warn('Mermaid render error:', e);
-                }
-            }
-
-            // Notify Swift with heading list
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.headingsExtracted) {
-                window.webkit.messageHandlers.headingsExtracted.postMessage(headingsRef);
-            }
-
-            // Notify Swift render complete
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.renderComplete) {
-                window.webkit.messageHandlers.renderComplete.postMessage(null);
             }
         },
 

@@ -226,4 +226,81 @@ final class RenderViewModelTests: XCTestCase {
         // Assert
         XCTAssertEqual(sut.theme, .githubDark)
     }
+
+    // MARK: - Crash-loop guard
+
+    /// A crash caused from outside — the process being killed, a system memory
+    /// kill — is followed by a successful render, which clears the counter. The
+    /// guard must stay out of the way there.
+    func test_rendererDidFail_withSuccessfulRenderInBetween_neverTripsTheGuard() {
+        // Arrange
+        let start = Date()
+
+        // Act
+        for step in 1 ... 5 {
+            let shouldReload = sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 2.5))
+            sut.noteRenderSucceeded()
+
+            // Assert
+            XCTAssertTrue(shouldReload)
+            XCTAssertNil(sut.renderFailureMessage)
+        }
+    }
+
+    /// When the content itself is what kills the renderer, no render ever
+    /// completes, so the failures accumulate and the guard has to stop the loop.
+    func test_rendererDidFail_repeatedlyWithoutSuccess_stopsReloadingContent() {
+        // Arrange
+        let start = Date()
+
+        // Act
+        for step in 1 ... 3 {
+            let shouldReload = sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+
+            // Assert
+            XCTAssertTrue(shouldReload)
+            XCTAssertNil(sut.renderFailureMessage)
+        }
+
+        // Act — one past the threshold
+        let reloadsOnceMore = sut.rendererDidFail(now: start.addingTimeInterval(2))
+
+        // Assert — reloads a final time, but empty, and explains why
+        XCTAssertTrue(reloadsOnceMore)
+        XCTAssertNotNil(sut.renderFailureMessage)
+
+        // Act — everything beyond that stops reloading altogether
+        let keepsReloading = sut.rendererDidFail(now: start.addingTimeInterval(2.5))
+
+        // Assert
+        XCTAssertFalse(keepsReloading)
+    }
+
+    func test_rendererDidFail_failuresFurtherApartThanTheWindow_doNotAccumulate() {
+        // Arrange
+        let start = Date()
+
+        // Act
+        sut.rendererDidFail(now: start)
+        sut.rendererDidFail(now: start.addingTimeInterval(30))
+        sut.rendererDidFail(now: start.addingTimeInterval(60))
+
+        // Assert
+        XCTAssertNil(sut.renderFailureMessage)
+    }
+
+    func test_noteRenderSucceeded_afterTheGuardTripped_clearsTheMessage() {
+        // Arrange
+        let start = Date()
+        for step in 1 ... 4 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+        XCTAssertNotNil(sut.renderFailureMessage)
+
+        // Act
+        sut.noteRenderSucceeded()
+
+        // Assert
+        XCTAssertNil(sut.renderFailureMessage)
+    }
 }
