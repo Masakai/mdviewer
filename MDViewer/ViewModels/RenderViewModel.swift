@@ -124,7 +124,10 @@ final class RenderViewModel: ObservableObject {
         guard consecutiveFailures <= maxConsecutiveFailures else {
             // Reload once more but without the content that keeps crashing, so
             // the user gets a usable empty renderer instead of a crash loop.
+            // Both copies must go: rendererDidLoad() falls back to the last
+            // render, which would draw the crashing content straight back.
             pendingMarkdown = nil
+            lastRenderedMarkdown = nil
             renderFailureMessage = NSLocalizedString("preview_crash_loop_message", comment: "")
             return consecutiveFailures == maxConsecutiveFailures + 1
         }
@@ -147,6 +150,14 @@ final class RenderViewModel: ObservableObject {
         renderFailureMessage = nil
     }
 
+    /// What `rendererDidLoad()` draws once the page has loaded: anything queued
+    /// while the renderer was not ready, otherwise the last content, so a native
+    /// Reload does not come back blank. Nil once the crash-loop guard has reset
+    /// the preview.
+    var markdownToRestore: String? {
+        pendingMarkdown ?? lastRenderedMarkdown
+    }
+
     func rendererDidLoad() {
         isRendererReady = true
         applyCurrentThemeAndFontSize()
@@ -163,7 +174,7 @@ final class RenderViewModel: ObservableObject {
         // Same for the content itself. Without the fallback a native reload
         // repaints an empty document, leaving the preview blank with no way
         // back until the file is reopened.
-        if let md = pendingMarkdown ?? lastRenderedMarkdown {
+        if let md = markdownToRestore {
             pendingMarkdown = nil
             let escaped = escapeForJS(md)
             webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)

@@ -303,4 +303,52 @@ final class RenderViewModelTests: XCTestCase {
         // Assert
         XCTAssertNil(sut.renderFailureMessage)
     }
+
+    /// The reset the guard announces must be real: the reload that follows it
+    /// may not draw the content that kept crashing, or the loop starts again.
+    func test_rendererDidFail_guardTripped_leavesNothingToRestore() {
+        // Arrange — a ready renderer showing content, as in normal use
+        let start = Date()
+        sut.rendererDidLoad()
+        sut.renderMarkdown("# content that crashes the renderer")
+
+        // Act
+        for step in 1 ... 4 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+
+        // Assert
+        XCTAssertNotNil(sut.renderFailureMessage)
+        XCTAssertNil(sut.markdownToRestore)
+    }
+
+    /// Below the threshold a crash is recovered from, content included.
+    func test_rendererDidFail_belowTheThreshold_restoresTheContent() {
+        // Arrange
+        sut.rendererDidLoad()
+        sut.renderMarkdown("# hello")
+
+        // Act
+        sut.rendererDidFail(now: Date())
+
+        // Assert
+        XCTAssertEqual(sut.markdownToRestore, "# hello")
+    }
+
+    /// After a reset the preview comes back as soon as there is new content.
+    func test_renderMarkdown_afterTheGuardTripped_restoresTheNewContent() {
+        // Arrange
+        let start = Date()
+        sut.rendererDidLoad()
+        sut.renderMarkdown("# content that crashes the renderer")
+        for step in 1 ... 4 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+
+        // Act
+        sut.renderMarkdown("# fixed content")
+
+        // Assert
+        XCTAssertEqual(sut.markdownToRestore, "# fixed content")
+    }
 }
