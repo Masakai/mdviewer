@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.0] — 2026-09-23
+
+### Fixed
+- Live reload no longer stops after the first save. Most editors (VS Code, vim, TextEdit, and MDViewer itself) save by replacing the file, and the watcher kept following the old, deleted copy, so every later change was missed. MDViewer now follows the file to its new copy on each save.
+- Live reload now picks up a file that disappears for a while and comes back, such as during a git branch switch or a cloud sync.
+- Opening another document while one was already open could shut down the new document's watcher, so live reload never started for it, and leaked the old file descriptor. Switching documents while a save was in progress could also leave live reload following the previous file. Both are fixed.
+- The preview now recovers on its own when WebKit's rendering process crashes. Previously it stayed blank until the app was restarted, while the sidebar kept working.
+- Reload in the preview's context menu now redraws the current document instead of showing a blank page.
+- If a document keeps crashing the preview (four crashes in a row, each within ten seconds of the last), MDViewer stops reloading it, clears the preview and shows a message. Editing the file, reloading it or reopening it tries again.
+- The preview no longer turns white when a render fails or produces no output, for example when the file is read while still being written. The previous output stays on screen, and when there is no output the sidebar keeps its headings as well.
+
+Thanks to @harasuke for these fixes ([#2](https://github.com/Masakai/mdviewer/pull/2)).
+
+---
+
 ## [1.2.3] — 2026-08-02
 
 ### Fixed
