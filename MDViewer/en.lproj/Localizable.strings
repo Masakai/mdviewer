@@ -58,3 +58,7 @@
 "save_button" = "Save";
 "discard_button" = "Don't Save";
 "cancel_button" = "Cancel";
+
+/* Preview recovery */
+"preview_error_title" = "Preview";
+"preview_crash_loop_message" = "The preview kept crashing and was reset. Reopen the file to try again.";

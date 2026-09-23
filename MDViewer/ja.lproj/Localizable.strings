@@ -58,3 +58,7 @@
 "save_button" = "保存";
 "discard_button" = "保存しない";
 "cancel_button" = "キャンセル";
+
+/* Preview recovery */
+"preview_error_title" = "プレビュー";
+"preview_crash_loop_message" = "プレビューが繰り返しクラッシュしたためリセットしました。ファイルを開き直してください。";

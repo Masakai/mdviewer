@@ -81,6 +81,14 @@ struct ContentView: View {
         } message: {
             Text(documentVM.errorMessage ?? "")
         }
+        .alert("preview_error_title", isPresented: Binding(
+            get: { renderVM.renderFailureMessage != nil },
+            set: { if !$0 { renderVM.renderFailureMessage = nil } }
+        )) {
+            Button("OK") { renderVM.renderFailureMessage = nil }
+        } message: {
+            Text(renderVM.renderFailureMessage ?? "")
+        }
         .onAppear {
             if let url = initialURL {
                 documentVM.load(url: url)

@@ -20,6 +20,7 @@ struct WebRendererView: NSViewRepresentable {
         let contentController = WKUserContentController()
         contentController.add(context.coordinator, name: "headingsExtracted")
         contentController.add(context.coordinator, name: "renderComplete")
+        contentController.add(context.coordinator, name: "renderFailed")
         contentController.add(context.coordinator, name: "scrollPositionChanged")
         contentController.add(context.coordinator, name: "linkHovered")
         contentController.add(context.coordinator, name: "linkClicked")
@@ -39,6 +40,10 @@ struct WebRendererView: NSViewRepresentable {
         context.coordinator.webView = webView
         renderVM.webView = webView
         renderVM.schemeHandler = context.coordinator.schemeHandler
+        renderVM.reloadRenderer = { [weak coordinator = context.coordinator] in
+            guard let webView = coordinator?.webView else { return false }
+            return Coordinator.loadRenderer(into: webView)
+        }
 
         loadRenderer(webView: webView)
 
@@ -50,11 +55,7 @@ struct WebRendererView: NSViewRepresentable {
     }
 
     private func loadRenderer(webView: WKWebView) {
-        guard let rendererURL = HTMLBuilder.rendererURL(),
-              let resourcesDir = HTMLBuilder.webResourcesDirectory()
-        else { return }
-
-        webView.loadFileURL(rendererURL, allowingReadAccessTo: resourcesDir)
+        Coordinator.loadRenderer(into: webView)
     }
 
     // MARK: - Coordinator
@@ -77,6 +78,9 @@ struct WebRendererView: NSViewRepresentable {
                 handleHeadingsExtracted(message.body)
             case "renderComplete":
                 handleRenderComplete()
+            case "renderFailed":
+                let reason = message.body as? String ?? "unknown"
+                NSLog("MDViewer: render failed in WebView: %@", reason)
             case "scrollPositionChanged":
                 break
             case "linkHovered":
@@ -115,7 +119,76 @@ struct WebRendererView: NSViewRepresentable {
             }
         }
 
-        private func handleRenderComplete() {}
+        /// A completed render is the proof that the renderer is healthy, so it
+        /// clears the crash-loop guard.
+        private func handleRenderComplete() {
+            Task { @MainActor in self.renderVM.noteRenderSucceeded() }
+        }
+
+        // MARK: - Renderer loading / recovery
+
+        /// Loads renderer.html, both for the initial display and when recovering
+        /// from a WebContent process crash.
+        ///
+        /// - Returns: whether a load was started; false if the renderer's
+        ///   resources are missing from the bundle.
+        @discardableResult
+        static func loadRenderer(into webView: WKWebView) -> Bool {
+            guard let rendererURL = HTMLBuilder.rendererURL(),
+                  let resourcesDir = HTMLBuilder.webResourcesDirectory()
+            else { return false }
+
+            webView.loadFileURL(rendererURL, allowingReadAccessTo: resourcesDir)
+            return true
+        }
+
+        /// Recovers by reloading the renderer.
+        ///
+        /// Once the reload completes, `didFinish` calls `rendererDidLoad()`,
+        /// which automatically re-renders the content held in pending.
+        @MainActor
+        private func recoverRenderer() {
+            guard renderVM.rendererDidFail(), let webView else { return }
+            Self.loadRenderer(into: webView)
+        }
+
+        /// Called when the WebContent process terminates.
+        ///
+        /// In that state the WKWebView renders as a blank white area with only
+        /// the SwiftUI sidebar left visible. Without reloading here, every
+        /// subsequent evaluateJavaScript call fails silently and the preview
+        /// never recovers until the app is restarted.
+        func webViewWebContentProcessDidTerminate(_: WKWebView) {
+            Task { @MainActor in self.recoverRenderer() }
+        }
+
+        func webView(_: WKWebView, didFail _: WKNavigation!, withError error: any Error) {
+            handleNavigationFailure(error)
+        }
+
+        func webView(
+            _: WKWebView,
+            didFailProvisionalNavigation _: WKNavigation!,
+            withError error: any Error
+        ) {
+            handleNavigationFailure(error)
+        }
+
+        /// A failed load leaves the renderer as unusable as a crash does, so it
+        /// is recovered the same way. Marking it failed without reloading would
+        /// queue every later render with nothing left to flush it.
+        private func handleNavigationFailure(_ error: any Error) {
+            guard !Self.isSupersededNavigation(error) else { return }
+            Task { @MainActor in self.recoverRenderer() }
+        }
+
+        /// A navigation cancelled because a newer one replaced it. That is not a
+        /// renderer failure — the newer navigation reports its own outcome — and
+        /// recovering from it would count against the crash-loop guard and
+        /// replace the navigation that superseded it.
+        static func isSupersededNavigation(_ error: any Error) -> Bool {
+            (error as? URLError)?.code == .cancelled
+        }
 
         // MARK: - WKUIDelegate
 

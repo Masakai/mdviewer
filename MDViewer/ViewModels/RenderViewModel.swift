@@ -8,6 +8,9 @@ final class RenderViewModel: ObservableObject {
     @Published var fontSize: Double = 16
     @Published var hoveredURL: String = ""
 
+    /// Set when the preview could not be recovered; nil while things are healthy.
+    @Published var renderFailureMessage: String?
+
     @AppStorage("selectedThemeId") private var storedThemeId: String = MarkdownTheme.githubLight.id
     @AppStorage("fontSize") private var storedFontSize: Double = 16
     @AppStorage("pdfPageSize") private var storedPDFPageSize: String = PDFPageSize.a4.rawValue
@@ -18,6 +21,26 @@ final class RenderViewModel: ObservableObject {
     private(set) var isRendererReady = false
     private var pendingMarkdown: String?
     private var pendingBaseURL: URL?
+
+    /// The most recently rendered content, retained so it can be drawn again
+    /// after reloading when recovering from a WebContent process crash.
+    private var lastRenderedMarkdown: String?
+    private var lastBaseURL: URL?
+
+    /// Crash-loop guard: if the content itself crashes the WebContent process,
+    /// re-rendering it on recovery would crash again indefinitely.
+    private var consecutiveFailures = 0
+    private var lastFailureTime: Date?
+    private let maxConsecutiveFailures = 3
+    private let failureWindow: TimeInterval = 10
+
+    /// Set once the crash-loop guard has given up: the WebContent process is
+    /// gone and nothing will load the renderer again on its own.
+    private(set) var isRecoveryHalted = false
+
+    /// Loads the renderer page again. Set by the view that owns the web view;
+    /// returns false when there is no renderer on screen to reload.
+    var reloadRenderer: (() -> Bool)?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -62,6 +85,7 @@ final class RenderViewModel: ObservableObject {
         // The Markdown file's directory is served to the WebView through the
         // custom mdviewer-local:// scheme handler, which enforces path security.
         schemeHandler?.baseDirectory = directoryURL.standardizedFileURL
+        lastBaseURL = directoryURL
         guard isRendererReady else { pendingBaseURL = directoryURL; return }
         applyBaseURL()
     }
@@ -73,20 +97,122 @@ final class RenderViewModel: ObservableObject {
     }
 
     func renderMarkdown(_ markdown: String) {
-        guard isRendererReady else { pendingMarkdown = markdown; return }
+        lastRenderedMarkdown = markdown
+        guard isRendererReady else {
+            pendingMarkdown = markdown
+            retryHaltedRenderer()
+            return
+        }
         let escaped = escapeForJS(markdown)
         webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
     }
 
+    /// Once the guard has given up, new content — an edit, reloading the file,
+    /// reopening it — is the user trying again: the renderer gets a fresh
+    /// budget and is reloaded, and rendererDidLoad() draws the queued content.
+    /// If it keeps crashing the guard stops it again after the same number of
+    /// attempts. Edits made before the reload finishes only update the queued
+    /// content, since the renderer is not ready until then.
+    private func retryHaltedRenderer() {
+        guard isRecoveryHalted, reloadRenderer?() == true else { return }
+        resumeRecovery()
+    }
+
+    /// Leaves the halted state with a fresh budget, so the next crash is
+    /// recovered from rather than counted against the budget used up before.
+    private func resumeRecovery() {
+        isRecoveryHalted = false
+        consecutiveFailures = 0
+        lastFailureTime = nil
+    }
+
+    /// Called when the WebContent process terminates or a navigation fails.
+    ///
+    /// Unless `isRendererReady` is reset to false, subsequent `renderMarkdown`
+    /// calls pass the guard and keep running evaluateJavaScript against a dead
+    /// page, failing silently and leaving the preview permanently white. The
+    /// current content is moved back to pending so it is re-rendered once the
+    /// reload completes.
+    ///
+    /// - Returns: whether the caller should reload the renderer. False once the
+    ///   crashes look self-inflicted — if the content itself is what kills the
+    ///   WebContent process, re-rendering it would crash again in a loop.
+    ///
+    /// - Parameter now: the current time, injectable so the crash-loop window can
+    ///   be exercised in tests without waiting in real time.
+    @discardableResult
+    func rendererDidFail(now: Date = Date()) -> Bool {
+        isRendererReady = false
+        if pendingBaseURL == nil { pendingBaseURL = lastBaseURL }
+
+        if let last = lastFailureTime, now.timeIntervalSince(last) < failureWindow {
+            consecutiveFailures += 1
+        } else {
+            consecutiveFailures = 1
+        }
+        lastFailureTime = now
+
+        guard consecutiveFailures <= maxConsecutiveFailures else {
+            // Reload once more but without the content that keeps crashing, so
+            // the user gets a usable empty renderer instead of a crash loop.
+            // Both copies must go: rendererDidLoad() falls back to the last
+            // render, which would draw the crashing content straight back.
+            pendingMarkdown = nil
+            lastRenderedMarkdown = nil
+            renderFailureMessage = NSLocalizedString("preview_crash_loop_message", comment: "")
+            let reloadsOnceMore = consecutiveFailures == maxConsecutiveFailures + 1
+            if !reloadsOnceMore {
+                isRecoveryHalted = true
+            }
+            return reloadsOnceMore
+        }
+
+        if pendingMarkdown == nil { pendingMarkdown = lastRenderedMarkdown }
+        return true
+    }
+
+    /// Clears the crash-loop counter once a render has demonstrably succeeded.
+    ///
+    /// This runs after every render, so it must stay a no-op in the common case:
+    /// assigning to a @Published property publishes even when the value is
+    /// unchanged, which would invalidate the view on every keystroke.
+    func noteRenderSucceeded() {
+        guard consecutiveFailures != 0 || lastFailureTime != nil || renderFailureMessage != nil else {
+            return
+        }
+        consecutiveFailures = 0
+        lastFailureTime = nil
+        renderFailureMessage = nil
+    }
+
+    /// What `rendererDidLoad()` draws once the page has loaded: anything queued
+    /// while the renderer was not ready, otherwise the last content, so a native
+    /// Reload does not come back blank. Nil once the crash-loop guard has reset
+    /// the preview.
+    var markdownToRestore: String? {
+        pendingMarkdown ?? lastRenderedMarkdown
+    }
+
     func rendererDidLoad() {
         isRendererReady = true
+        if isRecoveryHalted {
+            resumeRecovery()
+        }
         applyCurrentThemeAndFontSize()
         applyPDFPageSize()
-        if pendingBaseURL != nil {
+
+        // Fall back to the base URL of the last render: the renderer can be
+        // reloaded without anything pending — the context menu offers a native
+        // Reload — and the freshly loaded page knows nothing about it.
+        if pendingBaseURL != nil || lastBaseURL != nil {
             pendingBaseURL = nil
             applyBaseURL()
         }
-        if let md = pendingMarkdown {
+
+        // Same for the content itself. Without the fallback a native reload
+        // repaints an empty document, leaving the preview blank with no way
+        // back until the file is reopened.
+        if let md = markdownToRestore {
             pendingMarkdown = nil
             let escaped = escapeForJS(md)
             webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
