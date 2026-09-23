@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.1] — 2026-09-23
+
+### Fixed
+- When the open file disappeared for a moment and came back (a git branch switch, a cloud sync), the "file doesn't exist" alert stayed on screen even though the preview had already reloaded the file. The alert now closes once the file is read successfully again. If the file stays deleted, the alert remains.
+
+---
+
 ## [1.3.0] — 2026-09-23
 
 ### Fixed
