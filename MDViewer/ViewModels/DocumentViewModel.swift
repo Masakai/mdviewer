@@ -68,6 +68,9 @@ final class DocumentViewModel: ObservableObject {
             let contents = try String(contentsOf: url, encoding: .utf8)
             isDirty = false
             text = contents
+            // 一時的に消えたファイルが戻ってきた場合など、直前の読み込み失敗の
+            // アラートが残らないようにする（成功時は常に最新の内容を表示している）
+            if errorMessage != nil { errorMessage = nil }
         } catch {
             errorMessage = error.localizedDescription
         }
