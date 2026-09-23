@@ -1,5 +1,15 @@
 # MDViewer Project Instructions
 
+## テスト
+
+コミット前に単体テスト（`MDViewerTests`、test target は `project.yml` で定義）を実行する。
+
+```bash
+xcodebuild test -project MDViewer.xcodeproj -scheme MDViewer -destination 'platform=macOS'
+```
+
+`project.yml` を変更したら `xcodegen generate` で `project.pbxproj` を再生成する。エンタイトルメントは `project.yml` の `entitlements.properties` が正であり、そこに書いていないキーは再生成で `MDViewer.entitlements` から消える。
+
 ## Release Process
 
 **機能実装の完了報告には、公証付きリリースへの導線を明示する**: リリース対象になりうる機能実装・修正が完了したら、完了報告の最後に「次は `/release-md` で公証付きリリースです」等、次のアクションとして release-md スキルを一言添える。公証を後から聞かれて初めて言及する、という抜けを防ぐため。
