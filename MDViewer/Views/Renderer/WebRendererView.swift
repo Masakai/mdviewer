@@ -153,16 +153,32 @@ struct WebRendererView: NSViewRepresentable {
             Task { @MainActor in self.recoverRenderer() }
         }
 
-        func webView(_: WKWebView, didFail _: WKNavigation!, withError _: any Error) {
-            Task { @MainActor in self.renderVM.rendererDidFail() }
+        func webView(_: WKWebView, didFail _: WKNavigation!, withError error: any Error) {
+            handleNavigationFailure(error)
         }
 
         func webView(
             _: WKWebView,
             didFailProvisionalNavigation _: WKNavigation!,
-            withError _: any Error
+            withError error: any Error
         ) {
-            Task { @MainActor in self.renderVM.rendererDidFail() }
+            handleNavigationFailure(error)
+        }
+
+        /// A failed load leaves the renderer as unusable as a crash does, so it
+        /// is recovered the same way. Marking it failed without reloading would
+        /// queue every later render with nothing left to flush it.
+        private func handleNavigationFailure(_ error: any Error) {
+            guard !Self.isSupersededNavigation(error) else { return }
+            Task { @MainActor in self.recoverRenderer() }
+        }
+
+        /// A navigation cancelled because a newer one replaced it. That is not a
+        /// renderer failure — the newer navigation reports its own outcome — and
+        /// recovering from it would count against the crash-loop guard and
+        /// replace the navigation that superseded it.
+        static func isSupersededNavigation(_ error: any Error) -> Bool {
+            (error as? URLError)?.code == .cancelled
         }
 
         // MARK: - WKUIDelegate
