@@ -7,6 +7,11 @@
     // -- Shiki highlighter (resolved async on page load)
     let shikiHighlighter = null;
 
+    // Headings of the render #content is showing, re-reported when a render
+    // keeps the previous content. Null until this page has drawn one, so a
+    // freshly loaded page never reports an empty list over the sidebar.
+    let displayedHeadings = null;
+
     if (window.__shikiReady) {
         window.__shikiReady.then(function (h) { shikiHighlighter = h; });
     }
@@ -89,6 +94,15 @@
         });
     }
 
+    // Sends the headings of what is on screen to the sidebar. Swift also builds
+    // the sidebar from the raw text as soon as it changes; this message lands
+    // afterwards and describes what was actually drawn.
+    function notifyHeadings(headings) {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.headingsExtracted) {
+            window.webkit.messageHandlers.headingsExtracted.postMessage(headings);
+        }
+    }
+
     // Tells Swift the renderer is alive and showing valid content, which clears
     // the crash-loop guard.
     function notifyRenderComplete() {
@@ -169,13 +183,18 @@
         // rendered HTML just to check it for emptiness.
         const hasContent = /\S/;
         if (!hasContent.test(html) && hasContent.test(markdown)) {
-            // The previous render stays, headings included, so there is nothing
-            // new to report — but the renderer did complete a render.
+            // The previous render stays on screen. Swift has already rebuilt the
+            // sidebar from the new text, which has no headings, so report the
+            // ones still shown — and the renderer did complete a render.
+            if (displayedHeadings !== null) {
+                notifyHeadings(displayedHeadings);
+            }
             notifyRenderComplete();
             return;
         }
 
         contentEl.innerHTML = html;
+        displayedHeadings = headingsRef;
 
         // Resolve relative image paths against the Markdown file's directory
         rewriteLocalResources(contentEl);
@@ -189,10 +208,7 @@
             }
         }
 
-        // Notify Swift with heading list
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.headingsExtracted) {
-            window.webkit.messageHandlers.headingsExtracted.postMessage(headingsRef);
-        }
+        notifyHeadings(headingsRef);
 
         notifyRenderComplete();
     }
