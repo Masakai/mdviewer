@@ -40,6 +40,10 @@ struct WebRendererView: NSViewRepresentable {
         context.coordinator.webView = webView
         renderVM.webView = webView
         renderVM.schemeHandler = context.coordinator.schemeHandler
+        renderVM.reloadRenderer = { [weak coordinator = context.coordinator] in
+            guard let webView = coordinator?.webView else { return false }
+            return Coordinator.loadRenderer(into: webView)
+        }
 
         loadRenderer(webView: webView)
 
@@ -125,12 +129,17 @@ struct WebRendererView: NSViewRepresentable {
 
         /// Loads renderer.html, both for the initial display and when recovering
         /// from a WebContent process crash.
-        static func loadRenderer(into webView: WKWebView) {
+        ///
+        /// - Returns: whether a load was started; false if the renderer's
+        ///   resources are missing from the bundle.
+        @discardableResult
+        static func loadRenderer(into webView: WKWebView) -> Bool {
             guard let rendererURL = HTMLBuilder.rendererURL(),
                   let resourcesDir = HTMLBuilder.webResourcesDirectory()
-            else { return }
+            else { return false }
 
             webView.loadFileURL(rendererURL, allowingReadAccessTo: resourcesDir)
+            return true
         }
 
         /// Recovers by reloading the renderer.

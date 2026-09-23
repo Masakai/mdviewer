@@ -351,4 +351,134 @@ final class RenderViewModelTests: XCTestCase {
         // Assert
         XCTAssertEqual(sut.markdownToRestore, "# fixed content")
     }
+
+    // MARK: - Recovery after the guard gives up
+
+    /// Drives the guard past its last reload: four failures reset the preview,
+    /// the fifth inside the window stops reloading altogether.
+    private func haltRecovery(from start: Date) {
+        for step in 1 ... 5 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+    }
+
+    /// Once the guard has stopped, new content is the user trying again. It
+    /// reloads the renderer once, however many edits follow before the reload
+    /// finishes, and the latest one is what gets drawn.
+    func test_renderMarkdown_afterRecoveryHalted_reloadsTheRendererOnce() {
+        // Arrange
+        haltRecovery(from: Date())
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return true }
+
+        // Act
+        sut.renderMarkdown("# a")
+        sut.renderMarkdown("# ab")
+        sut.renderMarkdown("# abc")
+
+        // Assert
+        XCTAssertEqual(reloads, 1)
+        XCTAssertFalse(sut.isRecoveryHalted)
+        XCTAssertEqual(sut.markdownToRestore, "# abc")
+        XCTAssertNotNil(sut.renderFailureMessage)
+    }
+
+    /// A renderer that is loading — the first load, or a recovery in flight —
+    /// is not stuck, and after the fourth failure the guard still reloads
+    /// once. Neither may trigger a second load.
+    func test_renderMarkdown_whileNotHalted_neverReloadsTheRenderer() {
+        // Arrange
+        let start = Date()
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return true }
+
+        // Act — before the first load finishes
+        sut.renderMarkdown("# first")
+        // Act — after the guard reset the preview, without giving up
+        for step in 1 ... 4 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+        sut.renderMarkdown("# second")
+
+        // Assert
+        XCTAssertEqual(reloads, 0)
+        XCTAssertFalse(sut.isRecoveryHalted)
+    }
+
+    /// A retry gets the same budget as any other content: if it keeps
+    /// crashing the guard stops it again, and the next edit may retry again.
+    func test_rendererDidFail_afterARetry_haltsAgainAfterTheSameBudget() {
+        // Arrange
+        let start = Date()
+        haltRecovery(from: start)
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return true }
+        sut.renderMarkdown("# still crashing")
+        sut.rendererDidLoad()  // the retried page loads, then the content crashes it
+        let retry = start.addingTimeInterval(3)
+
+        // Act
+        var results: [Bool] = []
+        for step in 1 ... 5 {
+            results.append(sut.rendererDidFail(now: retry.addingTimeInterval(Double(step) * 0.5)))
+        }
+
+        // Assert
+        XCTAssertEqual(results, [true, true, true, true, false])
+        XCTAssertTrue(sut.isRecoveryHalted)
+        XCTAssertNil(sut.markdownToRestore)
+
+        // Act — the user tries again
+        sut.renderMarkdown("# fixed")
+
+        // Assert
+        XCTAssertEqual(reloads, 2)
+        XCTAssertEqual(sut.markdownToRestore, "# fixed")
+    }
+
+    /// Any page that finishes loading means the renderer is back, with a
+    /// fresh budget: a crash right after must be reloaded, not counted as the
+    /// sixth failure of the budget that was already used up.
+    func test_rendererDidLoad_afterRecoveryHalted_clearsTheHaltWithAFreshBudget() {
+        // Arrange
+        let start = Date()
+        haltRecovery(from: start)
+        XCTAssertTrue(sut.isRecoveryHalted)
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return true }
+
+        // Act
+        sut.rendererDidLoad()
+        sut.renderMarkdown("# drawn directly")
+        let reloadsAfterCrash = sut.rendererDidFail(now: start.addingTimeInterval(3))
+
+        // Assert
+        XCTAssertEqual(reloads, 0)
+        XCTAssertTrue(reloadsAfterCrash)
+        XCTAssertFalse(sut.isRecoveryHalted)
+    }
+
+    /// With no renderer on screen nothing is reloaded, so the halt must stay
+    /// for the next attempt to retry.
+    func test_renderMarkdown_haltedWithoutARenderer_staysHalted() {
+        // Arrange
+        haltRecovery(from: Date())
+        var available = false
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return available }
+
+        // Act
+        sut.renderMarkdown("# nowhere to draw")
+
+        // Assert
+        XCTAssertTrue(sut.isRecoveryHalted)
+
+        // Act — the renderer is back on screen
+        available = true
+        sut.renderMarkdown("# drawn")
+
+        // Assert
+        XCTAssertFalse(sut.isRecoveryHalted)
+        XCTAssertEqual(reloads, 2)
+    }
 }

@@ -33,6 +33,14 @@ final class RenderViewModel: ObservableObject {
     private var lastFailureTime: Date?
     private let maxConsecutiveFailures = 3
     private let failureWindow: TimeInterval = 10
+
+    /// Set once the crash-loop guard has given up: the WebContent process is
+    /// gone and nothing will load the renderer again on its own.
+    private(set) var isRecoveryHalted = false
+
+    /// Loads the renderer page again. Set by the view that owns the web view;
+    /// returns false when there is no renderer on screen to reload.
+    var reloadRenderer: (() -> Bool)?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -90,9 +98,32 @@ final class RenderViewModel: ObservableObject {
 
     func renderMarkdown(_ markdown: String) {
         lastRenderedMarkdown = markdown
-        guard isRendererReady else { pendingMarkdown = markdown; return }
+        guard isRendererReady else {
+            pendingMarkdown = markdown
+            retryHaltedRenderer()
+            return
+        }
         let escaped = escapeForJS(markdown)
         webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
+    }
+
+    /// Once the guard has given up, new content — an edit, reloading the file,
+    /// reopening it — is the user trying again: the renderer gets a fresh
+    /// budget and is reloaded, and rendererDidLoad() draws the queued content.
+    /// If it keeps crashing the guard stops it again after the same number of
+    /// attempts. Edits made before the reload finishes only update the queued
+    /// content, since the renderer is not ready until then.
+    private func retryHaltedRenderer() {
+        guard isRecoveryHalted, reloadRenderer?() == true else { return }
+        resumeRecovery()
+    }
+
+    /// Leaves the halted state with a fresh budget, so the next crash is
+    /// recovered from rather than counted against the budget used up before.
+    private func resumeRecovery() {
+        isRecoveryHalted = false
+        consecutiveFailures = 0
+        lastFailureTime = nil
     }
 
     /// Called when the WebContent process terminates or a navigation fails.
@@ -129,7 +160,11 @@ final class RenderViewModel: ObservableObject {
             pendingMarkdown = nil
             lastRenderedMarkdown = nil
             renderFailureMessage = NSLocalizedString("preview_crash_loop_message", comment: "")
-            return consecutiveFailures == maxConsecutiveFailures + 1
+            let reloadsOnceMore = consecutiveFailures == maxConsecutiveFailures + 1
+            if !reloadsOnceMore {
+                isRecoveryHalted = true
+            }
+            return reloadsOnceMore
         }
 
         if pendingMarkdown == nil { pendingMarkdown = lastRenderedMarkdown }
@@ -160,6 +195,9 @@ final class RenderViewModel: ObservableObject {
 
     func rendererDidLoad() {
         isRendererReady = true
+        if isRecoveryHalted {
+            resumeRecovery()
+        }
         applyCurrentThemeAndFontSize()
         applyPDFPageSize()
 
