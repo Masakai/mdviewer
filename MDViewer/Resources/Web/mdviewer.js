@@ -89,6 +89,14 @@
         });
     }
 
+    // Tells Swift the renderer is alive and showing valid content, which clears
+    // the crash-loop guard.
+    function notifyRenderComplete() {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.renderComplete) {
+            window.webkit.messageHandlers.renderComplete.postMessage(null);
+        }
+    }
+
     // Renders the Markdown. Exceptions are caught by the calling setContent.
     async function renderContent(markdown) {
         if (!shikiHighlighter && window.__shikiReady) {
@@ -161,6 +169,9 @@
         // rendered HTML just to check it for emptiness.
         const hasContent = /\S/;
         if (!hasContent.test(html) && hasContent.test(markdown)) {
+            // The previous render stays, headings included, so there is nothing
+            // new to report — but the renderer did complete a render.
+            notifyRenderComplete();
             return;
         }
 
@@ -183,10 +194,7 @@
             window.webkit.messageHandlers.headingsExtracted.postMessage(headingsRef);
         }
 
-        // Notify Swift render complete
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.renderComplete) {
-            window.webkit.messageHandlers.renderComplete.postMessage(null);
-        }
+        notifyRenderComplete();
     }
 
     // -- Public MDViewer API (called from Swift via evaluateJavaScript)
