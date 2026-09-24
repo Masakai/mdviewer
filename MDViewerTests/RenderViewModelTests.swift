@@ -244,6 +244,7 @@ final class RenderViewModelTests: XCTestCase {
             // Assert
             XCTAssertTrue(shouldReload)
             XCTAssertNil(sut.renderFailureMessage)
+            XCTAssertFalse(sut.isPreviewInterrupted)
         }
     }
 
@@ -297,11 +298,14 @@ final class RenderViewModelTests: XCTestCase {
         }
         XCTAssertNotNil(sut.renderFailureMessage)
 
+        XCTAssertTrue(sut.isPreviewInterrupted)
+
         // Act
         sut.noteRenderSucceeded()
 
         // Assert
         XCTAssertNil(sut.renderFailureMessage)
+        XCTAssertFalse(sut.isPreviewInterrupted)
     }
 
     /// The reset the guard announces must be real: the reload that follows it
@@ -480,5 +484,229 @@ final class RenderViewModelTests: XCTestCase {
         // Assert
         XCTAssertFalse(sut.isRecoveryHalted)
         XCTAssertEqual(reloads, 2)
+    }
+
+    // MARK: - Preview interrupted
+
+    func test_rendererDidFail_fourthFailureInTheWindow_interruptsThePreview() {
+        // Arrange
+        let start = Date()
+        for step in 1 ... 3 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+            XCTAssertFalse(sut.isPreviewInterrupted)
+        }
+
+        // Act
+        sut.rendererDidFail(now: start.addingTimeInterval(2))
+
+        // Assert
+        XCTAssertTrue(sut.isPreviewInterrupted)
+    }
+
+    func test_rendererDidFail_belowTheThreshold_doesNotInterruptThePreview() {
+        // Arrange
+        let start = Date()
+
+        // Act
+        for step in 1 ... 3 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+
+        // Assert
+        XCTAssertFalse(sut.isPreviewInterrupted)
+    }
+
+    /// The alert is shown once and dismissed; the preview is still showing the
+    /// reset (or halted) renderer, so the interruption must outlive it.
+    func test_isPreviewInterrupted_afterTheAlertIsDismissed_staysSet() {
+        // Arrange
+        let start = Date()
+        for step in 1 ... 4 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+
+        // Act — alert OK after the reset
+        sut.renderFailureMessage = nil
+
+        // Assert
+        XCTAssertTrue(sut.isPreviewInterrupted)
+
+        // Act — halt, alert OK again, then the empty page loads
+        sut.rendererDidFail(now: start.addingTimeInterval(2.5))
+        sut.renderFailureMessage = nil
+        sut.rendererDidLoad()
+
+        // Assert
+        XCTAssertTrue(sut.isPreviewInterrupted)
+    }
+
+    /// The page that loads after a halt zeroes the budget and the alert has
+    /// been dismissed, so the interruption is the only thing left to clear:
+    /// a successful render must still clear it, or the banner stays forever.
+    func test_noteRenderSucceeded_afterHaltLoadAndDismissedAlert_clearsTheInterruption() {
+        // Arrange
+        haltRecovery(from: Date())
+        sut.rendererDidLoad()
+        sut.renderFailureMessage = nil
+        XCTAssertTrue(sut.isPreviewInterrupted)
+
+        // Act
+        sut.noteRenderSucceeded()
+
+        // Assert
+        XCTAssertFalse(sut.isPreviewInterrupted)
+    }
+
+    /// A failure after the window restarts the count, but the preview is
+    /// still the reset one: nothing has rendered since.
+    func test_rendererDidFail_afterTheWindowWhileInterrupted_staysInterrupted() {
+        // Arrange
+        let start = Date()
+        for step in 1 ... 4 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+
+        // Act
+        sut.rendererDidFail(now: start.addingTimeInterval(30))
+
+        // Assert
+        XCTAssertTrue(sut.isPreviewInterrupted)
+    }
+
+    /// Try Again after the reset gets a fresh budget: the next failures inside
+    /// the window of the fourth are recovered from instead of halting.
+    func test_retryRendering_afterTheReset_givesAFreshBudgetAndRestoresTheText() {
+        // Arrange
+        let start = Date()
+        sut.rendererDidLoad()
+        sut.renderMarkdown("# content that crashes the renderer")
+        for step in 1 ... 4 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return true }
+
+        // Act
+        sut.retryRendering("# try again")
+
+        // Assert
+        XCTAssertEqual(reloads, 0)
+        XCTAssertEqual(sut.markdownToRestore, "# try again")
+        XCTAssertTrue(sut.isPreviewInterrupted)
+
+        // Act — it crashes again, inside the window of the fourth failure
+        let retry = start.addingTimeInterval(3)
+        var results: [Bool] = []
+        for step in 1 ... 3 {
+            results.append(sut.rendererDidFail(now: retry.addingTimeInterval(Double(step) * 0.5)))
+        }
+
+        // Assert
+        XCTAssertEqual(results, [true, true, true])
+        XCTAssertFalse(sut.isRecoveryHalted)
+    }
+
+    func test_retryRendering_whenHalted_reloadsOnceAndKeepsTheLatestText() {
+        // Arrange
+        haltRecovery(from: Date())
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return true }
+
+        // Act
+        sut.retryRendering("# a")
+        sut.retryRendering("# ab")
+
+        // Assert
+        XCTAssertEqual(reloads, 1)
+        XCTAssertFalse(sut.isRecoveryHalted)
+        XCTAssertEqual(sut.markdownToRestore, "# ab")
+        XCTAssertTrue(sut.isPreviewInterrupted)
+    }
+
+    func test_retryRendering_haltedWithoutARenderer_staysHaltedAndInterrupted() {
+        // Arrange
+        haltRecovery(from: Date())
+
+        // Act — no reloadRenderer at all
+        sut.retryRendering("# nowhere to draw")
+
+        // Assert
+        XCTAssertTrue(sut.isRecoveryHalted)
+        XCTAssertTrue(sut.isPreviewInterrupted)
+
+        // Act — a renderer that cannot reload
+        sut.reloadRenderer = { false }
+        sut.retryRendering("# nowhere to draw")
+        sut.retryRendering("# nowhere to draw")
+
+        // Assert
+        XCTAssertTrue(sut.isRecoveryHalted)
+        XCTAssertTrue(sut.isPreviewInterrupted)
+    }
+
+    /// Mid crash-loop, before any reset, Try Again is not on screen; a call
+    /// anyway must not hand the crashing content a fresh budget.
+    func test_retryRendering_whenNotInterrupted_leavesTheBudgetAlone() {
+        // Arrange
+        let start = Date()
+        var reloads = 0
+        sut.reloadRenderer = { reloads += 1; return true }
+        for step in 1 ... 3 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+
+        // Act
+        sut.retryRendering("# not now")
+        sut.rendererDidFail(now: start.addingTimeInterval(2))
+
+        // Assert — the fourth failure still resets the preview
+        XCTAssertNotNil(sut.renderFailureMessage)
+        XCTAssertTrue(sut.isPreviewInterrupted)
+        XCTAssertEqual(reloads, 0)
+    }
+
+    func test_rendererDidFail_resetAndHalt_callOnPreviewResetEachTime() {
+        // Arrange
+        let start = Date()
+        var resets = 0
+        sut.onPreviewReset = { resets += 1 }
+
+        // Act
+        for step in 1 ... 3 {
+            sut.rendererDidFail(now: start.addingTimeInterval(Double(step) * 0.5))
+        }
+
+        // Assert
+        XCTAssertEqual(resets, 0)
+
+        // Act — the reset
+        sut.rendererDidFail(now: start.addingTimeInterval(2))
+
+        // Assert
+        XCTAssertEqual(resets, 1)
+
+        // Act — the halt
+        sut.rendererDidFail(now: start.addingTimeInterval(2.5))
+
+        // Assert
+        XCTAssertEqual(resets, 2)
+    }
+
+    /// The user scenario end to end: halted, alert dismissed, Try Again
+    /// reloads the renderer and the retried content renders.
+    func test_retryRendering_haltedThenRenderSucceeds_clearsTheInterruption() {
+        // Arrange
+        haltRecovery(from: Date())
+        sut.renderFailureMessage = nil
+        sut.reloadRenderer = { true }
+
+        // Act
+        sut.retryRendering("# fixed")
+        sut.rendererDidLoad()
+        sut.noteRenderSucceeded()
+
+        // Assert
+        XCTAssertFalse(sut.isPreviewInterrupted)
+        XCTAssertNil(sut.renderFailureMessage)
     }
 }

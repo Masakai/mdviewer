@@ -11,6 +11,13 @@ final class RenderViewModel: ObservableObject {
     /// Set when the preview could not be recovered; nil while things are healthy.
     @Published var renderFailureMessage: String?
 
+    /// Set when the crash-loop guard resets or halts the preview, cleared only
+    /// once a render succeeds. Stored rather than derived from the guard's
+    /// counters: those are zeroed while the preview is still empty — the page
+    /// loading after a halt, a failure outside the window restarting the count —
+    /// and dismissing the alert clears `renderFailureMessage`.
+    @Published private(set) var isPreviewInterrupted = false
+
     @AppStorage("selectedThemeId") private var storedThemeId: String = MarkdownTheme.githubLight.id
     @AppStorage("fontSize") private var storedFontSize: Double = 16
     @AppStorage("pdfPageSize") private var storedPDFPageSize: String = PDFPageSize.a4.rawValue
@@ -41,6 +48,12 @@ final class RenderViewModel: ObservableObject {
     /// Loads the renderer page again. Set by the view that owns the web view;
     /// returns false when there is no renderer on screen to reload.
     var reloadRenderer: (() -> Bool)?
+
+    /// Called when the crash-loop guard resets the preview. Set by the view that
+    /// owns the web view: what was extracted from the crashing content, such as
+    /// the sidebar's headings, would otherwise outlive it, since the empty page
+    /// that follows renders nothing to replace it.
+    var onPreviewReset: (() -> Void)?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
@@ -160,6 +173,10 @@ final class RenderViewModel: ObservableObject {
             pendingMarkdown = nil
             lastRenderedMarkdown = nil
             renderFailureMessage = NSLocalizedString("preview_crash_loop_message", comment: "")
+            if !isPreviewInterrupted {
+                isPreviewInterrupted = true
+            }
+            onPreviewReset?()
             let reloadsOnceMore = consecutiveFailures == maxConsecutiveFailures + 1
             if !reloadsOnceMore {
                 isRecoveryHalted = true
@@ -177,12 +194,30 @@ final class RenderViewModel: ObservableObject {
     /// assigning to a @Published property publishes even when the value is
     /// unchanged, which would invalidate the view on every keystroke.
     func noteRenderSucceeded() {
-        guard consecutiveFailures != 0 || lastFailureTime != nil || renderFailureMessage != nil else {
+        guard consecutiveFailures != 0 || lastFailureTime != nil || renderFailureMessage != nil
+            || isPreviewInterrupted
+        else {
             return
         }
         consecutiveFailures = 0
         lastFailureTime = nil
         renderFailureMessage = nil
+        isPreviewInterrupted = false
+    }
+
+    /// Try Again on an interrupted preview, with the text currently in memory.
+    ///
+    /// After a reset the renderer is alive (or its empty reload is in flight),
+    /// so the content gets a fresh budget and is drawn, or queued for
+    /// rendererDidLoad(). Once halted, the fresh budget must wait:
+    /// renderMarkdown() only reloads a halted renderer, and resets the budget
+    /// itself when the reload starts. Nothing is cleared here — the banner and
+    /// the alert go when a render succeeds. Outside an interruption it does
+    /// nothing, so it cannot hand a budget back mid crash-loop.
+    func retryRendering(_ markdown: String) {
+        guard isPreviewInterrupted else { return }
+        if !isRecoveryHalted { resumeRecovery() }
+        renderMarkdown(markdown)
     }
 
     /// What `rendererDidLoad()` draws once the page has loaded: anything queued
