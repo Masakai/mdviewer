@@ -44,6 +44,11 @@ struct WebRendererView: NSViewRepresentable {
             guard let webView = coordinator?.webView else { return false }
             return Coordinator.loadRenderer(into: webView)
         }
+        // After a reset the text is unchanged and the empty page renders
+        // nothing, so no headingsExtracted would replace the crashed content's.
+        renderVM.onPreviewReset = { [weak coordinator = context.coordinator] in
+            coordinator?.sidebarVM.tocItems = []
+        }
 
         loadRenderer(webView: webView)
 
