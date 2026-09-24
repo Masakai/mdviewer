@@ -62,3 +62,5 @@
 /* Preview recovery */
 "preview_error_title" = "プレビュー";
 "preview_crash_loop_message" = "プレビューが繰り返しクラッシュしたためリセットしました。ファイルを開き直してください。";
+"preview_interrupted_message" = "プレビューが繰り返しクラッシュしたため停止しています。";
+"preview_try_again_button" = "再試行";
