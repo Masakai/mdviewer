@@ -67,20 +67,20 @@ Build and run with ⌘R. No Swift Package dependencies — all vendor libraries 
 | Rendering engine | WKWebView |
 | Markdown parser | [marked](https://github.com/markedjs/marked) v12 |
 | Syntax highlighting | [Shiki](https://github.com/shikijs/shiki) v1 |
-| Math | [KaTeX](https://github.com/KaTeX/KaTeX) v0.16 |
-| Diagrams | [Mermaid](https://github.com/mermaid-js/mermaid) v10 |
+| Math | [KaTeX](https://github.com/KaTeX/KaTeX) v0.18 |
+| Diagrams | [Mermaid](https://github.com/mermaid-js/mermaid) v12 |
 | File watching | `DispatchSource` (kqueue) |
 
 ## Open source libraries
 
-All bundled libraries are MIT licensed. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full license texts.
+The libraries below are MIT licensed. Mermaid's single-file build also includes its own dependencies, some under other licenses (Apache-2.0, EPL-2.0, ISC, BSD-3-Clause). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full license texts.
 
 | Library | Version | License |
 |---------|---------|---------|
 | marked | 12.0.2 | MIT |
 | Shiki | 1.x | MIT |
-| KaTeX | 0.16.11 | MIT |
-| Mermaid | 10.x | MIT |
+| KaTeX | 0.18.9 | MIT |
+| Mermaid | 12.0.0 | MIT |
 
 ## License
 

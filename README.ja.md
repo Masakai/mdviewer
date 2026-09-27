@@ -67,20 +67,20 @@ open MDViewer.xcodeproj
 | レンダリングエンジン | WKWebView |
 | Markdown パーサー | [marked](https://github.com/markedjs/marked) v12 |
 | シンタックスハイライト | [Shiki](https://github.com/shikijs/shiki) v1 |
-| 数式 | [KaTeX](https://github.com/KaTeX/KaTeX) v0.16 |
-| 図 | [Mermaid](https://github.com/mermaid-js/mermaid) v10 |
+| 数式 | [KaTeX](https://github.com/KaTeX/KaTeX) v0.18 |
+| 図 | [Mermaid](https://github.com/mermaid-js/mermaid) v12 |
 | ファイル監視 | `DispatchSource`（kqueue） |
 
 ## オープンソースライブラリ
 
-バンドルされているライブラリはすべて MIT ライセンスです。ライセンス全文は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
+下表のライブラリは MIT ライセンスです。Mermaid の単一ファイル版には Mermaid 自身の依存ライブラリも含まれており、その一部は MIT 以外のライセンス（Apache-2.0、EPL-2.0、ISC、BSD-3-Clause）です。ライセンス全文は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
 
 | ライブラリ | バージョン | ライセンス |
 |-----------|-----------|-----------|
 | marked | 12.0.2 | MIT |
 | Shiki | 1.x | MIT |
-| KaTeX | 0.16.11 | MIT |
-| Mermaid | 10.x | MIT |
+| KaTeX | 0.18.9 | MIT |
+| Mermaid | 12.0.0 | MIT |
 
 ## ライセンス
 
