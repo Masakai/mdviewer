@@ -40,11 +40,13 @@ MDViewer は、ターミナルから Claude Code や Codex などのツールを
 
 - macOS 14 Sonoma 以降
 - Safari 17.4 以降（Mermaid の図の表示に必要。プレビューは Safari の WebKit で描画されるため、図が表示されない場合は Safari を更新してください）
-- Apple Silicon（M1 以降）
+- Apple Silicon（M1 以降）または Intel の Mac
 
 ## インストール
 
-1. [Releases ページ](https://github.com/Masakai/mdviewer/releases/latest) から最新の `MDViewer-x.x.x.zip` をダウンロード
+1. [Releases ページ](https://github.com/Masakai/mdviewer/releases/latest) から、お使いの Mac に合った zip をダウンロード
+   - Apple Silicon（M1 以降）：`MDViewer-AppleSilicon.zip`
+   - Intel：`MDViewer-Universal.zip`（Apple Silicon でも動きます）
 2. 解凍して `MDViewer.app` を **アプリケーション** フォルダにドラッグ
 3. `.md` ファイルをダブルクリック、または Dock の MDViewer アイコンにドロップ
 

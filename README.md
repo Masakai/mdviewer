@@ -40,11 +40,13 @@ Open "MDViewer Help" from the Help menu for a live-rendered reference covering a
 
 - macOS 14 Sonoma or later
 - Safari 17.4 or later, for Mermaid diagrams (Safari's WebKit draws the preview; update Safari if diagrams do not appear)
-- Apple Silicon (M1 or later)
+- Apple Silicon (M1 or later) or Intel Mac
 
 ## Installation
 
-1. Download the latest `MDViewer-x.x.x.zip` from the [Releases page](https://github.com/Masakai/mdviewer/releases/latest)
+1. Download the zip for your Mac from the [Releases page](https://github.com/Masakai/mdviewer/releases/latest):
+   - Apple Silicon (M1 or later): `MDViewer-AppleSilicon.zip`
+   - Intel: `MDViewer-Universal.zip` (it also runs on Apple Silicon)
 2. Unzip and drag `MDViewer.app` to your **Applications** folder
 3. Double-click any `.md` file — or drop it onto the MDViewer icon in the Dock
 

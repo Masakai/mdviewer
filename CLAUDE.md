@@ -20,14 +20,15 @@ xcodebuild test -project MDViewer.xcodeproj -scheme MDViewer -destination 'platf
 ./build-notarize.sh
 ```
 
-このスクリプトがビルド・署名・公証・staple・zip作成をすべて行う。
-生成された `build/MDViewer.zip`（staple済み）をGitHub Releaseにアップロードしてからリリースすること。
+このスクリプトがビルド・署名・公証・staple・zip作成を、Universal 版（arm64 + x86_64）と AppleSilicon 版（arm64 のみ）の2種類について行う。
+生成された `build/MDViewer-Universal.zip` と `build/MDViewer-AppleSilicon.zip`（どちらもstaple済み）をGitHub Releaseにアップロードしてからリリースすること。
+`build-notarize.sh` は `.gitignore` の対象でリポジトリには含まれない。
 
 ### 手順
 
 1. `./build-notarize.sh` を実行
-2. 成功したら `build/MDViewer.zip` が生成される
-3. `gh release create vX.X.X build/MDViewer.zip ...` でリリース作成
+2. 成功したら `build/MDViewer-Universal.zip` と `build/MDViewer-AppleSilicon.zip` が生成される
+3. `gh release create vX.X.X build/MDViewer-Universal.zip build/MDViewer-AppleSilicon.zip ...` でリリース作成
 4. zipなしのリリースは不可
 
 ### アプリパスワード・公証の設定
@@ -44,5 +45,5 @@ Releaseビルドでも `com.apple.security.get-task-allow` エンタイトルメ
 
 ```bash
 # 確認方法
-codesign --display --entitlements - build/MDViewer.app
+codesign --display --entitlements - build/Universal/export/MDViewer.app
 ```
