@@ -109,15 +109,18 @@
             margin-top: 1.4rem; font-size: 0.82rem; color: #8899bb;
         }
 
-        /* ─── SCREENSHOT ─── */
+        /* ─── DEMO VIDEO ─── */
         .preview-wrap {
             width: 100%; max-width: 900px; margin: 4rem auto 0;
             padding: 0 1.5rem;
         }
-        .preview-wrap img {
-            width: 100%; border-radius: 18px;
+        .preview-wrap video {
+            width: 100%; aspect-ratio: 16 / 9; border-radius: 18px;
             box-shadow: 0 24px 80px rgba(37,99,235,.15), 0 4px 20px rgba(0,0,0,.10);
-            display: block;
+            display: block; background: #eef4ff;
+        }
+        .video-credit {
+            margin-top: .8rem; font-size: .78rem; color: #8899bb; text-align: right;
         }
 
         /* ─── FEATURES ─── */
@@ -281,8 +284,19 @@
     <p class="req">macOS 14 Sonoma 以降が必要 &nbsp;·&nbsp; Mermaid の図の表示には Safari 17.4 以降が必要 &nbsp;·&nbsp; Apple Silicon・Intel 対応</p>
 
     <div class="preview-wrap">
-        <img src="../screenshot.png" alt="MDViewer — 目次サイドバー、KaTeX 数式、Mermaid ダイアグラムの表示例">
+        <video src="../video/mdviewer-ja.mp4" poster="../video/mdviewer-ja.jpg"
+               autoplay muted loop playsinline controls preload="auto"
+               aria-label="MDViewer のデモ：ターミナルから Markdown ファイルを開き、コード・数式・Mermaid の図、目次サイドバー、分割ビューエディタを表示する様子"></video>
+        <p class="video-credit">ナレーション：VOICEVOX:春日部つむぎ</p>
     </div>
+    <script>
+        // 視差効果を減らす設定の閲覧者には自動再生せず、ポスターを表示する
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const demo = document.querySelector('.preview-wrap video');
+            demo.removeAttribute('autoplay');
+            demo.pause();
+        }
+    </script>
 </section>
 
 <!-- ─── BACKSTORY ─── -->

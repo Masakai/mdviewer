@@ -109,15 +109,15 @@
             margin-top: 1.4rem; font-size: 0.82rem; color: #8899bb;
         }
 
-        /* ─── SCREENSHOT ─── */
+        /* ─── DEMO VIDEO ─── */
         .preview-wrap {
             width: 100%; max-width: 900px; margin: 4rem auto 0;
             padding: 0 1.5rem;
         }
-        .preview-wrap img {
-            width: 100%; border-radius: 18px;
+        .preview-wrap video {
+            width: 100%; aspect-ratio: 16 / 9; border-radius: 18px;
             box-shadow: 0 24px 80px rgba(37,99,235,.15), 0 4px 20px rgba(0,0,0,.10);
-            display: block;
+            display: block; background: #eef4ff;
         }
 
         /* ─── FEATURES ─── */
@@ -281,8 +281,18 @@
     <p class="req">Requires macOS 14 Sonoma or later &nbsp;·&nbsp; Safari 17.4 or later for Mermaid diagrams &nbsp;·&nbsp; Apple Silicon or Intel</p>
 
     <div class="preview-wrap">
-        <img src="screenshot.png" alt="MDViewer showing KaTeX math equations and a Mermaid diagram with TOC sidebar">
+        <video src="video/mdviewer-en.mp4" poster="video/mdviewer-en.jpg"
+               autoplay muted loop playsinline controls preload="auto"
+               aria-label="MDViewer demo: open a Markdown file from the terminal and see code, math and Mermaid diagrams rendered, with a TOC sidebar and a split-view editor"></video>
     </div>
+    <script>
+        // Respect reduced motion: show the poster and let the viewer press play.
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const demo = document.querySelector('.preview-wrap video');
+            demo.removeAttribute('autoplay');
+            demo.pause();
+        }
+    </script>
 </section>
 
 <!-- ─── BACKSTORY ─── -->
