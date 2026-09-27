@@ -58,14 +58,19 @@ targets:
           cp -R "${SRCROOT}/MDViewer/Resources/Web" "${DEST}/"
           cp -R "${SRCROOT}/MDViewer/en.lproj" "${DEST}/"
           cp -R "${SRCROOT}/MDViewer/ja.lproj" "${DEST}/"
+          # 同梱ライブラリ（Apache-2.0・EPL-2.0 等）はライセンス全文の同梱を求めるため、
+          # 配布するアプリ自体に含める。
+          cp "${SRCROOT}/THIRD_PARTY_NOTICES.md" "${DEST}/"
         inputFiles:
           - $(SRCROOT)/MDViewer/Resources/Web
           - $(SRCROOT)/MDViewer/en.lproj
           - $(SRCROOT)/MDViewer/ja.lproj
+          - $(SRCROOT)/THIRD_PARTY_NOTICES.md
         outputFiles:
           - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Web
           - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/en.lproj
           - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ja.lproj
+          - $(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/THIRD_PARTY_NOTICES.md
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mdviewer.app

@@ -414,6 +414,7 @@
 				"$(SRCROOT)/MDViewer/Resources/Web",
 				"$(SRCROOT)/MDViewer/en.lproj",
 				"$(SRCROOT)/MDViewer/ja.lproj",
+				"$(SRCROOT)/THIRD_PARTY_NOTICES.md",
 			);
 			name = "Copy Web Resources";
 			outputFileListPaths = (
@@ -422,10 +423,11 @@
 				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Web",
 				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/en.lproj",
 				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ja.lproj",
+				"$(BUILT_PRODUCTS_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/THIRD_PARTY_NOTICES.md",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nDEST=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources\"\nmkdir -p \"${DEST}\"\ncp -R \"${SRCROOT}/MDViewer/Resources/Web\" \"${DEST}/\"\ncp -R \"${SRCROOT}/MDViewer/en.lproj\" \"${DEST}/\"\ncp -R \"${SRCROOT}/MDViewer/ja.lproj\" \"${DEST}/\"\n";
+			shellScript = "set -e\nDEST=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources\"\nmkdir -p \"${DEST}\"\ncp -R \"${SRCROOT}/MDViewer/Resources/Web\" \"${DEST}/\"\ncp -R \"${SRCROOT}/MDViewer/en.lproj\" \"${DEST}/\"\ncp -R \"${SRCROOT}/MDViewer/ja.lproj\" \"${DEST}/\"\n# 同梱ライブラリ（Apache-2.0・EPL-2.0 等）はライセンス全文の同梱を求めるため、\n# 配布するアプリ自体に含める。\ncp \"${SRCROOT}/THIRD_PARTY_NOTICES.md\" \"${DEST}/\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
