@@ -2,7 +2,6 @@ import XCTest
 @testable import MDViewer
 
 final class FileWatcherTests: XCTestCase {
-
     var sut: FileWatcher!
     var tempDirectory: URL!
 
@@ -246,12 +245,15 @@ final class FileWatcherTests: XCTestCase {
         // Arrange
         let file = try makeFile()
         sut.start(url: file)
+        // The counter must see the watcher's own descriptors (file + directory),
+        // or the leak check below would pass without measuring anything.
+        XCTAssertEqual(watcherDescriptorCount(for: file), 2)
         sut.stop()
 
         let settled = expectation(description: "cancel handlers drained")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { settled.fulfill() }
         wait(for: [settled], timeout: 5)
-        let baseline = openFileDescriptorCount()
+        let baseline = watcherDescriptorCount(for: file)
 
         // Act
         for _ in 0 ..< 30 {
@@ -262,11 +264,27 @@ final class FileWatcherTests: XCTestCase {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { drained.fulfill() }
         wait(for: [drained], timeout: 5)
 
-        // Assert — a couple of descriptors of slack for unrelated activity
-        XCTAssertLessThanOrEqual(openFileDescriptorCount(), baseline + 2)
+        // Assert
+        XCTAssertEqual(watcherDescriptorCount(for: file), baseline)
     }
 
-    private func openFileDescriptorCount() -> Int {
-        (Int32(0) ..< Int32(256)).filter { fcntl($0, F_GETFD) != -1 }.count
+    /// Counts the descriptors open on the watched file or its directory — the
+    /// only ones the watcher opens. Counting every descriptor in the process
+    /// picked up unrelated ones, such as AppKit writing the test host's saved
+    /// window state, and failed the test without any leak.
+    private func watcherDescriptorCount(for file: URL) -> Int {
+        // F_GETPATH reports the real path (/private/var/...). realpath matches
+        // it, whereas resolvingSymlinksInPath() strips the /private prefix.
+        let targets = Set([file, file.deletingLastPathComponent()].compactMap { url -> String? in
+            guard let resolved = realpath(url.path, nil) else { return nil }
+            defer { free(resolved) }
+            return String(cString: resolved)
+        })
+        return (Int32(0) ..< Int32(256)).filter { descriptor in
+            guard fcntl(descriptor, F_GETFD) != -1 else { return false }
+            var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+            guard fcntl(descriptor, F_GETPATH, &path) != -1 else { return false }
+            return targets.contains(String(cString: path))
+        }.count
     }
 }
