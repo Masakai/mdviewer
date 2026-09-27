@@ -57,6 +57,8 @@
 	<string>14</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
+	<key>MDViewerDistribution</key>
+	<string>$(MDVIEWER_DISTRIBUTION)</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSPrincipalClass</key>
