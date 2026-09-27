@@ -39,6 +39,7 @@ Open "MDViewer Help" from the Help menu for a live-rendered reference covering a
 ## Requirements
 
 - macOS 14 Sonoma or later
+- Safari 17.4 or later, for Mermaid diagrams (Safari's WebKit draws the preview; update Safari if diagrams do not appear)
 - Apple Silicon (M1 or later)
 
 ## Installation

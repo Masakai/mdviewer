@@ -39,6 +39,7 @@ MDViewer は、ターミナルから Claude Code や Codex などのツールを
 ## 動作環境
 
 - macOS 14 Sonoma 以降
+- Safari 17.4 以降（Mermaid の図の表示に必要。プレビューは Safari の WebKit で描画されるため、図が表示されない場合は Safari を更新してください）
 - Apple Silicon（M1 以降）
 
 ## インストール

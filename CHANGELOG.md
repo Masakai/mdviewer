@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.4.0] — 2026-09-27
+
+### Changed
+- Mermaid is updated from 10.9.5 to 12.0.0. Flowcharts, state, class and other diagrams are now laid out with ELK and drawn with Mermaid's new "neo" look by default, so existing diagrams may be arranged and styled differently. UML use case diagrams are now available. Mermaid 12 needs the WebKit of Safari 17.4 or later; if Safari on your Mac is older, diagrams may not render.
+- KaTeX is updated from 0.16.11 to 0.18.9.
+- The app now includes the full license texts of its bundled libraries (`THIRD_PARTY_NOTICES.md` in the app's resources), including the libraries bundled inside Mermaid.
+
+### Fixed
+- Math was drawn with fallback system fonts instead of KaTeX's own fonts, because the font files were not where KaTeX's stylesheet looked for them. KaTeX's fonts now load.
+- The Mermaid update fixes known vulnerabilities in 10.9.5: a crafted diagram could inject HTML or CSS into the preview, or hang it (Gantt and XY charts).
+
+---
+
 ## [1.3.1] — 2026-09-23
 
 ### Fixed
