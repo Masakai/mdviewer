@@ -213,7 +213,9 @@ final class RenderViewModel: ObservableObject {
     /// renderMarkdown() only reloads a halted renderer, and resets the budget
     /// itself when the reload starts. Nothing is cleared here — the banner and
     /// the alert go when a render succeeds. Outside an interruption it does
-    /// nothing, so it cannot hand a budget back mid crash-loop.
+    /// nothing. While the banner is up, pressing it again during a retried
+    /// crash-loop does hand the budget back, so each press costs at most
+    /// `maxConsecutiveFailures` more crashes before the guard steps in again.
     func retryRendering(_ markdown: String) {
         guard isPreviewInterrupted else { return }
         if !isRecoveryHalted { resumeRecovery() }
