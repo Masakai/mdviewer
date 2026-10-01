@@ -40,13 +40,23 @@ struct MarkdownRenderView: View {
                 renderVM.applySystemAppearance(isDark: newScheme == .dark)
             }
 
-            if isSearchVisible {
-                SearchBarView(
-                    searchText: $searchText,
-                    isVisible: $isSearchVisible,
-                    webView: renderVM.webView
-                )
-                .transition(.move(edge: .top).combined(with: .opacity))
+            // Stacked so the banner and the search bar never overlap.
+            VStack(spacing: 0) {
+                if renderVM.isPreviewInterrupted {
+                    PreviewInterruptedBanner {
+                        renderVM.retryRendering(documentVM.text)
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if isSearchVisible {
+                    SearchBarView(
+                        searchText: $searchText,
+                        isVisible: $isSearchVisible,
+                        webView: renderVM.webView
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
 
             if documentVM.isLoading {
@@ -56,6 +66,7 @@ struct MarkdownRenderView: View {
             }
         }
         .animation(.easeInOut(duration: 0.15), value: isSearchVisible)
+        .animation(.easeInOut(duration: 0.15), value: renderVM.isPreviewInterrupted)
         .onAppear {
             renderVM.applyCurrentThemeAndFontSize()
             if !documentVM.text.isEmpty {
@@ -66,6 +77,34 @@ struct MarkdownRenderView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showSearchBar)) { _ in
             withAnimation { isSearchVisible = true }
         }
+    }
+}
+
+/// Native rather than drawn in the web view, so it still shows when the
+/// renderer is dead or empty. Stays until a render succeeds, not when the
+/// alert is dismissed or Try Again is pressed.
+private struct PreviewInterruptedBanner: View {
+    let onTryAgain: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .symbolRenderingMode(.multicolor)
+
+            Text("preview_interrupted_message")
+                .font(.callout)
+
+            Spacer()
+
+            Button("preview_try_again_button", action: onTryAgain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.regularMaterial)
+        .cornerRadius(8)
+        .shadow(radius: 4)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 }
 
