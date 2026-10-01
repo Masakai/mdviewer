@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.4.1] — 2026-10-01
+
+### Fixed
+- After the preview crashed repeatedly and was reset, the window kept showing an empty preview with no explanation once the alert was dismissed. A banner above the preview now stays until a render succeeds, with a Try Again button that renders the text currently in the editor. The sidebar no longer lists the headings of the content that crashed. The alert now points to Try Again instead of telling you to reopen the file. (Thanks to @harasuke, #4)
+
+---
+
 ## [1.4.0] — 2026-09-27
 
 ### Changed
