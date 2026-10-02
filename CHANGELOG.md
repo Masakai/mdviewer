@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.4.2] — 2026-10-02
+
+### Fixed
+- On macOS 26 and earlier, `.md` files could not be selected in the Open dialog (they were greyed out) when no app on the Mac declared a file type for Markdown, for example when VS Code was the only other Markdown app. MDViewer now declares the Markdown file type itself, and the Open dialog also accepts whatever type macOS assigns to the `.md` and `.markdown` extensions. (Thanks to @SamCyanide, #5)
+
+---
+
 ## [1.4.1] — 2026-10-01
 
 ### Fixed
