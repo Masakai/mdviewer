@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 final class DocumentViewModel: ObservableObject {
@@ -24,7 +25,7 @@ final class DocumentViewModel: ObservableObject {
 
     func openFile() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.markdown, .plainText]
+        panel.allowedContentTypes = UTType.markdownFileTypes + [.plainText]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
 
