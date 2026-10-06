@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.4.3] — 2026-10-07
+
+### Fixed
+- The File menu had no "Close" item, so Cmd+W did not close the window. "Close" is back in the File menu with the Cmd+W shortcut. (Thanks to @bganesh, #6)
+
+---
+
 ## [1.4.2] — 2026-10-02
 
 ### Fixed
