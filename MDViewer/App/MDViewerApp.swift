@@ -38,6 +38,11 @@ struct MDViewerApp: App {
             }
 
             CommandGroup(replacing: .saveItem) {
+                Button("Close") {
+                    NSApp.keyWindow?.performClose(nil)
+                }
+                .keyboardShortcut("w", modifiers: .command)
+
                 Button("Save") {
                     NotificationCenter.default.post(name: .saveFile, object: nil)
                 }
