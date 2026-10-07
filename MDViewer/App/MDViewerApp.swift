@@ -9,6 +9,8 @@ struct MDViewerApp: App {
         WindowGroup {
             ContentView()
         }
+        // URLを開く処理はAppDelegateが担当する。SwiftUIが外部イベントごとに空ウィンドウを作らないようにする
+        .handlesExternalEvents(matching: [])
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
@@ -107,6 +109,7 @@ struct MDViewerApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified(showsTitle: true))
+        .handlesExternalEvents(matching: [])
         .defaultSize(width: 900, height: 700)
     }
 }

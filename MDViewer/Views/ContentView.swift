@@ -46,9 +46,6 @@ struct ContentView: View {
         .toolbar {
             MainToolbar(documentVM: documentVM, renderVM: renderVM, exportVM: exportVM, isEditorMode: isEditorMode)
         }
-        .onOpenURL { url in
-            documentVM.load(url: url)
-        }
         .onReceive(NotificationCenter.default.publisher(for: .newFile)) { _ in
             requestNewDocument()
         }
