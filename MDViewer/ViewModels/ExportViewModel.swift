@@ -66,7 +66,15 @@ final class ExportViewModel: ObservableObject {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         isExporting = true
-        webView.evaluateJavaScript("document.documentElement.outerHTML") { [weak self] result, error in
+        // コピーボタンは画面操作用なので、書き出すHTMLには含めない
+        let script = """
+        (function () {
+            const root = document.documentElement.cloneNode(true);
+            root.querySelectorAll('.code-copy-button').forEach(function (b) { b.remove(); });
+            return root.outerHTML;
+        })()
+        """
+        webView.evaluateJavaScript(script) { [weak self] result, error in
             DispatchQueue.main.async {
                 self?.isExporting = false
                 if let html = result as? String {

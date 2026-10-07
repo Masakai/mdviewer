@@ -42,10 +42,23 @@
             .replace(/"/g, '&quot;');
     }
 
+    // Copy button shown on hover at the top-right of every code block.
+    const COPY_ICON = '<svg class="icon-copy" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">' +
+        '<path fill="currentColor" d="M5 1.5A1.5 1.5 0 0 1 6.5 0h6A1.5 1.5 0 0 1 14 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 5 9.5v-8zm1.5-.5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5h-6z"/>' +
+        '<path fill="currentColor" d="M2 4.5A1.5 1.5 0 0 1 3.5 3H4v1h-.5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5V12h1v.5A1.5 1.5 0 0 1 9.5 14h-6A1.5 1.5 0 0 1 2 12.5v-8z"/></svg>';
+    const CHECK_ICON = '<svg class="icon-check" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">' +
+        '<path fill="currentColor" d="M13.78 3.97a.75.75 0 0 1 0 1.06l-6.5 6.5a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l2.47 2.47 5.97-5.97a.75.75 0 0 1 1.06 0z"/></svg>';
+    const COPY_BUTTON = '<button type="button" class="code-copy-button" title="Copy" aria-label="Copy code">' +
+        COPY_ICON + CHECK_ICON + '</button>';
+
+    function wrapCodeBlock(preHtml, lang) {
+        const label = lang ? `<span class="code-lang-label">${escapeHtml(lang)}</span>` : '';
+        return `<div class="code-block-wrapper">${label}${COPY_BUTTON}${preHtml}</div>`;
+    }
+
     function highlightCode(code, lang) {
         const fallback = function () {
-            const label = lang ? `<span class="code-lang-label">${escapeHtml(lang)}</span>` : '';
-            return `<div class="code-block-wrapper">${label}<pre><code>${escapeHtml(code)}</code></pre></div>`;
+            return wrapCodeBlock(`<pre><code>${escapeHtml(code)}</code></pre>`, lang);
         };
 
         if (!shikiHighlighter) { return fallback(); }
@@ -59,15 +72,32 @@
                 themes: { light: 'github-light', dark: 'github-dark' }
             });
 
-            if (lang) {
-                return html
-                    .replace('<pre ', `<div class="code-block-wrapper"><span class="code-lang-label">${escapeHtml(lang)}</span><pre `)
-                    .replace('</pre>', '</pre></div>');
-            }
-            return html;
+            return wrapCodeBlock(html, lang);
         } catch (_) {
             return fallback();
         }
+    }
+
+    // Copies text to the clipboard. navigator.clipboard may be unavailable
+    // for local pages, so fall back to execCommand on a temporary textarea.
+    async function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (_) { /* fall through to the fallback */ }
+        }
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+        document.body.removeChild(area);
+        return ok;
     }
 
     // Base directory for resolving relative image paths, served via the
@@ -309,6 +339,26 @@
         if (link && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.linkHovered) {
             window.webkit.messageHandlers.linkHovered.postMessage('');
         }
+    });
+
+    // Copy button: copies the text of the code block's <pre>
+    document.addEventListener('click', function (e) {
+        const button = e.target.closest('.code-copy-button');
+        if (!button) return;
+
+        const pre = button.parentElement.querySelector('pre');
+        if (!pre) return;
+
+        copyText(pre.textContent).then(function (ok) {
+            if (!ok) return;
+            button.classList.add('copied');
+            button.title = 'Copied';
+            clearTimeout(button._copiedTimer);
+            button._copiedTimer = setTimeout(function () {
+                button.classList.remove('copied');
+                button.title = 'Copy';
+            }, 1500);
+        });
     });
 
     // Link click: fragment links scroll in-page; all others handled by Swift
