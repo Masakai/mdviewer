@@ -8,6 +8,7 @@ struct ContentView: View {
     @StateObject private var sidebarVM = SidebarViewModel()
     @StateObject private var renderVM = RenderViewModel()
     @StateObject private var exportVM = ExportViewModel()
+    @StateObject private var windowBox = WindowBox()
 
     @AppStorage("sidebarWidth") private var sidebarWidth: Double = 240
     @AppStorage("isSidebarVisible") private var isSidebarVisible: Bool = true
@@ -42,23 +43,28 @@ struct ContentView: View {
                 }
             }
         )
-        .background(WindowCloseInterceptor(documentVM: documentVM))
+        .background(WindowCloseInterceptor(documentVM: documentVM, windowBox: windowBox))
         .toolbar {
             MainToolbar(documentVM: documentVM, renderVM: renderVM, exportVM: exportVM, isEditorMode: isEditorMode)
         }
         .onReceive(NotificationCenter.default.publisher(for: .newFile)) { _ in
+            guard isKeyWindow else { return }
             requestNewDocument()
         }
         .onReceive(NotificationCenter.default.publisher(for: .openFile)) { _ in
+            guard isKeyWindow else { return }
             documentVM.openFile()
         }
         .onReceive(NotificationCenter.default.publisher(for: .reloadFile)) { _ in
+            guard isKeyWindow else { return }
             documentVM.reload()
         }
         .onReceive(NotificationCenter.default.publisher(for: .saveFile)) { _ in
+            guard isKeyWindow else { return }
             documentVM.save()
         }
         .onReceive(NotificationCenter.default.publisher(for: .toggleEditorMode)) { _ in
+            guard isKeyWindow else { return }
             isEditorMode.toggle()
         }
         .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
@@ -95,6 +101,11 @@ struct ContentView: View {
         }
     }
 
+    /// メニュー操作の通知は全ウィンドウに届くため、キーウィンドウの ContentView だけが処理する。
+    private var isKeyWindow: Bool {
+        windowBox.window?.isKeyWindow == true
+    }
+
     /// Cmd+N / Welcome画面からの新規作成。未保存の変更があれば確認してから空ドキュメントに切り替える。
     private func requestNewDocument() {
         guard documentVM.isDirty else {
@@ -129,11 +140,19 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Window box
+
+/// ContentView が載っているウィンドウへの弱参照。キーウィンドウかどうかの判定に使う。
+final class WindowBox: ObservableObject {
+    weak var window: NSWindow?
+}
+
 // MARK: - Window close interceptor
 
 /// NSViewRepresentable that attaches an NSWindowDelegate to block window close when there are unsaved changes.
 private struct WindowCloseInterceptor: NSViewRepresentable {
     let documentVM: DocumentViewModel
+    let windowBox: WindowBox
 
     func makeNSView(context _: Context) -> NSView {
         NSView()
@@ -141,8 +160,13 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.documentVM = documentVM
+        let documentVM = documentVM
         DispatchQueue.main.async {
-            nsView.window?.delegate = context.coordinator
+            guard let window = nsView.window else { return }
+            window.delegate = context.coordinator
+            windowBox.window = window
+            // 表示中のファイルは切り替わりうるので、値ではなく都度参照する形で登録する
+            DocumentWindowRegistry.shared.register(window: window) { documentVM.fileURL }
         }
     }
 

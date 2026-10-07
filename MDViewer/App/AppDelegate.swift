@@ -24,9 +24,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_: NSApplication, open urls: [URL]) {
-        // 複数URLを同時に渡されても取りこぼさないよう、1URLにつき1つの独立したウィンドウで開く
+        // 複数URLを同時に渡されても取りこぼさないよう、1URLにつき1つの独立したウィンドウで開く。
+        // すでに開いているファイルは新しく開かず、既存のウィンドウを前面に出す。
         for url in urls {
-            openDocumentInNewWindow(url: url)
+            if let existing = DocumentWindowRegistry.shared.window(for: url) {
+                if existing.isMiniaturized {
+                    existing.deminiaturize(nil)
+                }
+                existing.makeKeyAndOrderFront(nil)
+            } else {
+                openDocumentInNewWindow(url: url)
+            }
         }
     }
 
@@ -44,6 +52,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         window.toolbarStyle = .unified
         window.tabbingMode = .disallowed
+        // ContentView が描画されて登録するまでの間に同じURLが来ても重複しないよう、先に登録する
+        DocumentWindowRegistry.shared.register(window: window, url: url)
         window.makeKeyAndOrderFront(nil)
     }
 
