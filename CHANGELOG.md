@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.4.4] — 2026-10-07
+
+### Fixed
+- Opening several files at once from Finder (Cmd+Down) or by dropping them on the Dock icon opened only one or two of them. MDViewer now opens every file in its own window. (Thanks to @bganesh, #7)
+
+---
+
 ## [1.4.3] — 2026-10-07
 
 ### Fixed
