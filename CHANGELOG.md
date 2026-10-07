@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.5.1] — 2026-10-08
+
+### Fixed
+- File > New replaced the document in the front window, and with several windows open it cleared all of them. File > New now opens a new window and leaves the open documents untouched. A window that has no document open (the welcome screen) is still turned into the new document in place. (Thanks to @bganesh, #10)
+- The editor mode is now set per window, so creating a new document no longer switches other windows to the editor.
+
+---
+
 ## [1.5.0] — 2026-10-07
 
 ### Added
