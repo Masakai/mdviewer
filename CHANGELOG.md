@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.4.5] — 2026-10-07
+
+### Fixed
+- Opening a file that was already open (from Finder by double-clicking or Cmd+Down, or from the Dock icon) created another window with the same file. MDViewer now brings the existing window to the front. (Thanks to @bganesh, #8)
+- With several windows open, File > Open… showed the Open dialog once per window. Menu commands (Open, New, Reload, Save, Toggle Editor Mode) now act only on the front window. (Thanks to @bganesh, #8)
+
+---
+
 ## [1.4.4] — 2026-10-07
 
 ### Fixed
