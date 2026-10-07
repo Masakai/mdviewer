@@ -16,6 +16,7 @@ MDViewer started as a viewer — but we wanted editing too, so it now includes a
 - **Live reload** — watches for file changes and re-renders as you save
 - **Table of contents** — auto-generated sidebar from headings with smooth scroll
 - **Syntax highlighting** — 27 languages via [Shiki v1](https://github.com/shikijs/shiki)
+- **Copy button on code blocks** — appears when you hover a code block
 - **Math equations** — inline and block LaTeX via [KaTeX](https://github.com/KaTeX/KaTeX)
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, and more
 - **Smart link handling** — local `.md` links open in-app; external links open in the browser

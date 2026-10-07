@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.5.0] — 2026-10-07
+
+### Added
+- A copy button appears at the top-right of a code block when you hover over it. Clicking it copies the code to the clipboard. The button is not included in printed pages, PDF exports, or HTML exports. (Thanks to @bganesh, #9)
+
+---
+
 ## [1.4.5] — 2026-10-07
 
 ### Fixed
