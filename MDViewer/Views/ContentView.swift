@@ -3,6 +3,8 @@ import SwiftUI
 
 struct ContentView: View {
     var initialURL: URL?
+    /// true のとき、起動時に空の新規ドキュメントとして開く（File > New で作るウィンドウ用）。
+    var startsAsNewDocument = false
 
     @StateObject private var documentVM = DocumentViewModel()
     @StateObject private var sidebarVM = SidebarViewModel()
@@ -12,7 +14,9 @@ struct ContentView: View {
 
     @AppStorage("sidebarWidth") private var sidebarWidth: Double = 240
     @AppStorage("isSidebarVisible") private var isSidebarVisible: Bool = true
-    @AppStorage("isEditorMode") private var isEditorMode: Bool = false
+    /// エディタモードはウィンドウごとの状態。新規ドキュメントを作っても他のウィンドウの表示を変えない。
+    /// 最後に切り替えた状態だけを、次に開くウィンドウの初期値として保存する。
+    @State private var isEditorMode: Bool = UserDefaults.standard.bool(forKey: "isEditorMode")
 
     var body: some View {
         NavigationSplitView(
@@ -23,7 +27,7 @@ struct ContentView: View {
             detail: {
                 Group {
                     if !documentVM.hasDocument {
-                        WelcomeView(documentVM: documentVM)
+                        WelcomeView(documentVM: documentVM, onNewFile: startNewDocumentInThisWindow)
                     } else {
                         HSplitView {
                             // エディタペイン: isEditorMode時のみ表示
@@ -66,6 +70,7 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .toggleEditorMode)) { _ in
             guard isKeyWindow else { return }
             isEditorMode.toggle()
+            UserDefaults.standard.set(isEditorMode, forKey: "isEditorMode")
         }
         .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
             // NavigationSplitView handles its own sidebar toggle
@@ -95,6 +100,8 @@ struct ContentView: View {
         .onAppear {
             if let url = initialURL {
                 documentVM.load(url: url)
+            } else if startsAsNewDocument {
+                startNewDocumentInThisWindow()
             } else {
                 documentVM.restoreLastOpened()
             }
@@ -106,37 +113,20 @@ struct ContentView: View {
         windowBox.window?.isKeyWindow == true
     }
 
-    /// Cmd+N / Welcome画面からの新規作成。未保存の変更があれば確認してから空ドキュメントに切り替える。
+    /// File > New / ツールバーの New。開いているドキュメントには触れず、新しいウィンドウで開く。
+    /// ドキュメントを開いていない（ウェルカム画面の）ウィンドウは、そのまま新規ドキュメントにする。
     private func requestNewDocument() {
-        guard documentVM.isDirty else {
-            documentVM.newDocument()
-            isEditorMode = true
-            return
+        if documentVM.hasDocument {
+            NotificationCenter.default.post(name: .openNewDocumentWindow, object: nil)
+        } else {
+            startNewDocumentInThisWindow()
         }
+    }
 
-        let alert = NSAlert()
-        alert.messageText = NSLocalizedString("unsaved_changes_title", comment: "")
-        alert.informativeText = NSLocalizedString("unsaved_changes_message", comment: "")
-        alert.addButton(withTitle: NSLocalizedString("save_button", comment: ""))
-        alert.addButton(withTitle: NSLocalizedString("discard_button", comment: ""))
-        alert.addButton(withTitle: NSLocalizedString("cancel_button", comment: ""))
-        alert.alertStyle = .warning
-
-        switch alert.runModal() {
-        case .alertFirstButtonReturn:
-            documentVM.save()
-            // saveAs()がパネルでキャンセルされた場合はisDirtyがtrueのまま残るため、
-            // 保存が実際に完了したときだけ新規ドキュメントに切り替える。
-            if !documentVM.isDirty {
-                documentVM.newDocument()
-                isEditorMode = true
-            }
-        case .alertSecondButtonReturn:
-            documentVM.newDocument()
-            isEditorMode = true
-        default:
-            break
-        }
+    /// このウィンドウを空の新規ドキュメントにして、編集モードにする。
+    private func startNewDocumentInThisWindow() {
+        documentVM.newDocument()
+        isEditorMode = true
     }
 }
 
@@ -210,6 +200,7 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
 
 struct WelcomeView: View {
     let documentVM: DocumentViewModel
+    let onNewFile: () -> Void
 
     var body: some View {
         VStack(spacing: 16) {
@@ -226,7 +217,7 @@ struct WelcomeView: View {
 
             HStack(spacing: 12) {
                 Button("New File") {
-                    NotificationCenter.default.post(name: .newFile, object: nil)
+                    onNewFile()
                 }
                 .keyboardShortcut("n", modifiers: .command)
                 .buttonStyle(.borderedProminent)
