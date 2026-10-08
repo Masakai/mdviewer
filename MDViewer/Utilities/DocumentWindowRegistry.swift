@@ -30,6 +30,11 @@ final class DocumentWindowRegistry {
         entries.setObject(Entry(urlProvider: urlProvider), forKey: window)
     }
 
+    /// ドキュメントウィンドウとして登録されているか（ヘルプや設定のウィンドウと区別するために使う）。
+    func contains(_ window: NSWindow) -> Bool {
+        entries.object(forKey: window) != nil
+    }
+
     /// 指定ファイルを表示しているウィンドウを返す。無ければ nil。
     func window(for url: URL) -> NSWindow? {
         let target = Self.key(for: url)

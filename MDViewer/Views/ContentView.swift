@@ -139,13 +139,32 @@ final class WindowBox: ObservableObject {
 
 // MARK: - Window close interceptor
 
+/// ウィンドウに載ったときに通知する NSView。
+private final class WindowAttachView: NSView {
+    var onAttach: ((NSWindow) -> Void)?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let window {
+            onAttach?(window)
+        }
+    }
+}
+
 /// NSViewRepresentable that attaches an NSWindowDelegate to block window close when there are unsaved changes.
 private struct WindowCloseInterceptor: NSViewRepresentable {
     let documentVM: DocumentViewModel
     let windowBox: WindowBox
 
     func makeNSView(context _: Context) -> NSView {
-        NSView()
+        let view = WindowAttachView()
+        let documentVM = documentVM
+        // 起動時の復元が2件目以降のウィンドウを配置するとき、このウィンドウを基準にできるよう、
+        // ウィンドウに載った時点で登録しておく（updateNSView の登録は非同期で間に合わない）
+        view.onAttach = { window in
+            DocumentWindowRegistry.shared.register(window: window) { documentVM.fileURL }
+        }
+        return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {

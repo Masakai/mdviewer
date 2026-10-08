@@ -2,6 +2,9 @@ import AppKit
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// 直前に配置したドキュメントウィンドウ。続けて開くウィンドウをずらす基準にする。
+    private weak var lastPlacedWindow: NSWindow?
+
     override init() {
         super.init()
         // SwiftUI は applicationDidFinishLaunching より先に最初のウィンドウを表示する。
@@ -83,12 +86,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 空の新規ドキュメントを、独立した新しいウィンドウで開く。
     private func openNewDocumentWindow() {
         let window = makeDocumentWindow(rootView: ContentView(startsAsNewDocument: true), title: "Untitled")
-        // 既存のウィンドウに重ならないよう、少しずらして配置する
-        if let key = NSApp.keyWindow {
-            let point = window.cascadeTopLeft(from: NSPoint(x: key.frame.minX, y: key.frame.maxY))
-            window.setFrameTopLeftPoint(point)
-        }
+        place(window)
         window.makeKeyAndOrderFront(nil)
+    }
+
+    /// 新しいドキュメントウィンドウを配置する。
+    /// 最前面のドキュメントウィンドウから1段ずらし、ドキュメントウィンドウが無ければ画面中央に置く。
+    private func place(_ window: NSWindow) {
+        // 複数ファイルを続けて開くと、アプリが非アクティブな間はキーウィンドウが切り替わらない。
+        // 前面に並べた順で判定し、直前に配置したウィンドウ（登録前の場合がある）も基準に含める。
+        let reference = NSApp.orderedWindows.first { candidate in
+            candidate !== window && candidate.isVisible
+                && (candidate === lastPlacedWindow || DocumentWindowRegistry.shared.contains(candidate))
+        }
+        if let reference, let screen = reference.screen ?? NSScreen.main {
+            let point = WindowPlacement.cascadedTopLeft(
+                from: reference.frame,
+                windowSize: window.frame.size,
+                visibleFrame: screen.visibleFrame
+            )
+            window.setFrameTopLeftPoint(point)
+        } else {
+            window.center()
+        }
+        lastPlacedWindow = window
     }
 
     private func makeDocumentWindow(rootView: ContentView, title: String) -> NSWindow {
@@ -107,6 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let window = makeDocumentWindow(rootView: ContentView(initialURL: url), title: url.lastPathComponent)
         // ContentView が描画されて登録するまでの間に同じURLが来ても重複しないよう、先に登録する
         DocumentWindowRegistry.shared.register(window: window, url: url)
+        place(window)
         window.makeKeyAndOrderFront(nil)
     }
 
@@ -123,6 +145,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let keyWindow = NSApp.keyWindow {
             window.tabbingIdentifier = keyWindow.tabbingIdentifier
             keyWindow.addTabbedWindow(window, ordered: .above)
+        } else {
+            place(window)
         }
         window.makeKeyAndOrderFront(nil)
     }
