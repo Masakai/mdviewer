@@ -2,8 +2,10 @@ import AppKit
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_: Notification) {
-        NSWindow.allowsAutomaticWindowTabbing = true
+    override init() {
+        super.init()
+        // SwiftUI は applicationDidFinishLaunching より先に最初のウィンドウを表示する。
+        // 起動時の復元で送られる通知を取りこぼさないよう、生成時点で受信登録しておく。
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleOpenLocalDocument(_:)),
@@ -22,6 +24,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .openDocumentInWindow,
             object: nil
         )
+    }
+
+    func applicationDidFinishLaunching(_: Notification) {
+        NSWindow.allowsAutomaticWindowTabbing = true
     }
 
     func applicationWillTerminate(_: Notification) {
