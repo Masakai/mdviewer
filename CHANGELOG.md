@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.0] — 2026-10-09
+
+### Changed
+- Closing the last document no longer quits MDViewer. The welcome screen is shown instead, so you can open another file without going back to Finder. Closing the welcome screen quits as before. (Thanks to @bganesh, #13)
+
+### Fixed
+- Windows opened with File > Open…, from Finder or the Dock, or restored at launch all appeared at the same spot toward the bottom-right of the screen, on top of each other. A new window now opens centered on the screen when no other document window is open, and otherwise cascades down and to the right from the front document window, wrapping back to the top-left when it would go off screen. (Thanks to @bganesh, #12)
+
+---
+
 ## [1.5.3] — 2026-10-08
 
 ### Fixed

@@ -52,9 +52,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.5.3</string>
+	<string>1.6.0</string>
 	<key>CFBundleVersion</key>
-	<string>23</string>
+	<string>24</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>MDViewerDistribution</key>
