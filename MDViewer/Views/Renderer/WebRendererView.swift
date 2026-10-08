@@ -32,7 +32,7 @@ struct WebRendererView: NSViewRepresentable {
         // Allow local file access
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
 
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = RendererWebView(frame: .zero, configuration: config)
         webView.allowsLinkPreview = false
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
@@ -263,5 +263,16 @@ struct WebRendererView: NSViewRepresentable {
 
             decisionHandler(.allow)
         }
+    }
+}
+
+/// With the editor hidden, the preview is the only child of an HSplitView, and
+/// HSplitView lays it out at a stale width and zero height on every live-resize
+/// step before the real frame. The web view would paint that empty viewport as
+/// a white flash; such frames are never meaningful for the preview, so ignore them.
+final class RendererWebView: WKWebView {
+    override func setFrameSize(_ newSize: NSSize) {
+        guard newSize.width >= 1, newSize.height >= 1 else { return }
+        super.setFrameSize(newSize)
     }
 }
