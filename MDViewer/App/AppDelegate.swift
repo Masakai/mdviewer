@@ -4,6 +4,8 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 直前に配置したドキュメントウィンドウ。続けて開くウィンドウをずらす基準にする。
     private weak var lastPlacedWindow: NSWindow?
+    /// 最後に閉じたウィンドウがドキュメントを表示していたか。ウェルカム画面を閉じたときは false。
+    private var lastClosedWindowHadDocument = false
 
     override init() {
         super.init()
@@ -27,6 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .openDocumentInWindow,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDocumentWindowWillClose(_:)),
+            name: .documentWindowWillClose,
+            object: nil
+        )
     }
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -39,7 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
-        true
+        // 最後のドキュメントを閉じただけでは終了せず、ウェルカム画面を出す。ウェルカム画面を閉じたら終了する
+        guard lastClosedWindowHadDocument, !OpenDocumentStore.shared.isTerminating else { return true }
+        lastClosedWindowHadDocument = false
+        openWelcomeWindow()
+        return false
     }
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -81,6 +93,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleOpenNewDocumentWindow() {
         openNewDocumentWindow()
+    }
+
+    @objc private func handleDocumentWindowWillClose(_ notification: Notification) {
+        lastClosedWindowHadDocument = notification.userInfo?["hasDocument"] as? Bool ?? false
+    }
+
+    /// ウェルカム画面のウィンドウを開く。前回終了時のファイルは復元しない。
+    private func openWelcomeWindow() {
+        let window = makeDocumentWindow(rootView: ContentView(restoresLastOpened: false), title: "MDViewer")
+        place(window)
+        window.makeKeyAndOrderFront(nil)
     }
 
     /// 空の新規ドキュメントを、独立した新しいウィンドウで開く。
@@ -156,4 +179,6 @@ extension Notification.Name {
     static let openNewDocumentWindow = Notification.Name("MDViewer.openNewDocumentWindow")
     /// object に URL を載せる。新しいウィンドウで開く（すでに開いていれば前面に出す）。
     static let openDocumentInWindow = Notification.Name("MDViewer.openDocumentInWindow")
+    /// ドキュメントウィンドウが閉じる直前に送る。userInfo["hasDocument"] にドキュメントを表示していたかを載せる。
+    static let documentWindowWillClose = Notification.Name("MDViewer.documentWindowWillClose")
 }

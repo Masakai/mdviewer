@@ -5,6 +5,8 @@ struct ContentView: View {
     var initialURL: URL?
     /// true のとき、起動時に空の新規ドキュメントとして開く（File > New で作るウィンドウ用）。
     var startsAsNewDocument = false
+    /// false のとき、前回終了時のファイルを復元しない（最後のドキュメントを閉じた後のウェルカム画面用）。
+    var restoresLastOpened = true
 
     @StateObject private var documentVM = DocumentViewModel()
     @StateObject private var sidebarVM = SidebarViewModel()
@@ -102,7 +104,7 @@ struct ContentView: View {
                 documentVM.load(url: url)
             } else if startsAsNewDocument {
                 startNewDocumentInThisWindow()
-            } else {
+            } else if restoresLastOpened {
                 documentVM.restoreLastOpened()
             }
         }
@@ -191,6 +193,11 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
         }
 
         func windowWillClose(_: Notification) {
+            NotificationCenter.default.post(
+                name: .documentWindowWillClose,
+                object: nil,
+                userInfo: ["hasDocument": documentVM.hasDocument]
+            )
             // 閉じたファイルを次回起動時の復元対象から外す
             if let url = documentVM.fileURL {
                 OpenDocumentStore.shared.remove(url: url)
