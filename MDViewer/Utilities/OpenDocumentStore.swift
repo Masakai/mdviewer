@@ -15,6 +15,9 @@ final class OpenDocumentStore {
     /// 1件だけ記録していた旧バージョンのキー。一覧が空のときの引き継ぎ用。
     private let legacyKey = "lastOpenedBookmark"
     private var didClaimLaunchURLs = false
+    /// 最後のウィンドウを閉じたとき、次回も開くために一覧へ残したファイル。
+    /// その後ウェルカム画面から別のファイルを開いたら、閉じたファイルとして一覧から外す。
+    private var keptAfterCloseKey: String?
 
     /// アプリ終了処理中は true。終了に伴うウィンドウ閉鎖で一覧が消えないようにするために使う。
     var isTerminating = false
@@ -27,11 +30,22 @@ final class OpenDocumentStore {
     func add(url: URL) {
         var entries = loadEntries()
         let target = DocumentWindowRegistry.key(for: url)
-        guard !entries.contains(where: { DocumentWindowRegistry.key(for: $0.url) == target }),
-              let data = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
-        else { return }
-        entries.append(Entry(data: data, url: url))
-        saveEntries(entries)
+        var changed = false
+        if let kept = keptAfterCloseKey {
+            keptAfterCloseKey = nil
+            if kept != target {
+                entries.removeAll { DocumentWindowRegistry.key(for: $0.url) == kept }
+                changed = true
+            }
+        }
+        if !entries.contains(where: { DocumentWindowRegistry.key(for: $0.url) == target }),
+           let data = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
+            entries.append(Entry(data: data, url: url))
+            changed = true
+        }
+        if changed {
+            saveEntries(entries)
+        }
     }
 
     /// ウィンドウを閉じたファイルを一覧から外す。
@@ -41,7 +55,10 @@ final class OpenDocumentStore {
         let target = DocumentWindowRegistry.key(for: url)
         let entries = loadEntries()
         let remaining = entries.filter { DocumentWindowRegistry.key(for: $0.url) != target }
-        guard remaining.contains(where: { FileManager.default.fileExists(atPath: $0.url.path) }) else { return }
+        guard remaining.contains(where: { FileManager.default.fileExists(atPath: $0.url.path) }) else {
+            keptAfterCloseKey = target
+            return
+        }
         saveEntries(remaining)
     }
 

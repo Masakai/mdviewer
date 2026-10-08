@@ -74,6 +74,40 @@ final class OpenDocumentStoreTests: XCTestCase {
         XCTAssertEqual(claimed(OpenDocumentStore(defaults: defaults)), ["a.md"])
     }
 
+    func test_remove_lastFile_thenOpenAnother_closedFileNotRestored() throws {
+        let a = try makeFile("a.md")
+        sut.add(url: a)
+        sut.remove(url: a)
+
+        // ウェルカム画面から別のファイルを開いた
+        try sut.add(url: makeFile("b.md"))
+
+        XCTAssertEqual(claimed(OpenDocumentStore(defaults: defaults)), ["b.md"])
+    }
+
+    func test_remove_lastFile_thenReopenSameFile_isRestored() throws {
+        let a = try makeFile("a.md")
+        sut.add(url: a)
+        sut.remove(url: a)
+
+        sut.add(url: a)
+        try sut.add(url: makeFile("b.md"))
+
+        XCTAssertEqual(claimed(OpenDocumentStore(defaults: defaults)), ["a.md", "b.md"])
+    }
+
+    func test_remove_lastFile_thenOpenAnotherAndClose_onlyLastClosedIsRestored() throws {
+        let a = try makeFile("a.md")
+        let b = try makeFile("b.md")
+        sut.add(url: a)
+        sut.remove(url: a)
+        sut.add(url: b)
+
+        sut.remove(url: b)
+
+        XCTAssertEqual(claimed(OpenDocumentStore(defaults: defaults)), ["b.md"])
+    }
+
     func test_remove_whenTerminating_keepsAll() throws {
         let a = try makeFile("a.md")
         sut.add(url: a)
