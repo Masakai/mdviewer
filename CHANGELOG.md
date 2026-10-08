@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.5.3] — 2026-10-08
+
+### Fixed
+- When MDViewer was quit with several documents open, only one of them was restored at the next launch. MDViewer now remembers every open document and reopens all of them, each in its own window. A document whose window you closed before quitting is not restored. Files that no longer exist are skipped, and the welcome screen is shown if none remain. (Thanks to @bganesh, #11)
+
+---
+
 ## [1.5.2] — 2026-10-08
 
 ### Fixed
