@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.5.2] — 2026-10-08
+
+### Fixed
+- File > Open… replaced the document in the front window, discarding unsaved edits without asking. When a window already shows a document, the chosen file now opens in a new window, or the existing window is brought to the front if the file is already open. A window that has no document open (the welcome screen) still loads the file in place. (Thanks to @bganesh, #8)
+
+---
+
 ## [1.5.1] — 2026-10-08
 
 ### Fixed
