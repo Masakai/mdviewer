@@ -16,6 +16,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .openNewDocumentWindow,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOpenDocumentInWindow(_:)),
+            name: .openDocumentInWindow,
+            object: nil
+        )
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
@@ -34,15 +40,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 複数URLを同時に渡されても取りこぼさないよう、1URLにつき1つの独立したウィンドウで開く。
         // すでに開いているファイルは新しく開かず、既存のウィンドウを前面に出す。
         for url in urls {
-            if let existing = DocumentWindowRegistry.shared.window(for: url) {
-                if existing.isMiniaturized {
-                    existing.deminiaturize(nil)
-                }
-                existing.makeKeyAndOrderFront(nil)
-            } else {
-                openDocumentInNewWindow(url: url)
-            }
+            openOrActivateDocument(url: url)
         }
+    }
+
+    private func openOrActivateDocument(url: URL) {
+        if let existing = DocumentWindowRegistry.shared.window(for: url) {
+            if existing.isMiniaturized {
+                existing.deminiaturize(nil)
+            }
+            existing.makeKeyAndOrderFront(nil)
+        } else {
+            openDocumentInNewWindow(url: url)
+        }
+    }
+
+    @objc private func handleOpenDocumentInWindow(_ notification: Notification) {
+        guard let url = notification.object as? URL else { return }
+        openOrActivateDocument(url: url)
     }
 
     @objc private func handleOpenLocalDocument(_ notification: Notification) {
@@ -104,4 +119,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension Notification.Name {
     static let openNewDocumentWindow = Notification.Name("MDViewer.openNewDocumentWindow")
+    /// object に URL を載せる。新しいウィンドウで開く（すでに開いていれば前面に出す）。
+    static let openDocumentInWindow = Notification.Name("MDViewer.openDocumentInWindow")
 }

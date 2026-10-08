@@ -29,7 +29,17 @@ final class DocumentViewModel: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
 
-        if panel.runModal() == .OK, let url = panel.url {
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        open(url: url)
+    }
+
+    /// File > Open で選ばれたファイルを開く。
+    /// ドキュメント表示中なら置き換えず別ウィンドウに回し、無ければこのウィンドウに読み込む。
+    func open(url: URL) {
+        if hasDocument {
+            // 表示中のドキュメントを置き換えず、別ウィンドウで開く（開いていれば前面に出す）
+            NotificationCenter.default.post(name: .openDocumentInWindow, object: url)
+        } else {
             load(url: url)
         }
     }
