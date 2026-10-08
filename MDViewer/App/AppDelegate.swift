@@ -24,6 +24,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    func applicationWillTerminate(_: Notification) {
+        // 終了に伴うウィンドウ閉鎖で、復元対象の一覧が消えないようにする
+        OpenDocumentStore.shared.isTerminating = true
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         true
     }

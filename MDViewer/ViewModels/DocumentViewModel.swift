@@ -11,11 +11,11 @@ final class DocumentViewModel: ObservableObject {
     @Published var isDirty: Bool = false
     @Published var hasDocument: Bool = false
 
-    @AppStorage("lastOpenedBookmark") private var lastOpenedBookmarkData: Data = .init()
-
     private let fileWatcher = FileWatcher()
+    private let openDocumentStore: OpenDocumentStore
 
-    init() {
+    init(openDocumentStore: OpenDocumentStore = .shared) {
+        self.openDocumentStore = openDocumentStore
         fileWatcher.onChange = { [weak self] in
             Task { @MainActor in
                 self?.reload()
@@ -125,22 +125,18 @@ final class DocumentViewModel: ObservableObject {
         }
     }
 
+    /// 前回終了時に開いていたファイルを復元する。このウィンドウに1件目を読み込み、残りは新しいウィンドウで開く。
+    /// 復元は起動ごとに1回だけ行う（2つ目以降のウェルカム画面では何もしない）。
     func restoreLastOpened() {
-        guard !lastOpenedBookmarkData.isEmpty else { return }
-        var isStale = false
-        if let url = try? URL(
-            resolvingBookmarkData: lastOpenedBookmarkData,
-            options: [],
-            relativeTo: nil,
-            bookmarkDataIsStale: &isStale
-        ) {
-            load(url: url)
+        let urls = openDocumentStore.claimLaunchURLs()
+        guard let first = urls.first else { return }
+        load(url: first)
+        for url in urls.dropFirst() {
+            NotificationCenter.default.post(name: .openDocumentInWindow, object: url)
         }
     }
 
     private func saveLastOpened(url: URL) {
-        if let data = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
-            lastOpenedBookmarkData = data
-        }
+        openDocumentStore.add(url: url)
     }
 }

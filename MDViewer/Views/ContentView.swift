@@ -171,6 +171,13 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
             self.documentVM = documentVM
         }
 
+        func windowWillClose(_: Notification) {
+            // 閉じたファイルを次回起動時の復元対象から外す
+            if let url = documentVM.fileURL {
+                OpenDocumentStore.shared.remove(url: url)
+            }
+        }
+
         func windowShouldClose(_: NSWindow) -> Bool {
             guard documentVM.isDirty else { return true }
 
