@@ -19,7 +19,8 @@ struct GeneralPrefsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(maxWidth: 200)
+                // 幅を絞るとラベルまで押し縮められ、macOS 27 では「Page Size」が折り返される（#15）
+                .fixedSize()
                 .onChange(of: pdfPageSizeRaw) { newValue in
                     NotificationCenter.default.post(name: .pdfPageSizeChanged, object: newValue)
                 }
