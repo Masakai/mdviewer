@@ -47,6 +47,10 @@
 "Font" = "Font";
 "Size" = "Size";
 "Code Font" = "Code Font";
+"Body Font" = "Body Font";
+"Heading Font" = "Heading Font";
+"System" = "System";
+"Same as Body" = "Same as Body";
 
 /* Alerts */
 "Error" = "Error";

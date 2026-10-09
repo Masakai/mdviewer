@@ -47,6 +47,10 @@
 "Font" = "フォント";
 "Size" = "サイズ";
 "Code Font" = "コードフォント";
+"Body Font" = "本文フォント";
+"Heading Font" = "見出しフォント";
+"System" = "システム";
+"Same as Body" = "本文と同じ";
 
 /* Alerts */
 "Error" = "エラー";

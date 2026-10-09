@@ -67,6 +67,13 @@ final class RenderViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.applyPDFPageSize() }
             .store(in: &cancellables)
+
+        // 設定画面でフォントを変えたら、開いているウィンドウにもすぐ反映する
+        NotificationCenter.default
+            .publisher(for: .previewFontsChanged)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.applyFonts() }
+            .store(in: &cancellables)
     }
 
     func setTheme(_ newTheme: MarkdownTheme) {
@@ -291,6 +298,11 @@ final class RenderViewModel: ObservableObject {
     func applyCurrentThemeAndFontSize() {
         webView?.evaluateJavaScript(Self.setThemeScript(for: theme), completionHandler: nil)
         webView?.evaluateJavaScript("MDViewer.setFontSize(\(Int(fontSize)))", completionHandler: nil)
+        applyFonts()
+    }
+
+    func applyFonts() {
+        webView?.evaluateJavaScript(PreviewFont.setFontsScript(), completionHandler: nil)
     }
 
     func applySystemAppearance(isDark: Bool) {

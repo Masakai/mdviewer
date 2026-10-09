@@ -281,6 +281,14 @@
             }
         },
 
+        // Font stacks are built in Swift (PreviewFont): { body, heading, code }.
+        setFonts: function (fonts) {
+            const style = document.documentElement.style;
+            style.setProperty('--body-font', fonts.body);
+            style.setProperty('--heading-font', fonts.heading);
+            style.setProperty('--code-font', fonts.code);
+        },
+
         setFontSize: function (size) {
             document.documentElement.style.setProperty('--font-size', size + 'px');
         },

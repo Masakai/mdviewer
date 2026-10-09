@@ -123,6 +123,7 @@ extension Notification.Name {
     static let exportPDF = Notification.Name("MDViewer.exportPDF")
     static let exportHTML = Notification.Name("MDViewer.exportHTML")
     static let pdfPageSizeChanged = Notification.Name("MDViewer.pdfPageSizeChanged")
+    static let previewFontsChanged = Notification.Name("MDViewer.previewFontsChanged")
     static let newFile = Notification.Name("MDViewer.newFile")
 }
 
