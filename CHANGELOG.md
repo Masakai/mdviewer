@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.4] — 2026-10-09
+
+### Added
+- Help > Check for Updates… opens the releases page on GitHub in your default browser. (Thanks to @sanderberents, #21)
+
+---
+
 ## [1.7.3] — 2026-10-09
 
 ### Fixed
