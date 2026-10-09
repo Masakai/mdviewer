@@ -170,6 +170,17 @@
         const mathBlocks = [];
         let processed = markdown;
 
+        // Set code aside first: a `$` in a shell snippet such as `cp $f $f.bak`
+        // would otherwise be paired up and rendered as math.
+        const codeParts = [];
+        const stashCode = function (code) {
+            codeParts.push(code);
+            return `MDCODE_${codeParts.length - 1}_END`;
+        };
+        processed = processed
+            .replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[`~]*[ \t]*$|(?![\s\S]))/gm, stashCode)
+            .replace(/(`+)(?!`)[\s\S]*?[^`]\1(?!`)/g, stashCode);
+
         processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
             const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
             mathBlocks.push({ type: 'block', expr: expr.trim() });
@@ -180,6 +191,10 @@
             const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
             mathBlocks.push({ type: 'inline', expr: expr.trim() });
             return placeholder;
+        });
+
+        processed = processed.replace(/MDCODE_(\d+)_END/g, function (_, i) {
+            return codeParts[Number(i)];
         });
 
         let html = marked.parse(processed, { renderer: renderer });
