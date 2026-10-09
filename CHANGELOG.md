@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.2] — 2026-10-09
+
+### Fixed
+- Changing the theme from the toolbar no longer changes the theme in Settings > Appearance. The toolbar now changes only that window; the Settings choice applies to all windows and to windows opened later. The automatic GitHub Light/Dark switch that follows the system appearance now changes only the window, not the setting. (Thanks to @bganesh, #14)
+
+---
+
 ## [1.7.1] — 2026-10-09
 
 ### Fixed
