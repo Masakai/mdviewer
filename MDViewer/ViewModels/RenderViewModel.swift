@@ -89,9 +89,10 @@ final class RenderViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
+    /// このウィンドウのテーマだけを切り替える。設定（selectedThemeId）には書かない。
+    /// ツールバーからの個別変更が全体設定や他のウィンドウに波及しないようにするため。
     func setTheme(_ newTheme: MarkdownTheme) {
         theme = newTheme
-        storedThemeId = newTheme.id
         webView?.evaluateJavaScript(Self.setThemeScript(for: newTheme), completionHandler: nil)
     }
 
@@ -319,9 +320,9 @@ final class RenderViewModel: ObservableObject {
     }
 
     func applySystemAppearance(isDark: Bool) {
-        if storedThemeId == MarkdownTheme.githubLight.id, isDark {
+        if theme.id == MarkdownTheme.githubLight.id, isDark {
             setTheme(.githubDark)
-        } else if storedThemeId == MarkdownTheme.githubDark.id, !isDark {
+        } else if theme.id == MarkdownTheme.githubDark.id, !isDark {
             setTheme(.githubLight)
         }
     }

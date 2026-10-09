@@ -748,4 +748,20 @@ final class RenderViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.theme, .githubDark)
     }
+
+    // MARK: - ツールバーでのテーマ変更は設定に書かない（#14）
+
+    func test_setTheme_doesNotWriteSelectedThemeIdToSettings() throws {
+        let key = "selectedThemeId"
+        let saved = UserDefaults.standard.object(forKey: key)
+        defer {
+            if let saved { UserDefaults.standard.set(saved, forKey: key) } else { UserDefaults.standard.removeObject(forKey: key) }
+        }
+        UserDefaults.standard.set("github-light", forKey: key)
+
+        try sut.setTheme(XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "nord" })))
+
+        XCTAssertEqual(sut.theme.id, "nord")
+        XCTAssertEqual(UserDefaults.standard.string(forKey: key), "github-light")
+    }
 }
