@@ -44,4 +44,41 @@ final class WebRendererViewTests: XCTestCase {
         // Assert
         XCTAssertFalse(result)
     }
+
+    // MARK: - RendererWebView
+
+    /// HSplitView sends a zero-height frame on every live-resize step; applying
+    /// it would make the page lay out in an empty viewport (white flash).
+    func test_setFrameSize_zeroHeight_keepsPreviousSize() {
+        // Arrange
+        let webView = RendererWebView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
+
+        // Act
+        webView.setFrameSize(NSSize(width: 780, height: 0))
+
+        // Assert
+        XCTAssertEqual(webView.frame.size, NSSize(width: 300, height: 200))
+    }
+
+    func test_setFrameSize_zeroWidth_keepsPreviousSize() {
+        // Arrange
+        let webView = RendererWebView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
+
+        // Act
+        webView.setFrameSize(NSSize(width: 0, height: 700))
+
+        // Assert
+        XCTAssertEqual(webView.frame.size, NSSize(width: 300, height: 200))
+    }
+
+    func test_setFrameSize_realSize_isApplied() {
+        // Arrange
+        let webView = RendererWebView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
+
+        // Act
+        webView.setFrameSize(NSSize(width: 400, height: 300))
+
+        // Assert
+        XCTAssertEqual(webView.frame.size, NSSize(width: 400, height: 300))
+    }
 }
