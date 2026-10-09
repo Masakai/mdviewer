@@ -709,4 +709,20 @@ final class RenderViewModelTests: XCTestCase {
         XCTAssertFalse(sut.isPreviewInterrupted)
         XCTAssertNil(sut.renderFailureMessage)
     }
+
+    // MARK: - setThemeScript
+
+    /// Nord や Dracula は名前に dark を含まないので、ダークかどうかを明示的に渡す（#14）
+    func test_setThemeScript_darkThemeWithoutDarkInName_passesTrue() throws {
+        let nord = try XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "nord" }))
+        XCTAssertEqual(RenderViewModel.setThemeScript(for: nord), "MDViewer.setTheme('nord', true)")
+    }
+
+    func test_setThemeScript_lightTheme_passesFalse() throws {
+        let solarizedLight = try XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "solarized-light" }))
+        XCTAssertEqual(
+            RenderViewModel.setThemeScript(for: solarizedLight),
+            "MDViewer.setTheme('solarized-light', false)"
+        )
+    }
 }

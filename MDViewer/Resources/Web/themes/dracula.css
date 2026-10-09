@@ -1,0 +1,37 @@
+/* Dracula Theme */
+:root {
+    --bg-color: #282a36;
+    --text-color: #f8f8f2;
+    --link-color: #8be9fd;
+    --border-color: #44475a;
+    --blockquote-border: #bd93f9;
+    --blockquote-color: #a4afd6;
+    --table-border: #44475a;
+    --table-row-alt: #2f3241;
+    --code-bg: #21222c;
+    --code-inline-bg: rgba(68, 71, 90, 0.8);
+    --highlight-bg: rgba(241, 250, 140, 0.3);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+code:not(pre code) {
+    background-color: var(--code-inline-bg);
+    color: var(--text-color);
+}
+
+pre {
+    background-color: var(--code-bg);
+}
+
+/* Shiki sets the GitHub theme's background inline; use this theme's instead */
+body.dark-theme .shiki {
+    background-color: var(--code-bg) !important;
+}
+
+body.dark-theme .shiki span {
+    background-color: transparent !important;
+}

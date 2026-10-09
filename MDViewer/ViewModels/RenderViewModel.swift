@@ -72,7 +72,12 @@ final class RenderViewModel: ObservableObject {
     func setTheme(_ newTheme: MarkdownTheme) {
         theme = newTheme
         storedThemeId = newTheme.id
-        webView?.evaluateJavaScript("MDViewer.setTheme('\(newTheme.cssFileName)')", completionHandler: nil)
+        webView?.evaluateJavaScript(Self.setThemeScript(for: newTheme), completionHandler: nil)
+    }
+
+    /// テーマを切り替える JS。ダークかどうかはテーマ名から判別できないので、明示的に渡す。
+    static func setThemeScript(for theme: MarkdownTheme) -> String {
+        "MDViewer.setTheme('\(theme.cssFileName)', \(theme.isDark))"
     }
 
     func setFontSize(_ size: Double) {
@@ -284,7 +289,7 @@ final class RenderViewModel: ObservableObject {
     }
 
     func applyCurrentThemeAndFontSize() {
-        webView?.evaluateJavaScript("MDViewer.setTheme('\(theme.cssFileName)')", completionHandler: nil)
+        webView?.evaluateJavaScript(Self.setThemeScript(for: theme), completionHandler: nil)
         webView?.evaluateJavaScript("MDViewer.setFontSize(\(Int(fontSize)))", completionHandler: nil)
     }
 

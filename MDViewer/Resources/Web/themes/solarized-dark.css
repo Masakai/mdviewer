@@ -1,0 +1,37 @@
+/* Solarized Dark Theme */
+:root {
+    --bg-color: #002b36;
+    --text-color: #93a1a1;
+    --link-color: #268bd2;
+    --border-color: #073642;
+    --blockquote-border: #586e75;
+    --blockquote-color: #839496;
+    --table-border: #0a4555;
+    --table-row-alt: #073642;
+    --code-bg: #073642;
+    --code-inline-bg: rgba(147, 161, 161, 0.15);
+    --highlight-bg: rgba(181, 137, 0, 0.3);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+code:not(pre code) {
+    background-color: var(--code-inline-bg);
+    color: var(--text-color);
+}
+
+pre {
+    background-color: var(--code-bg);
+}
+
+/* Shiki sets the GitHub theme's background inline; use this theme's instead */
+body.dark-theme .shiki {
+    background-color: var(--code-bg) !important;
+}
+
+body.dark-theme .shiki span {
+    background-color: transparent !important;
+}

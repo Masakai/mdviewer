@@ -50,6 +50,20 @@ final class MarkdownThemeTests: XCTestCase {
         }
     }
 
+    // MARK: - Bundled CSS
+
+    /// 一覧に出しているテーマは、すべて CSS を同梱していなければ選んでも効かない（#14）
+    func test_allThemes_haveBundledCSS() throws {
+        let themesDirectory = try XCTUnwrap(HTMLBuilder.webResourcesDirectory()).appendingPathComponent("themes")
+        for theme in MarkdownTheme.all {
+            let css = themesDirectory.appendingPathComponent("\(theme.cssFileName).css")
+            XCTAssertTrue(
+                FileManager.default.fileExists(atPath: css.path),
+                "Theme '\(theme.displayName)' has no CSS at \(css.path)"
+            )
+        }
+    }
+
     // MARK: - No empty fields
 
     func test_allThemes_haveNonEmptyID() {

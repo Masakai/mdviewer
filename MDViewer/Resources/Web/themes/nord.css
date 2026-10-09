@@ -1,0 +1,37 @@
+/* Nord Theme */
+:root {
+    --bg-color: #2e3440;
+    --text-color: #d8dee9;
+    --link-color: #88c0d0;
+    --border-color: #434c5e;
+    --blockquote-border: #5e81ac;
+    --blockquote-color: #a3adbf;
+    --table-border: #434c5e;
+    --table-row-alt: #3b4252;
+    --code-bg: #3b4252;
+    --code-inline-bg: rgba(76, 86, 106, 0.6);
+    --highlight-bg: rgba(235, 203, 139, 0.3);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+code:not(pre code) {
+    background-color: var(--code-inline-bg);
+    color: var(--text-color);
+}
+
+pre {
+    background-color: var(--code-bg);
+}
+
+/* Shiki sets the GitHub theme's background inline; use this theme's instead */
+body.dark-theme .shiki {
+    background-color: var(--code-bg) !important;
+}
+
+body.dark-theme .shiki span {
+    background-color: transparent !important;
+}

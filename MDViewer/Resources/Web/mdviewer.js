@@ -261,13 +261,14 @@
             }
         },
 
-        setTheme: function (themeName) {
+        // isDark comes from Swift: theme names such as "nord" or "dracula"
+        // are dark without saying so.
+        setTheme: function (themeName, isDark) {
             const link = document.getElementById('theme-css');
             if (link) {
                 link.href = `themes/${themeName}.css`;
             }
             // Toggle Shiki dark-theme class
-            const isDark = themeName.includes('dark');
             document.body.classList.toggle('dark-theme', isDark);
 
             // Update mermaid theme
