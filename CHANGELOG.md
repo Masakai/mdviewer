@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.1] — 2026-10-09
+
+### Fixed
+- The two switches in Settings > General had no effect. With the launch switch off, MDViewer now opens the welcome screen instead of reopening documents. Open documents are still recorded while it is off, so turning it back on restores them. With auto-reload off, an open document is no longer reloaded when the file changes on disk; ⌘R still reloads it. Both take effect without relaunching. The launch switch is renamed "Reopen documents from last time on launch", since it reopens every document that was open, not only the last one. (#18)
+- Choosing a theme in Settings > Appearance now applies it to open windows right away, as the toolbar's theme menu does. Previously it applied only to windows opened afterwards. (#19)
+
+---
+
 ## [1.7.0] — 2026-10-09
 
 ### Added
