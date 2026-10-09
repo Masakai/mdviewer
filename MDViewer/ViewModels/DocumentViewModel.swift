@@ -11,16 +11,34 @@ final class DocumentViewModel: ObservableObject {
     @Published var isDirty: Bool = false
     @Published var hasDocument: Bool = false
 
+    /// 設定 > 一般 のスイッチ。未設定のときはどちらもオン。
+    nonisolated static let restoreOnLaunchKey = "restoreLastFile"
+    nonisolated static let autoReloadKey = "autoReload"
+
     private let fileWatcher = FileWatcher()
     private let openDocumentStore: OpenDocumentStore
+    private let settings: UserDefaults
 
-    init(openDocumentStore: OpenDocumentStore = .shared) {
+    init(openDocumentStore: OpenDocumentStore = .shared, settings: UserDefaults = .standard) {
         self.openDocumentStore = openDocumentStore
+        self.settings = settings
         fileWatcher.onChange = { [weak self] in
             Task { @MainActor in
-                self?.reload()
+                self?.fileDidChange()
             }
         }
+    }
+
+    /// 表示中のファイルがディスク上で変わったとき。
+    /// 自動再読み込みがオフなら表示を変えない（⌘R で読み直せる）。設定はその都度読むので、切り替えは即座に効く。
+    func fileDidChange() {
+        guard isEnabled(Self.autoReloadKey) else { return }
+        reload()
+    }
+
+    private func isEnabled(_ key: String) -> Bool {
+        // 起動引数（-autoReload NO など）では文字列で入るので、bool(forKey:) で読む
+        settings.object(forKey: key) == nil ? true : settings.bool(forKey: key)
     }
 
     func openFile() {
@@ -128,8 +146,9 @@ final class DocumentViewModel: ObservableObject {
     /// 前回終了時に開いていたファイルを復元する。このウィンドウに1件目を読み込み、残りは新しいウィンドウで開く。
     /// 復元は起動ごとに1回だけ行う（2つ目以降のウェルカム画面では何もしない）。
     func restoreLastOpened() {
+        // 復元しない設定でも一覧は取り出しておき、起動ごとに1回だけという扱いを変えない
         let urls = openDocumentStore.claimLaunchURLs()
-        guard let first = urls.first else { return }
+        guard isEnabled(Self.restoreOnLaunchKey), let first = urls.first else { return }
         load(url: first)
         for url in urls.dropFirst() {
             NotificationCenter.default.post(name: .openDocumentInWindow, object: url)

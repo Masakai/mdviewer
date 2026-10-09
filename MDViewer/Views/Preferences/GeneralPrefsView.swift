@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct GeneralPrefsView: View {
-    @AppStorage("restoreLastFile") private var restoreLastFile: Bool = true
-    @AppStorage("autoReload") private var autoReload: Bool = true
+    @AppStorage(DocumentViewModel.restoreOnLaunchKey) private var restoreLastFile: Bool = true
+    @AppStorage(DocumentViewModel.autoReloadKey) private var autoReload: Bool = true
     @AppStorage("pdfPageSize") private var pdfPageSizeRaw: String = PDFPageSize.a4.rawValue
 
     var body: some View {
         Form {
             Section {
-                Toggle("Restore last opened file on launch", isOn: $restoreLastFile)
+                Toggle("Reopen documents from last time on launch", isOn: $restoreLastFile)
                 Toggle("Auto-reload file when changed on disk", isOn: $autoReload)
             }
 
