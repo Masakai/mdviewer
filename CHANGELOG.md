@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.0] — 2026-10-09
+
+### Added
+- Body text and headings can now use different fonts. Choose them under Settings > Appearance: Body Font lists the fonts installed on your Mac (System by default), and Heading Font defaults to Same as Body. Characters a chosen font does not have, such as Japanese, are shown in the default font. (Thanks to @bganesh, #16)
+
+### Fixed
+- The Code Font setting had no effect on the preview. It is now applied. Font changes in Settings also show up immediately in open windows.
+
+---
+
 ## [1.6.2] — 2026-10-09
 
 ### Fixed
