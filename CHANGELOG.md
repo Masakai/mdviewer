@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.1] — 2026-10-09
+
+### Fixed
+- While a window was being resized with the editor hidden, the preview flashed white for an instant on every step of the drag. The preview now keeps its last layout until the real size arrives, so it no longer flashes. (Thanks to @harasuke, #17)
+
+---
+
 ## [1.6.0] — 2026-10-09
 
 ### Changed
