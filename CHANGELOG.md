@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.3] — 2026-10-09
+
+### Fixed
+- A `$` inside a code block or inline code was paired with the next `$` and rendered as math. For example, `cp -p $f.conf $f.conf.bak` showed `f.conf` in italic math type. Code is now left as written; math outside code still renders. (#20)
+
+---
+
 ## [1.7.2] — 2026-10-09
 
 ### Fixed
