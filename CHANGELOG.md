@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.2] — 2026-10-09
+
+### Fixed
+- The Solarized Light, Solarized Dark, Dracula and Nord themes could be chosen but had no effect, because their style sheets were missing. All four now work, with code blocks drawn on each theme's background. Code in Dracula and Nord is now highlighted with dark-theme colors, which previously happened only for themes with "Dark" in the name. (Thanks to @bganesh, #14)
+- On macOS 27, the "Page Size" label in Settings > General wrapped onto two lines. It now fits on one line. (Thanks to @bganesh, #15)
+
+---
+
 ## [1.6.1] — 2026-10-09
 
 ### Fixed
