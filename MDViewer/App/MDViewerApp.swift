@@ -124,6 +124,8 @@ extension Notification.Name {
     static let exportHTML = Notification.Name("MDViewer.exportHTML")
     static let pdfPageSizeChanged = Notification.Name("MDViewer.pdfPageSizeChanged")
     static let previewFontsChanged = Notification.Name("MDViewer.previewFontsChanged")
+    /// object にテーマの id を載せる。
+    static let previewThemeChanged = Notification.Name("MDViewer.previewThemeChanged")
     static let newFile = Notification.Name("MDViewer.newFile")
 }
 

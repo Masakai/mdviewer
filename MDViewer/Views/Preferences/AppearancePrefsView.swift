@@ -61,5 +61,8 @@ struct AppearancePrefsView: View {
         .onChange(of: [bodyFont, headingFont, codeFont]) { _ in
             NotificationCenter.default.post(name: .previewFontsChanged, object: nil)
         }
+        .onChange(of: selectedThemeId) { newValue in
+            NotificationCenter.default.post(name: .previewThemeChanged, object: newValue)
+        }
     }
 }

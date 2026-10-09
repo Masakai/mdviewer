@@ -725,4 +725,27 @@ final class RenderViewModelTests: XCTestCase {
             "MDViewer.setTheme('solarized-light', false)"
         )
     }
+
+    // MARK: - 設定画面のテーマ変更（#19）
+
+    func test_previewThemeChanged_appliesThemeToOpenWindow() throws {
+        sut.setTheme(.githubLight)
+
+        NotificationCenter.default.post(name: .previewThemeChanged, object: "nord")
+
+        let applied = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in self.sut.theme.id == "nord" },
+            object: nil
+        )
+        wait(for: [applied], timeout: 2)
+    }
+
+    func test_previewThemeChanged_unknownTheme_keepsCurrentTheme() {
+        sut.setTheme(.githubDark)
+
+        NotificationCenter.default.post(name: .previewThemeChanged, object: "no-such-theme")
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        XCTAssertEqual(sut.theme, .githubDark)
+    }
 }

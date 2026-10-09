@@ -74,6 +74,19 @@ final class RenderViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.applyFonts() }
             .store(in: &cancellables)
+
+        // 設定画面でテーマを選んだら、開いているウィンドウにもすぐ反映する
+        NotificationCenter.default
+            .publisher(for: .previewThemeChanged)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] notification in
+                guard let id = notification.object as? String,
+                      let theme = MarkdownTheme.all.first(where: { $0.id == id }),
+                      theme != self?.theme
+                else { return }
+                self?.setTheme(theme)
+            }
+            .store(in: &cancellables)
     }
 
     func setTheme(_ newTheme: MarkdownTheme) {
