@@ -33,6 +33,7 @@
 
 /* Menu - Help */
 "MDViewer Help" = "MDViewer ヘルプ";
+"Check for Updates…" = "アップデートを確認…";
 
 /* Sidebar */
 "No headings found" = "見出しが見つかりません";
