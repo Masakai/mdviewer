@@ -181,17 +181,36 @@
             .replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[`~]*[ \t]*$|(?![\s\S]))/gm, stashCode)
             .replace(/(`+)(?!`)[\s\S]*?[^`]\1(?!`)/g, stashCode);
 
+        // Set escapes aside too, so `\$` is a literal dollar sign. `\\` is
+        // taken first in the same pass, so in `\\$` the `$` still opens math.
+        const escapeParts = [];
+        processed = processed.replace(/\\[\\$]/g, function (esc) {
+            escapeParts.push(esc);
+            return `MDESC_${escapeParts.length - 1}_END`;
+        });
+        const restoreEscapes = function (text) {
+            return text.replace(/MDESC_(\d+)_END/g, function (_, i) {
+                return escapeParts[Number(i)];
+            });
+        };
+
         processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
             const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
-            mathBlocks.push({ type: 'block', expr: expr.trim() });
+            mathBlocks.push({ type: 'block', expr: restoreEscapes(expr.trim()) });
             return placeholder;
         });
 
-        processed = processed.replace(/\$([^$\n]+?)\$/g, function (_, expr) {
+        // Pandoc's rule for inline math: the opening `$` is followed by a
+        // non-space, the closing `$` is preceded by a non-space and not
+        // followed by a digit. Prices such as `$7,463 and $356` stay text.
+        processed = processed.replace(/\$(?=[^\s$])([^$\n]*?[^\s$])\$(?!\d)/g, function (_, expr) {
             const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
-            mathBlocks.push({ type: 'inline', expr: expr.trim() });
+            mathBlocks.push({ type: 'inline', expr: restoreEscapes(expr) });
             return placeholder;
         });
+
+        // marked turns the restored `\$` into `$` and `\\` into `\`.
+        processed = restoreEscapes(processed);
 
         processed = processed.replace(/MDCODE_(\d+)_END/g, function (_, i) {
             return codeParts[Number(i)];
