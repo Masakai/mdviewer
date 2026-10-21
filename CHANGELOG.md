@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.5] — 2026-10-21
+
+### Fixed
+- Relative links in a document, such as `dir_name/file_name.md` or `../dir_name/file_name.md`, pointed into the app bundle (`MDViewer.app/Contents/Resources/`) instead of the open file's folder, so the linked document could not be opened. Links now resolve against the open file's folder, and the status bar shows the same path on hover. (Thanks to @ima-hima, #22)
+
+---
+
 ## [1.7.4] — 2026-10-09
 
 ### Added
