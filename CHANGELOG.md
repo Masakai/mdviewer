@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.6] — 2026-10-21
+
+### Fixed
+- Plain text with two dollar amounts on a line, such as `Income $7,463; Expenses $356,143;`, was rendered as inline math. Inline math now follows Pandoc's rule: the opening `$` must be followed by a non-space, and the closing `$` must be preceded by a non-space and not followed by a digit. `\$` is shown as a literal `$`, both in text and inside math. Note that `$ x $`, with spaces inside the dollar signs, is no longer treated as math. (Thanks to @Rodentia, #23)
+
+---
+
 ## [1.7.5] — 2026-10-21
 
 ### Fixed
