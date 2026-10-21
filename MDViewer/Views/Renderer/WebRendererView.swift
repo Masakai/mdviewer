@@ -89,11 +89,16 @@ struct WebRendererView: NSViewRepresentable {
             case "scrollPositionChanged":
                 break
             case "linkHovered":
-                let url = message.body as? String ?? ""
-                Task { @MainActor in self.renderVM.hoveredURL = url }
+                let href = message.body as? String ?? ""
+                let url = href.hasPrefix("#")
+                    ? nil
+                    : Self.resolveLinkURL(href, relativeTo: schemeHandler.baseDirectory)
+                let display = url.map { $0.isFileURL ? $0.path : $0.absoluteString } ?? href
+                Task { @MainActor in self.renderVM.hoveredURL = display }
             case "linkClicked":
-                guard let urlString = message.body as? String,
-                      let url = URL(string: urlString) else { break }
+                guard let href = message.body as? String,
+                      let url = Self.resolveLinkURL(href, relativeTo: schemeHandler.baseDirectory)
+                else { break }
                 Task { @MainActor in
                     if url.scheme == "file",
                        ["md", "markdown"].contains(url.pathExtension.lowercased())
@@ -106,6 +111,24 @@ struct WebRendererView: NSViewRepresentable {
             default:
                 break
             }
+        }
+
+        /// Resolves a link's raw href against the directory of the open Markdown
+        /// file. The page itself is renderer.html inside the app bundle, so the
+        /// WebView's own resolution would point relative links into the bundle.
+        ///
+        /// - Returns: nil for a relative href when no file is open, since there
+        ///   is nothing to resolve it against.
+        static func resolveLinkURL(_ href: String, relativeTo directory: URL?) -> URL? {
+            if let url = URL(string: href), url.scheme != nil {
+                return url
+            }
+            guard let directory else { return nil }
+            let base = directory.hasDirectoryPath
+                ? directory
+                : URL(fileURLWithPath: directory.path, isDirectory: true)
+            guard let url = URL(string: href, relativeTo: base)?.absoluteURL else { return nil }
+            return url.isFileURL ? url.standardizedFileURL : url
         }
 
         private func handleHeadingsExtracted(_ body: Any) {

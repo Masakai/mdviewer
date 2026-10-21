@@ -351,11 +351,13 @@
         }, 100);
     });
 
-    // Link hover: notify Swift to display URL in status bar
+    // Link hover: notify Swift to display URL in status bar. The raw href is
+    // sent because link.href resolves against renderer.html inside the app
+    // bundle; Swift resolves it against the Markdown file's directory.
     document.addEventListener('mouseover', function (e) {
         const link = e.target.closest('a[href]');
         if (link && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.linkHovered) {
-            window.webkit.messageHandlers.linkHovered.postMessage(link.href || '');
+            window.webkit.messageHandlers.linkHovered.postMessage(link.getAttribute('href') || '');
         }
     });
     document.addEventListener('mouseout', function (e) {
@@ -397,7 +399,7 @@
 
         e.preventDefault();
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.linkClicked) {
-            window.webkit.messageHandlers.linkClicked.postMessage(link.href);
+            window.webkit.messageHandlers.linkClicked.postMessage(href);
         }
     });
 
