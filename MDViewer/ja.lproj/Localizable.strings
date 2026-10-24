@@ -44,6 +44,9 @@
 /* Toolbar & Search */
 "Search" = "検索";
 "Done" = "完了";
+"No Matches" = "0件";
+"Previous Match" = "前の一致";
+"Next Match" = "次の一致";
 
 /* Preferences */
 "Select Theme" = "テーマを選択";
