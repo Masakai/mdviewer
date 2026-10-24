@@ -87,24 +87,22 @@ struct MainToolbar: ToolbarContent {
             .help("Select Theme")
 
             // Export menu
+            // ⇧⌘P・⇧⌘E・⌘P はメニューバーの 書き出し / ファイル メニューに割り当てている
             Menu {
                 Button("Export as PDF…") {
                     if let wv = renderVM.webView {
                         exportVM.exportToPDF(webView: wv, sourceURL: documentVM.fileURL)
                     }
                 }
-                .keyboardShortcut("p", modifiers: [.command, .shift])
 
                 Button("Export as HTML…") {
                     if let wv = renderVM.webView {
                         exportVM.exportToHTML(webView: wv, sourceURL: documentVM.fileURL)
                     }
                 }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
 
                 Divider()
 
-                // ⌘P はメニューバーの ファイル > プリント… に割り当てている
                 Button("Print…") {
                     if let wv = renderVM.webView {
                         exportVM.print(webView: wv)

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Opening a file from the welcome screen with File > Open… or File > Open Recent opened it a second time if it was already open in another window. That window is now brought to the front, and the welcome screen stays as it is.
 - The menu bar had two View menus. MDViewer's items (Toggle Editor Mode, Toggle Sidebar, Find… and the font size items) are now in the standard View menu, together with the tab bar and full screen items.
 - File > Close was not translated into Japanese.
+- View > Increase Font Size, Decrease Font Size and Reset Font Size (⌘+, ⌘−, ⌘0) and Export > Export as PDF… and Export as HTML… (⇧⌘P, ⇧⌘E) did nothing when chosen from the menu bar. They now act on the active window. ⇧⌘P and ⇧⌘E are no longer also assigned to the same items in the toolbar's Export menu.
 
 ---
 

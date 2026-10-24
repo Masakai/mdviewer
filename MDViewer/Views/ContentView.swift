@@ -80,6 +80,12 @@ struct ContentView: View {
             guard isKeyWindow, documentVM.hasDocument, let webView = renderVM.webView else { return }
             exportVM.print(webView: webView)
         }
+        .modifier(FontSizeAndExportCommands(
+            windowBox: windowBox,
+            documentVM: documentVM,
+            renderVM: renderVM,
+            exportVM: exportVM
+        ))
         .onReceive(NotificationCenter.default.publisher(for: .toggleEditorMode)) { _ in
             guard isKeyWindow else { return }
             isEditorMode.toggle()
@@ -142,6 +148,45 @@ struct ContentView: View {
     private func startNewDocumentInThisWindow() {
         documentVM.newDocument()
         isEditorMode = true
+    }
+}
+
+// MARK: - Font size and export commands
+
+/// 表示メニューの文字サイズと、書き出しメニューの項目の通知を処理する。
+/// ContentView の body に直接並べると型チェックが終わらなくなるため分けている。
+private struct FontSizeAndExportCommands: ViewModifier {
+    let windowBox: WindowBox
+    let documentVM: DocumentViewModel
+    let renderVM: RenderViewModel
+    let exportVM: ExportViewModel
+
+    private var isKeyWindow: Bool {
+        windowBox.window?.isKeyWindow == true
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .increaseFontSize)) { _ in
+                guard isKeyWindow else { return }
+                renderVM.increaseFontSize()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .decreaseFontSize)) { _ in
+                guard isKeyWindow else { return }
+                renderVM.decreaseFontSize()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .resetFontSize)) { _ in
+                guard isKeyWindow else { return }
+                renderVM.resetFontSize()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .exportPDF)) { _ in
+                guard isKeyWindow, documentVM.hasDocument, let webView = renderVM.webView else { return }
+                exportVM.exportToPDF(webView: webView, sourceURL: documentVM.fileURL)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .exportHTML)) { _ in
+                guard isKeyWindow, documentVM.hasDocument, let webView = renderVM.webView else { return }
+                exportVM.exportToHTML(webView: webView, sourceURL: documentVM.fileURL)
+            }
     }
 }
 
