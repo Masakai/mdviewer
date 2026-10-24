@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - The editor in editor mode now uses the same font size as the preview's body text. Changing the size with the toolbar's − / + / reset buttons or View > Increase Font Size, Decrease Font Size and Reset Font Size (⌘+, ⌘−, ⌘0) resizes both the preview and the editor. The editor keeps the system monospaced typeface. Before, the editor text stayed at a small fixed size.
+- Moving the Size slider in Settings > Appearance now resizes the preview and the editor in all open windows right away. Before, only windows opened afterwards used the new size. The toolbar buttons and ⌘+, ⌘− and ⌘0 still change only the active window.
 
 ### Fixed
 - View > Toggle Sidebar did nothing. It now shows and hides the sidebar of the active window, and stays in step with the toolbar button and with dragging the sidebar closed. (Thanks to @sanderberents, #24)

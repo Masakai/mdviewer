@@ -26,7 +26,15 @@ struct AppearancePrefsView: View {
             Section("Font") {
                 HStack {
                     Text("Size")
-                    Slider(value: $fontSize, in: 10 ... 32, step: 1)
+                    // onChange(of: fontSize) では送らない。ツールバーや ⌘+ で変えた値も同じキーに保存されるので、
+                    // そちらでも通知が出て、そのウィンドウだけのはずの変更が全ウィンドウに広がってしまう
+                    Slider(value: Binding(
+                        get: { fontSize },
+                        set: { newValue in
+                            fontSize = newValue
+                            NotificationCenter.default.post(name: .previewFontSizeChanged, object: newValue)
+                        }
+                    ), in: 10 ... 32, step: 1)
                     Text("\(Int(fontSize))pt")
                         .frame(width: 36, alignment: .trailing)
                 }

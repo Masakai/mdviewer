@@ -757,6 +757,51 @@ final class RenderViewModelTests: XCTestCase {
         XCTAssertEqual(sut.theme, .githubDark)
     }
 
+    // MARK: - 設定画面の文字サイズ変更
+
+    func test_previewFontSizeChanged_appliesFontSizeWithoutWritingSettings() {
+        let standardBefore = UserDefaults.standard.object(forKey: "fontSize") as? NSObject
+
+        NotificationCenter.default.post(name: .previewFontSizeChanged, object: 21.0)
+
+        let applied = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in self.sut.fontSize == 21 },
+            object: nil
+        )
+        wait(for: [applied], timeout: 2)
+        XCTAssertNil(defaults.object(forKey: "fontSize"))
+        XCTAssertEqual(UserDefaults.standard.object(forKey: "fontSize") as? NSObject, standardBefore)
+    }
+
+    func test_previewFontSizeChanged_aboveMaximum_clampedTo32() {
+        NotificationCenter.default.post(name: .previewFontSizeChanged, object: 100.0)
+
+        let applied = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in self.sut.fontSize == 32 },
+            object: nil
+        )
+        wait(for: [applied], timeout: 2)
+    }
+
+    func test_previewFontSizeChanged_belowMinimum_clampedTo10() {
+        NotificationCenter.default.post(name: .previewFontSizeChanged, object: 5.0)
+
+        let applied = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in self.sut.fontSize == 10 },
+            object: nil
+        )
+        wait(for: [applied], timeout: 2)
+    }
+
+    func test_previewFontSizeChanged_nonNumberObject_keepsCurrentSize() {
+        sut.setFontSize(18)
+
+        NotificationCenter.default.post(name: .previewFontSizeChanged, object: "20")
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        XCTAssertEqual(sut.fontSize, 18)
+    }
+
     // MARK: - ツールバーでのテーマ変更は設定に書かない（#14）
 
     func test_setTheme_doesNotWriteSelectedThemeIdToSettings() throws {

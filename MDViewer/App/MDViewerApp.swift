@@ -148,6 +148,8 @@ extension Notification.Name {
     static let previewFontsChanged = Notification.Name("MDViewer.previewFontsChanged")
     /// object にテーマの id を載せる。
     static let previewThemeChanged = Notification.Name("MDViewer.previewThemeChanged")
+    /// object に文字サイズ（Double）を載せる。設定のスライダーを操作したときだけ送る。
+    static let previewFontSizeChanged = Notification.Name("MDViewer.previewFontSizeChanged")
     static let newFile = Notification.Name("MDViewer.newFile")
     static let printDocument = Notification.Name("MDViewer.printDocument")
 }

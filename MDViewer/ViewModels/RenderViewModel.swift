@@ -114,6 +114,19 @@ final class RenderViewModel: ObservableObject {
                 self?.setTheme(theme)
             }
             .store(in: &cancellables)
+
+        // 設定画面で文字サイズを変えたら、開いているウィンドウにもすぐ反映する。
+        // 設定画面がすでに保存しているので、ここでは保存先に書かない
+        NotificationCenter.default
+            .publisher(for: .previewFontSizeChanged)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] notification in
+                guard let self, let size = notification.object as? Double else { return }
+                let clamped = Self.clampedFontSize(size)
+                guard clamped != self.fontSize else { return }
+                self.applyFontSize(clamped)
+            }
+            .store(in: &cancellables)
     }
 
     /// このウィンドウのテーマだけを切り替える。設定（selectedThemeId）には書かない。
@@ -129,10 +142,18 @@ final class RenderViewModel: ObservableObject {
     }
 
     func setFontSize(_ size: Double) {
-        let clamped = min(max(size, 10), 32)
-        fontSize = clamped
+        let clamped = Self.clampedFontSize(size)
         settings.set(clamped, forKey: Self.fontSizeKey)
-        webView?.evaluateJavaScript("MDViewer.setFontSize(\(Int(clamped)))", completionHandler: nil)
+        applyFontSize(clamped)
+    }
+
+    private static func clampedFontSize(_ size: Double) -> Double {
+        min(max(size, 10), 32)
+    }
+
+    private func applyFontSize(_ size: Double) {
+        fontSize = size
+        webView?.evaluateJavaScript("MDViewer.setFontSize(\(Int(size)))", completionHandler: nil)
     }
 
     func increaseFontSize() {
