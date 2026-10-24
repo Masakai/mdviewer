@@ -174,6 +174,8 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
         // ウィンドウに載った時点で登録しておく（updateNSView の登録は非同期で間に合わない）
         view.onAttach = { window in
             DocumentWindowRegistry.shared.register(window: window) { documentVM.fileURL }
+            // WindowGroup が作る最初のウィンドウにも、AppDelegate が作るウィンドウと同じタブの識別子を付ける
+            window.tabbingIdentifier = DocumentWindowRegistry.tabbingIdentifier
         }
         return view
     }

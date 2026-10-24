@@ -5,6 +5,11 @@ import AppKit
 final class DocumentWindowRegistry {
     static let shared = DocumentWindowRegistry()
 
+    /// ドキュメントウィンドウに共通で付けるタブの識別子。
+    /// SwiftUI の WindowGroup が作る最初のウィンドウと AppDelegate が作るウィンドウで既定値が異なるため、
+    /// そろえておかないと「すべてのウインドウを結合」で最初のウィンドウだけ取り残される。
+    static let tabbingIdentifier: NSWindow.TabbingIdentifier = "MDViewer.document"
+
     private final class Entry {
         let urlProvider: () -> URL?
         init(urlProvider: @escaping () -> URL?) {

@@ -112,10 +112,12 @@ struct MDViewerApp: App {
 
         Settings {
             PreferencesView()
+                .background(WindowTabbingDisabler())
         }
 
         Window("MDViewer Help", id: "help") {
             HelpView()
+                .background(WindowTabbingDisabler())
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified(showsTitle: true))
@@ -137,6 +139,24 @@ extension Notification.Name {
     /// object にテーマの id を載せる。
     static let previewThemeChanged = Notification.Name("MDViewer.previewThemeChanged")
     static let newFile = Notification.Name("MDViewer.newFile")
+}
+
+// MARK: - Window tabbing
+
+/// 載ったウィンドウをタブに入れないようにする。ヘルプと設定のウィンドウがドキュメントのタブに混ざらないようにするために使う。
+private struct WindowTabbingDisabler: NSViewRepresentable {
+    final class AttachView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            window?.tabbingMode = .disallowed
+        }
+    }
+
+    func makeNSView(context _: Context) -> NSView {
+        AttachView()
+    }
+
+    func updateNSView(_: NSView, context _: Context) {}
 }
 
 // MARK: - Open Recent menu

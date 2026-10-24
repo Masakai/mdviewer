@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_: NSApplication, open urls: [URL]) {
-        // 複数URLを同時に渡されても取りこぼさないよう、1URLにつき1つの独立したウィンドウで開く。
+        // 複数URLを同時に渡されても取りこぼさないよう、1URLにつき1つのウィンドウで開く（システム設定によってはタブになる）。
         // すでに開いているファイルは新しく開かず、既存のウィンドウを前面に出す。
         for url in urls {
             openOrActivateDocument(url: url)
@@ -87,8 +87,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleOpenLocalDocument(_ notification: Notification) {
+        // 文書内のリンクも他の経路と同じく開く。タブにするかはシステム設定に従い、開いていれば前面に出す
         guard let url = notification.object as? URL else { return }
-        openDocumentInNewTab(url: url)
+        openOrActivateDocument(url: url)
     }
 
     @objc private func handleOpenNewDocumentWindow() {
@@ -106,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
     }
 
-    /// 空の新規ドキュメントを、独立した新しいウィンドウで開く。
+    /// 空の新規ドキュメントを新しいウィンドウで開く（システム設定によってはタブになる）。
     private func openNewDocumentWindow() {
         let window = makeDocumentWindow(rootView: ContentView(startsAsNewDocument: true), title: "Untitled")
         place(window)
@@ -143,7 +144,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = title
         window.isReleasedWhenClosed = false
         window.toolbarStyle = .unified
-        window.tabbingMode = .disallowed
+        // タブにするかはシステム設定「書類を開くときはタブで」に任せる（tabbingMode は既定の .automatic）
+        window.tabbingIdentifier = DocumentWindowRegistry.tabbingIdentifier
         return window
     }
 
@@ -152,25 +154,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // ContentView が描画されて登録するまでの間に同じURLが来ても重複しないよう、先に登録する
         DocumentWindowRegistry.shared.register(window: window, url: url)
         place(window)
-        window.makeKeyAndOrderFront(nil)
-    }
-
-    private func openDocumentInNewTab(url: URL) {
-        let contentView = ContentView(initialURL: url)
-        let hosting = NSHostingController(rootView: contentView)
-        let window = NSWindow(contentViewController: hosting)
-        window.setContentSize(NSSize(width: 960, height: 700))
-        window.minSize = NSSize(width: 800, height: 600)
-        window.title = url.lastPathComponent
-        window.isReleasedWhenClosed = false
-        window.toolbarStyle = .unified
-
-        if let keyWindow = NSApp.keyWindow {
-            window.tabbingIdentifier = keyWindow.tabbingIdentifier
-            keyWindow.addTabbedWindow(window, ordered: .above)
-        } else {
-            place(window)
-        }
         window.makeKeyAndOrderFront(nil)
     }
 }
