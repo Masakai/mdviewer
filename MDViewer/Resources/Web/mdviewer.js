@@ -570,7 +570,10 @@
         if (typeof mermaid !== 'undefined') {
             try {
                 // 図は非同期に描かれるので、描き終えたら図の中の文字も含めて検索し直す
-                const diagramsDone = function () { refreshSearch(); };
+                const hasDiagrams = contentEl.querySelector('.mermaid') !== null;
+                const diagramsDone = function () {
+                    if (hasDiagrams) { refreshSearch(); }
+                };
                 Promise.resolve(mermaid.run({ querySelector: '.mermaid' })).then(diagramsDone, function (e) {
                     console.warn('Mermaid render error:', e);
                     diagramsDone();

@@ -810,4 +810,73 @@ final class RenderViewModelTests: XCTestCase {
         // Assert
         XCTAssertNil(sut.searchStatus)
     }
+
+    // MARK: - 検索欄の入力を待ってから検索する
+
+    /// 入力の途中では検索せず、止まってから最後の語で検索する。
+    func test_searchAsTyped_waitsBeforeSearching() async throws {
+        // Arrange
+        sut.search("old")
+        sut.searchResultsChanged(current: 2, total: 5)
+
+        // Act
+        sut.searchAsTyped("n", delay: .milliseconds(50))
+        sut.searchAsTyped("ne", delay: .milliseconds(50))
+        sut.searchAsTyped("new", delay: .milliseconds(50))
+
+        // Assert: まだ前の語の件数のまま
+        XCTAssertEqual(sut.searchStatus, RenderViewModel.SearchStatus(current: 2, total: 5))
+        XCTAssertEqual(sut.pendingSearchQuery, "new")
+
+        // Act
+        try await Task.sleep(for: .milliseconds(300))
+
+        // Assert: 検索したので結果待ち
+        XCTAssertNil(sut.pendingSearchQuery)
+        XCTAssertNil(sut.searchStatus)
+    }
+
+    /// 入力の直後に Return や矢印を押したら、待たずにその語で検索する。
+    func test_findNext_afterTyping_searchesImmediately() {
+        // Arrange
+        sut.search("old")
+        sut.searchResultsChanged(current: 2, total: 5)
+        sut.searchAsTyped("new", delay: .seconds(10))
+
+        // Act
+        sut.findNext()
+
+        // Assert
+        XCTAssertNil(sut.pendingSearchQuery)
+        XCTAssertNil(sut.searchStatus)
+    }
+
+    func test_searchAsTyped_empty_clearsImmediately() {
+        // Arrange
+        sut.search("word")
+        sut.searchResultsChanged(current: 1, total: 4)
+        sut.searchAsTyped("words", delay: .seconds(10))
+
+        // Act
+        sut.searchAsTyped("")
+
+        // Assert
+        XCTAssertNil(sut.pendingSearchQuery)
+        XCTAssertNil(sut.searchStatus)
+    }
+
+    /// 検索バーを閉じたら、待っていた検索も取り消す。
+    func test_clearSearch_cancelsPendingSearch() async throws {
+        // Arrange
+        sut.searchAsTyped("word", delay: .milliseconds(50))
+
+        // Act
+        sut.clearSearch()
+        try await Task.sleep(for: .milliseconds(300))
+        sut.searchResultsChanged(current: 1, total: 1)
+
+        // Assert
+        XCTAssertNil(sut.pendingSearchQuery)
+        XCTAssertNil(sut.searchStatus)
+    }
 }

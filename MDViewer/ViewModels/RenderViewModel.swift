@@ -32,6 +32,10 @@ final class RenderViewModel: ObservableObject {
     /// JS 側の状態が消えるので、ここで覚えておいて検索し直す。
     private var searchQuery = ""
 
+    /// 入力が止まるのを待っている検索
+    private var pendingSearch: Task<Void, Never>?
+    private(set) var pendingSearchQuery: String?
+
     @AppStorage("selectedThemeId") private var storedThemeId: String = MarkdownTheme.githubLight.id
     @AppStorage("fontSize") private var storedFontSize: Double = 16
     @AppStorage("pdfPageSize") private var storedPDFPageSize: String = PDFPageSize.a4.rawValue
@@ -302,7 +306,38 @@ final class RenderViewModel: ObservableObject {
 
     // MARK: - 検索
 
+    /// 検索欄への入力。1文字ごとに全文を走査しないよう、入力が止まってから検索する。
+    /// 空にしたときはすぐにハイライトを消す。
+    func searchAsTyped(_ query: String, delay: Duration = .milliseconds(150)) {
+        guard !query.isEmpty else {
+            search(query)
+            return
+        }
+        pendingSearch?.cancel()
+        pendingSearchQuery = query
+        pendingSearch = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            self?.search(query)
+        }
+    }
+
+    /// 入力待ちの検索があれば、待たずに今すぐ検索する。
+    /// - Returns: 検索したかどうか
+    private func flushPendingSearch() -> Bool {
+        guard let query = pendingSearchQuery else { return false }
+        search(query)
+        return true
+    }
+
+    private func cancelPendingSearch() {
+        pendingSearch?.cancel()
+        pendingSearch = nil
+        pendingSearchQuery = nil
+    }
+
     func search(_ query: String) {
+        cancelPendingSearch()
         searchQuery = query
         guard !query.isEmpty else {
             clearSearch()
@@ -315,17 +350,19 @@ final class RenderViewModel: ObservableObject {
         )
     }
 
+    /// 入力の直後に押されたときは、まだ検索していない語で最初の一致へ移る。
     func findNext() {
-        guard isRendererReady, !searchQuery.isEmpty else { return }
+        guard !flushPendingSearch(), isRendererReady, !searchQuery.isEmpty else { return }
         webView?.evaluateJavaScript("MDViewer.searchNext();", completionHandler: nil)
     }
 
     func findPrevious() {
-        guard isRendererReady, !searchQuery.isEmpty else { return }
+        guard !flushPendingSearch(), isRendererReady, !searchQuery.isEmpty else { return }
         webView?.evaluateJavaScript("MDViewer.searchPrevious();", completionHandler: nil)
     }
 
     func clearSearch() {
+        cancelPendingSearch()
         searchQuery = ""
         searchStatus = nil
         guard isRendererReady else { return }

@@ -608,6 +608,23 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertEqual(marks, 1)
     }
 
+    /// Mermaid の図がない文書では、描画1回につき数え直しは1回だけ。
+    func test_search_rerenderWithoutDiagrams_recountsOnce() async throws {
+        // Arrange
+        let recorder = MessageRecorder()
+        try await render("one two one")
+        _ = try await search("MDViewer.search('two')")
+        webView.configuration.userContentController.add(recorder, name: "searchResultsChanged")
+
+        // Act
+        try await render("two and two")
+        try await Task.sleep(nanoseconds: 300_000_000)
+        try await waitUntil("true")
+
+        // Assert
+        XCTAssertEqual(recorder.messages.count, 1)
+    }
+
     /// Mermaid の図は描き終えてから数え直す。図に置き換える前のソースは数えない。
     func test_search_countsMermaidLabelsAfterDiagramIsDrawn() async throws {
         // Arrange

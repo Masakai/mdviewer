@@ -65,7 +65,7 @@ struct SearchBarView: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .onChange(of: searchText) { _, newValue in
-            renderVM.search(newValue)
+            renderVM.searchAsTyped(newValue)
         }
         // 閉じている間はハイライトを消すので、開き直したら同じ語で検索し直す
         .onAppear {
