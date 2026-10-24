@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 - View > Toggle Sidebar did nothing. It now shows and hides the sidebar of the active window, and stays in step with the toolbar button and with dragging the sidebar closed. (Thanks to @sanderberents, #24)
+- The toolbar button that shows and hides the sidebar was missing in every window except the first one, such as windows for files opened from Finder or with File > Open… while another document was showing. It now appears in all document windows.
+- Opening a file from the welcome screen with File > Open… or File > Open Recent opened it a second time if it was already open in another window. That window is now brought to the front, and the welcome screen stays as it is.
+- The menu bar had two View menus. MDViewer's items (Toggle Editor Mode, Toggle Sidebar, Find… and the font size items) are now in the standard View menu, together with the tab bar and full screen items.
+- File > Close was not translated into Japanese.
 
 ---
 

@@ -138,7 +138,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func makeDocumentWindow(rootView: ContentView, title: String) -> NSWindow {
         let hosting = NSHostingController(rootView: rootView)
-        let window = NSWindow(contentViewController: hosting)
+        // NSWindow(contentViewController:) で作ると、NavigationSplitView のサイドバー切り替えボタンが
+        // ツールバーに出ない。先にウィンドウを作ってから載せる。
+        // スタイルは WindowGroup が作るウィンドウ（.fullSizeContentView つき）と同じにして、タブにまとめても見た目をそろえる。
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 960, height: 700),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentViewController = hosting
         window.setContentSize(NSSize(width: 960, height: 700))
         window.minSize = NSSize(width: 800, height: 600)
         window.title = title

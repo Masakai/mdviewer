@@ -69,7 +69,9 @@ struct MDViewerApp: App {
                 .keyboardShortcut("p", modifiers: .command)
             }
 
-            CommandMenu("View") {
+            // 独自の CommandMenu("View") にすると、システムの「表示」メニュー（タブバーやフルスクリーンの項目が入る）と
+            // 2つ並んでしまうので、システムの「表示」メニューに差し込む
+            CommandGroup(before: .toolbar) {
                 Button("Toggle Editor Mode") {
                     NotificationCenter.default.post(name: .toggleEditorMode, object: nil)
                 }

@@ -60,8 +60,9 @@ final class DocumentViewModel: ObservableObject {
 
     /// File > Open で選ばれたファイルを開く。
     /// ドキュメント表示中なら置き換えず別ウィンドウに回し、無ければこのウィンドウに読み込む。
+    /// 別のウィンドウですでに開いているファイルは、このウィンドウに読み込まずそのウィンドウを前面に出す。
     func open(url: URL) {
-        if hasDocument {
+        if hasDocument || DocumentWindowRegistry.shared.window(for: url) != nil {
             // 表示中のドキュメントを置き換えず、別ウィンドウで開く（開いていれば前面に出す）
             NotificationCenter.default.post(name: .openDocumentInWindow, object: url)
         } else {

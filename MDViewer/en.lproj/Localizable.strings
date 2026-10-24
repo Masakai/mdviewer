@@ -9,6 +9,7 @@
 "Clear Menu" = "Clear Menu";
 "Open" = "Open";
 "Reload" = "Reload";
+"Close" = "Close";
 "Save" = "Save";
 "Open a Markdown file to get started" = "Open a Markdown file to get started";
 "Toggle Editor Mode" = "Toggle Editor Mode";

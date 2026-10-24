@@ -9,6 +9,7 @@
 "Clear Menu" = "メニューを消去";
 "Open" = "開く";
 "Reload" = "再読み込み";
+"Close" = "閉じる";
 "Save" = "保存";
 "Open a Markdown file to get started" = "Markdownファイルを開いてください";
 "Toggle Editor Mode" = "エディタモード切替";
