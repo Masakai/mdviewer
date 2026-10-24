@@ -76,6 +76,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 existing.deminiaturize(nil)
             }
             existing.makeKeyAndOrderFront(nil)
+            // 新しく読み込む場合（DocumentViewModel.load）と同じく、最近使った項目の先頭に移す。
+            // AppDelegate は MainActor に隔離されていないが、ここは常にメインスレッドから呼ばれる
+            MainActor.assumeIsolated {
+                RecentDocuments.shared.note(url: url)
+            }
         } else {
             openDocumentInNewWindow(url: url)
         }

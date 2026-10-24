@@ -89,6 +89,60 @@ final class RecentDocumentsTests: XCTestCase {
         XCTAssertTrue(sut.urls.isEmpty)
     }
 
+    // MARK: - アプリが前面に来たときの読み直し
+
+    func test_didBecomeActive_reloadsListChangedOutsideTheApp() {
+        let center = NotificationCenter()
+        let sut = RecentDocuments(controller: controller, notificationCenter: center)
+        let a = URL(fileURLWithPath: "/tmp/a.md")
+        controller.recentDocumentURLs = [a]
+
+        center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+
+        XCTAssertEqual(sut.urls, [a])
+    }
+
+    func test_didBecomeActive_withoutChange_doesNotPublish() {
+        let center = NotificationCenter()
+        controller.recentDocumentURLs = [URL(fileURLWithPath: "/tmp/a.md")]
+        let sut = RecentDocuments(controller: controller, notificationCenter: center)
+        var changeCount = 0
+        let cancellable = sut.objectWillChange.sink { changeCount += 1 }
+        defer { cancellable.cancel() }
+
+        center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+
+        XCTAssertEqual(changeCount, 0)
+    }
+
+    // MARK: - メニューの項目名
+
+    func test_menuTitles_uniqueNames_showFileNameOnly() {
+        let urls = [
+            URL(fileURLWithPath: "/tmp/docs/README.md"),
+            URL(fileURLWithPath: "/tmp/notes/todo.md"),
+        ]
+
+        XCTAssertEqual(RecentDocuments.menuTitles(for: urls), ["README.md", "todo.md"])
+    }
+
+    func test_menuTitles_sameNameInDifferentFolders_appendParentFolderName() {
+        let urls = [
+            URL(fileURLWithPath: "/tmp/docs/README.md"),
+            URL(fileURLWithPath: "/tmp/notes/todo.md"),
+            URL(fileURLWithPath: "/tmp/app/README.md"),
+        ]
+
+        XCTAssertEqual(
+            RecentDocuments.menuTitles(for: urls),
+            ["README.md — docs", "todo.md", "README.md — app"]
+        )
+    }
+
+    func test_menuTitles_empty() {
+        XCTAssertEqual(RecentDocuments.menuTitles(for: []), [])
+    }
+
     // MARK: - DocumentViewModel からの記録
 
     func test_documentLoad_notesURL() throws {

@@ -178,11 +178,12 @@ struct OpenRecentMenu: View {
 
     var body: some View {
         Menu("Open Recent") {
-            ForEach(recentDocuments.urls, id: \.self) { url in
+            let titles = RecentDocuments.menuTitles(for: recentDocuments.urls)
+            ForEach(Array(zip(recentDocuments.urls, titles)), id: \.0) { url, title in
                 Button {
                     NotificationCenter.default.post(name: .openRecentDocument, object: url)
                 } label: {
-                    Text(verbatim: url.lastPathComponent)
+                    Text(verbatim: title)
                 }
             }
 

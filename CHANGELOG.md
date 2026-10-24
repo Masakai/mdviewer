@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- File > Open Recent lists the files you opened or saved recently. Choosing one opens it the same way as File > Open…: in a new window if a document is showing (or brings its window to the front if it is already open), or in the current window if it shows the welcome screen. Clear Menu empties the list. (Thanks to @sanderberents, #25)
+- File > Open Recent lists the files you opened or saved recently. Choosing one opens it the same way as File > Open…: in a new window if a document is showing (or brings its window to the front if it is already open), or in the current window if it shows the welcome screen. Clear Menu empties the list. Files with the same name in different folders are shown with their folder name, such as `README.md — docs`. Bringing an already open file to the front, from Open Recent or Finder, also moves it to the top of the list, and the list is read again whenever MDViewer becomes active. (Thanks to @sanderberents, #25)
 - Document windows can be combined into tabs. Window > Merge All Windows, Move Tab to New Window and View > Show Tab Bar now work, and documents open as tabs when "Prefer tabs when opening documents" in System Settings > Desktop & Dock is set to Always (or In Full Screen while in full screen). The Help and Settings windows stay separate. (Thanks to @sanderberents, #26)
 - File > Print… (⌘P) prints the document in the active window. ⌘P used to belong to Print… in the toolbar's Export menu, which now has no shortcut.
 
