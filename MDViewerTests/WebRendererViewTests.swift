@@ -506,6 +506,78 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertEqual(html, "<p><code>cp $f $f.bak</code> and $5 and $7,463 and $356 😄</p>\n")
     }
 
+    // MARK: start() のメモが別の文字列に前の結果を返さないこと（第2回レビューの反例）
+
+    /// 先頭と末尾が同じで中央だけ違う長い定型行が並んでも、行ごとに絵文字を変換する。
+    func test_emoji_similarLongListItems_eachConverted() async throws {
+        // Arrange
+        let line = { (status: String) in
+            "- The nightly integration run of the payments service on the staging cluster finished with status \(status) "
+                + "and the full output of this run is in the attached log file for the team."
+        }
+        let markdown = ["passed", ":tada:", "failed", ":x:"].map(line).joined(separator: "\n")
+
+        // Act
+        let html = try await render(markdown)
+
+        // Assert
+        XCTAssertTrue(html.contains("status 🎉 and"), html)
+        XCTAssertTrue(html.contains("status ❌ and"), html)
+        XCTAssertFalse(html.contains(":tada:") || html.contains(":x:"), html)
+    }
+
+    func test_emoji_similarLongParagraphs_eachConverted() async throws {
+        // Arrange
+        let head = "Result for nightly regression case 105 of the integration suite: see "
+        let tail = " and the complete details are in the attached log file for review by the team today."
+        let markdown = head + "passed!" + tail + "\n\n" + head + ":tada: " + tail
+
+        // Act
+        let html = try await render(markdown)
+
+        // Assert
+        XCTAssertTrue(html.contains("see 🎉  and"), html)
+        XCTAssertFalse(html.contains(":tada:"), html)
+    }
+
+    /// 前の段落の絵文字の位置で、次の段落の URL が途中で切れない（段落・リスト・表のセル）。
+    func test_emoji_previousParagraphShortcode_doesNotBreakNextURL() async throws {
+        // Arrange
+        let head = "Result for nightly regression case 105 of the integration suite: see "
+        let tail = " and the complete details are in the attached log file for review by the team today."
+        let first = head + "ab :tada: here" + tail
+        let second = head + "https://x.io/a" + tail
+        let samples: [(String, String)] = [
+            ("paragraphs", first + "\n\n" + second),
+            ("list", "- " + first + "\n- " + second),
+            ("table", "| a |\n|---|\n| " + first + " |\n| " + second + " |"),
+        ]
+        for (name, markdown) in samples {
+            // Act
+            let html = try await render(markdown)
+
+            // Assert
+            XCTAssertTrue(html.contains(#"<a href="https://x.io/a">https://x.io/a</a>"#), "\(name): \(html)")
+            XCTAssertTrue(html.contains("ab 🎉 here"), "\(name): \(html)")
+        }
+    }
+
+    /// 引用の中の脚注定義も、引用の段落に飲み込まれずに定義として読む。
+    func test_footnote_definitionInsideQuote_afterPeriodicLine_isRead() async throws {
+        // Arrange: 文書が改行で終わらない場合に、文書の残りと引用の中身とで取り違えていた
+        let body = "Ref[^1]\n\n> " + String(repeating: ".", count: 80) + "\n> [^1]: def inside quote\n"
+            + "this lazy continuation line is long enough to cover the sixty four char tail"
+        for markdown in [body, body + "\n"] {
+            // Act
+            let html = try await render(markdown)
+
+            // Assert
+            XCTAssertTrue(html.contains(##"<a href="#fn:1" id="fnref:1""##), html)
+            XCTAssertTrue(html.contains(#"<li id="fn:1">"#), html)
+            XCTAssertFalse(html.contains("[^1]"), html)
+        }
+    }
+
     // MARK: Search
 
     /// 検索の関数を呼び、返ってきた { current, total } を [current, total] で返す。

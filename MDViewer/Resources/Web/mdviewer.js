@@ -156,9 +156,9 @@
                 const last = recent[i];
                 if (src.length > last.src.length) { continue; }
                 const offset = last.src.length - src.length;
-                const isTail = last.src.startsWith(src.slice(0, 64), offset) &&
-                    last.src.endsWith(src.slice(-64));
-                if (isTail && (last.at === -1 || last.at >= offset)) {
+                // 末尾部分かどうかは全体を比べる。一部の字だけで判定すると、中央だけが
+                // 違う別の文字列（似た長い行が並ぶリストなど）に前の結果を返してしまう
+                if (last.src.endsWith(src) && (last.at === -1 || last.at >= offset)) {
                     // 使った結果は先頭に戻し、外側の文字列の結果が押し出されないようにする
                     recent.splice(i, 1);
                     recent.unshift(last);
@@ -212,16 +212,15 @@
             // 段落の途中から定義の行が始まったら、段落をそこで切らせる。marked は
             // 先頭1文字を除いた文字列を渡すので、改行の直後だけを行頭とみなす。
             // 行の途中を返すと「本文[^1]: 続き」のような段落が割れてしまう。
-            start: (function () {
-                const findNewline = memoizeStart(function (src) {
-                    const m = /\n {0,3}\[\^[^\]\s]+\]:/.exec(src);
-                    return m ? m.index : -1;
-                });
-                return function (src) {
-                    const at = findNewline(src);
-                    return at === undefined ? undefined : at + 1;
-                };
-            })(),
+            // 段落は空行を越えないので、最初の空行までだけを探す（文書の残り全体を
+            // 段落ごとに探すと、文書の長さの2乗の時間がかかる）。marked の段落は
+            // 空白だけの行で終わり、タブだけの行では終わらないので、それに合わせる。
+            start: function (src) {
+                const blank = src.search(/\n *(?:\n|$)/);
+                const paragraph = blank === -1 ? src : src.slice(0, blank + 1);
+                const m = /\n {0,3}\[\^[^\]\s]+\]:/.exec(paragraph);
+                return m ? m.index + 1 : undefined;
+            },
             tokenizer: function (src) {
                 const head = /^ {0,3}\[\^([^\]\s]+)\]:[ \t]*/.exec(src);
                 if (!head) { return undefined; }
