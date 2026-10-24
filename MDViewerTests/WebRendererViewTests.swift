@@ -319,8 +319,8 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertEqual(Set(all).count, all.count)
     }
 
-    /// 見出しは HTML と目次用の文字列とで2回描画されるが、参照は1回と数え、
-    /// 目次の項目名とアンカーに脚注の HTML を入れない。
+    /// 見出しは HTML と目次用の文字列とで何度か描画されるが、参照は1回と数え、
+    /// 目次の項目名には脚注を出さない。アンカーは v1.7.6 と同じ（元の「[^1]」から作る）。
     func test_footnote_inHeading_countsOnceAndStaysOutOfTOCTitle() async throws {
         // Arrange
         let recorder = MessageRecorder()
@@ -331,12 +331,36 @@ final class RendererScriptTests: XCTestCase {
         try await waitUntil("true")
 
         // Assert
-        XCTAssertTrue(html.contains(#"<h2 id="results">"#), html)
+        XCTAssertTrue(html.contains(#"<h2 id="results1">"#), html)
         XCTAssertTrue(html.contains(#"id="fnref:1:2""#))
         XCTAssertFalse(html.contains("fnref:1:3"))
         let headings = try XCTUnwrap(recorder.messages.last as? [[String: Any]])
         XCTAssertEqual(headings.first?["title"] as? String, "Results")
-        XCTAssertEqual(headings.first?["anchor"] as? String, "results")
+        XCTAssertEqual(headings.first?["anchor"] as? String, "results1")
+    }
+
+    /// ショートコードを含む見出しは、目次の表示名だけを絵文字にし、アンカーは v1.7.6 と
+    /// 同じくショートコードの名前から作る。Swift 側が原文から作る目次のアンカーとも一致する。
+    func test_emojiHeading_keepsShortcodeAnchorMatchingSwiftTOC() async throws {
+        // Arrange
+        let recorder = MessageRecorder()
+        webView.configuration.userContentController.add(recorder, name: "headingsExtracted")
+        let markdown = "## :sparkles: Features\n\n### Ship it :rocket: :+1:\n"
+        let sidebar = SidebarViewModel()
+        sidebar.extractTOC(from: markdown)
+
+        // Act
+        let html = try await render(markdown)
+        try await waitUntil("true")
+
+        // Assert
+        XCTAssertTrue(html.contains(#"<h2 id="sparkles-features">✨ Features</h2>"#), html)
+        XCTAssertTrue(html.contains(#"<h3 id="ship-it-rocket-1">Ship it 🚀 👍</h3>"#), html)
+        let headings = try XCTUnwrap(recorder.messages.last as? [[String: Any]])
+        XCTAssertEqual(headings.compactMap { $0["title"] as? String }, ["✨ Features", "Ship it 🚀 👍"])
+        let anchors = headings.compactMap { $0["anchor"] as? String }
+        XCTAssertEqual(anchors, ["sparkles-features", "ship-it-rocket-1"])
+        XCTAssertEqual(anchors, sidebar.tocItems.map(\.anchor))
     }
 
     /// 描画し直しても番号は1から振り直し、一覧は1つだけ。

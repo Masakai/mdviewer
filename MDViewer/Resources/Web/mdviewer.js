@@ -124,8 +124,24 @@
         });
     }
 
-    // 脚注の参照を描画した HTML（見出しの目次用の文字列から除くのに使う）
-    const FOOTNOTE_REF_HTML = /<sup class="footnote-ref">[\s\S]*?<\/sup>/g;
+    // 見出しの目次用の文字列を作っている間だけ、拡張のトークンを HTML ではなく
+    // 文字列として出す。'title' は目次の表示名、'anchor' はアンカーの元になる文字列
+    let inlineTextMode = null;
+
+    // marked の unescape と同じ処理（marked は公開していないので写した）。v1.7.6 と
+    // 同じアンカーを作るため、目次用の文字列を marked と同じ手順で作る。
+    function unescapeEntities(html) {
+        return html.replace(/&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/gi, function (_, name) {
+            name = name.toLowerCase();
+            if (name === 'colon') { return ':'; }
+            if (name.charAt(0) === '#') {
+                return name.charAt(1) === 'x'
+                    ? String.fromCharCode(parseInt(name.substring(2), 16))
+                    : String.fromCharCode(+name.substring(1));
+            }
+            return '';
+        });
+    }
 
     // marked は段落や地の文を切るたびに、残りの文字列で拡張の start() を呼ぶ。毎回
     // 先頭から探すと長い文書・段落で2乗の時間がかかるので、直前の結果を使い回す。
@@ -266,9 +282,12 @@
                 if (!m || !footnotes.has(labelKey(m[1]))) { return undefined; }
                 return { type: 'footnoteRef', raw: m[0], key: labelKey(m[1]) };
             },
-            // 見出しの中の参照は、HTML と目次用の文字列とで2回描画されるので、
-            // 番号は描画の前に processAllTokens で振っておく
+            // 見出しの中の参照は、HTML と目次用の文字列とで何度か描画されるので、
+            // 番号は描画の前に processAllTokens で振っておく。目次の表示名には出さず、
+            // アンカーには v1.7.6 と同じく元の「[^1]」を使う。
             renderer: function (token) {
+                if (inlineTextMode === 'title') { return ''; }
+                if (inlineTextMode === 'anchor') { return token.raw; }
                 return `<sup class="footnote-ref"><a href="#fn:${token.number}" id="${token.id}" data-footnote-ref>${token.number}</a></sup>`;
             }
         };
@@ -375,7 +394,10 @@
                 }
                 return { type: 'emoji', raw: m[0], text: emoji };
             },
-            renderer: function (token) { return escapeHtml(token.text); }
+            // 見出しのアンカーは v1.7.6 と同じくショートコードの文字列から作る
+            renderer: function (token) {
+                return inlineTextMode === 'anchor' ? token.raw : escapeHtml(token.text);
+            }
         };
     }
 
@@ -408,12 +430,29 @@
         const headingsRef = [];
         const renderer = new marked.Renderer();
 
-        renderer.heading = function (text, level, raw) {
-            // 目次用の文字列にも拡張の描画結果がそのまま入るので、脚注の参照を除く
-            const title = (typeof raw === 'string' ? raw : text).replace(FOOTNOTE_REF_HTML, '');
-            const anchor = slugify(title);
-            headingsRef.push({ level: level, title: title, anchor: anchor });
-            return `<h${level} id="${anchor}">${text}</h${level}>\n`;
+        // 目次の表示名は絵文字にし、アンカーは v1.7.6 と同じく元のショートコードの
+        // 文字列から作る（既存の文書内リンクや、Swift 側が原文から作る目次と合わせる）。
+        // marked の renderer.heading は描画済みの文字列しか受け取れないので、見出しの
+        // トークンごと受け取る拡張の描画で置き換える。
+        const headingExtension = {
+            name: 'heading',
+            renderer: function (token) {
+                const parser = this.parser;
+                const plainText = function (mode) {
+                    inlineTextMode = mode;
+                    try {
+                        return unescapeEntities(parser.parseInline(token.tokens, parser.textRenderer));
+                    } finally {
+                        inlineTextMode = null;
+                    }
+                };
+                const level = token.depth;
+                const text = parser.parseInline(token.tokens);
+                const title = plainText('title');
+                const anchor = slugify(plainText('anchor'));
+                headingsRef.push({ level: level, title: title, anchor: anchor });
+                return `<h${level} id="${anchor}">${text}</h${level}>\n`;
+            }
         };
 
         renderer.code = function (code, lang) {
@@ -475,7 +514,7 @@
 
         // 脚注の番号と定義は文書ごとなので、拡張ごと描画のたびに作り直す。
         // 定義が1つもない文書では、脚注の拡張は使わない。
-        const markedExtensions = [{ extensions: [createEmojiExtension()] }];
+        const markedExtensions = [{ extensions: [createEmojiExtension(), headingExtension] }];
         if (/\[\^[^\]\s]+\]:/.test(processed)) {
             markedExtensions.unshift(createFootnoteExtension());
         }
