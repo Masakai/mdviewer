@@ -20,6 +20,7 @@ MDViewer started as a viewer — but we wanted editing too, so it now includes a
 - **Themes and fonts** — six themes, and separate fonts for body text, headings and code (Settings > Appearance)
 - **Math equations** — inline and block LaTeX via [KaTeX](https://github.com/KaTeX/KaTeX)
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, and more
+- **Footnotes** — GitHub-style `[^1]` footnotes, listed at the end of the document with links back to the text
 - **Smart link handling** — local `.md` links open in-app; external links open in the browser
 - **Export to PDF** — one-click PDF export preserving all styles
 - **Signed & notarized** — Developer ID signing and Apple notarization

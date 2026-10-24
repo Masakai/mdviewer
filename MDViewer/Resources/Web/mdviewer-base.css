@@ -125,6 +125,22 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Footnotes */
+/* 上付きの番号で行の高さが広がらないようにする */
+.footnote-ref {
+    line-height: 0;
+}
+.footnotes {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color, #e1e4e8);
+    font-size: 0.875em;
+    color: var(--blockquote-color, #6a737d);
+}
+.footnotes li p {
+    margin: 0.25em 0;
+}
+
 /* Mermaid diagrams */
 .mermaid {
     text-align: center;

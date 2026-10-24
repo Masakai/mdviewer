@@ -124,6 +124,158 @@
         });
     }
 
+    // 脚注の参照を描画した HTML（見出しの目次用の文字列から除くのに使う）
+    const FOOTNOTE_REF_HTML = /<sup class="footnote-ref">[\s\S]*?<\/sup>/g;
+
+    // 脚注定義の続きの行としては取り込まない、別のブロックの始まり
+    const FOOTNOTE_BLOCK_START = /^ {0,3}(?:#{1,6}(?:\s|$)|>|[-*+](?:\s|$)|\d{1,9}[.)](?:\s|$)|`{3,}|~{3,}|\[\^[^\]\s]+\]:|(?:\*[ \t]*){3,}$|(?:-[ \t]*){3,}$|(?:_[ \t]*){3,}$)/;
+
+    // 脚注（GitHub と同じ [^label] 記法）の marked 拡張。描画1回ごとに作る。
+    // 定義は文書のどこに書いてもよく、本文で参照された順に番号を振って文書末に
+    // 一覧を出す。id には slugify が出さない「:」を含め、見出しのアンカーと
+    // 衝突しないようにする。
+    function createFootnoteExtension() {
+        const footnotes = new Map(); // 小文字にしたラベル → { tokens, number, refCount }
+        const numbered = [];         // 番号順
+
+        const labelKey = function (label) { return label.toLowerCase(); };
+        const refId = function (fn, n) {
+            return n === 1 ? `fnref:${fn.number}` : `fnref:${fn.number}:${n}`;
+        };
+
+        const definition = {
+            name: 'footnoteDefinition',
+            level: 'block',
+            // 段落の途中から定義の行が始まったら、段落をそこで切らせる。marked は
+            // 先頭1文字を除いた文字列を渡すので、改行の直後だけを行頭とみなす。
+            // 行の途中を返すと「本文[^1]: 続き」のような段落が割れてしまう。
+            start: function (src) {
+                const m = /\n {0,3}\[\^[^\]\s]+\]:/.exec(src);
+                return m ? m.index + 1 : undefined;
+            },
+            tokenizer: function (src) {
+                const head = /^ {0,3}\[\^([^\]\s]+)\]:[ \t]*/.exec(src);
+                if (!head) { return undefined; }
+
+                // 1行目の残りと、4文字以上字下げした行（間の空行を含む）、
+                // 段落の遅延継続の行を定義の中身とする
+                const lines = [];
+                let pendingBlanks = 0;
+                let rawLength = 0;
+                let pos = head[0].length;
+                while (pos < src.length) {
+                    const nl = src.indexOf('\n', pos);
+                    const next = nl === -1 ? src.length : nl + 1;
+                    const line = src.slice(pos, nl === -1 ? src.length : nl);
+                    if (lines.length === 0) {
+                        lines.push(line);
+                    } else if (/^[ \t]*$/.test(line)) {
+                        pendingBlanks += 1;
+                        pos = next;
+                        continue;
+                    } else if (/^(?: {4}|\t)/.test(line)) {
+                        for (; pendingBlanks > 0; pendingBlanks--) { lines.push(''); }
+                        lines.push(line.replace(/^(?: {4}|\t)/, ''));
+                    } else if (pendingBlanks === 0 && lines[lines.length - 1] !== '' &&
+                               !FOOTNOTE_BLOCK_START.test(line)) {
+                        lines.push(line);
+                    } else {
+                        break;
+                    }
+                    rawLength = next;
+                    pos = next;
+                }
+
+                // リストの中に書かれても、中身は段落として組む
+                const top = this.lexer.state.top;
+                this.lexer.state.top = true;
+                const tokens = this.lexer.blockTokens(lines.join('\n'), []);
+                this.lexer.state.top = top;
+
+                // 同じラベルが2回定義されたら最初のものを使う
+                const key = labelKey(head[1]);
+                if (!footnotes.has(key)) {
+                    footnotes.set(key, { tokens: tokens, number: 0, refCount: 0 });
+                }
+                return { type: 'footnoteDefinition', raw: src.slice(0, rawLength) };
+            },
+            // 定義の位置には何も出さず、文書末の一覧にまとめる
+            renderer: function () { return ''; }
+        };
+
+        // 定義のない参照は拡張では扱わず、文字のまま残す。ブロックをすべて
+        // 読んでからインラインを読むので、定義が参照より後ろにあっても分かる。
+        const reference = {
+            name: 'footnoteRef',
+            level: 'inline',
+            tokenizer: function (src) {
+                const m = /^\[\^([^\]\s]+)\]/.exec(src);
+                if (!m || !footnotes.has(labelKey(m[1]))) { return undefined; }
+                return { type: 'footnoteRef', raw: m[0], key: labelKey(m[1]) };
+            },
+            // 見出しの中の参照は、HTML と目次用の文字列とで2回描画されるので、
+            // 番号は描画の前に processAllTokens で振っておく
+            renderer: function (token) {
+                return `<sup class="footnote-ref"><a href="#fn:${token.number}" id="${token.id}" data-footnote-ref>${token.number}</a></sup>`;
+            }
+        };
+
+        // 本文の参照を先頭から順に数え、続いて脚注の中の参照を脚注の順に数える
+        const numberReferences = function (tokens) {
+            const visit = function (token) {
+                if (token.type !== 'footnoteRef') { return; }
+                const fn = footnotes.get(token.key);
+                if (fn.number === 0) {
+                    numbered.push(fn);
+                    fn.number = numbered.length;
+                }
+                fn.refCount += 1;
+                token.number = fn.number;
+                token.id = refId(fn, fn.refCount);
+            };
+            marked.walkTokens(tokens, visit);
+            // 脚注の中の参照で番号が増えることがあるので長さを毎回見る
+            for (let i = 0; i < numbered.length; i++) {
+                marked.walkTokens(numbered[i].tokens, visit);
+            }
+        };
+
+        // 文書末の脚注一覧。processAllTokens で最後に足したトークンを描画する。
+        const list = {
+            name: 'footnotes',
+            renderer: function () {
+                if (numbered.length === 0) { return ''; }
+                const parser = this.parser;
+                const items = numbered.map(function (fn) {
+                    let backrefs = '';
+                    for (let n = 1; n <= fn.refCount; n++) {
+                        const sup = n === 1 ? '' : `<sup>${n}</sup>`;
+                        backrefs += ` <a href="#${refId(fn, n)}" class="footnote-backref" data-footnote-backref aria-label="Back to reference ${fn.number}">↩${sup}</a>`;
+                    }
+                    // 戻りリンクは最後の段落の末尾に置く（GitHub と同じ）
+                    const body = parser.parse(fn.tokens);
+                    const lastParagraphEnd = /<\/p>\n?$/;
+                    const html = lastParagraphEnd.test(body)
+                        ? body.replace(lastParagraphEnd, `${backrefs}</p>\n`)
+                        : `${body}<p>${backrefs.trim()}</p>\n`;
+                    return `<li id="fn:${fn.number}">\n${html}</li>\n`;
+                });
+                return `<section class="footnotes" data-footnotes>\n<ol>\n${items.join('')}</ol>\n</section>\n`;
+            }
+        };
+
+        return {
+            extensions: [definition, reference, list],
+            hooks: {
+                processAllTokens: function (tokens) {
+                    numberReferences(tokens);
+                    tokens.push({ type: 'footnotes', raw: '' });
+                    return tokens;
+                }
+            }
+        };
+    }
+
     // Sends the headings of what is on screen to the sidebar. Swift also builds
     // the sidebar from the raw text as soon as it changes; this message lands
     // afterwards and describes what was actually drawn.
@@ -154,8 +306,10 @@
         const renderer = new marked.Renderer();
 
         renderer.heading = function (text, level, raw) {
-            const anchor = slugify(typeof raw === 'string' ? raw : text);
-            headingsRef.push({ level: level, title: typeof raw === 'string' ? raw : text, anchor: anchor });
+            // 目次用の文字列にも拡張の描画結果がそのまま入るので、脚注の参照を除く
+            const title = (typeof raw === 'string' ? raw : text).replace(FOOTNOTE_REF_HTML, '');
+            const anchor = slugify(title);
+            headingsRef.push({ level: level, title: title, anchor: anchor });
             return `<h${level} id="${anchor}">${text}</h${level}>\n`;
         };
 
@@ -216,7 +370,9 @@
             return codeParts[Number(i)];
         });
 
-        let html = marked.parse(processed, { renderer: renderer });
+        // 脚注の番号と定義は文書ごとなので、拡張ごと描画のたびに作り直す
+        const markdownParser = new marked.Marked(createFootnoteExtension());
+        let html = markdownParser.parse(processed, { renderer: renderer });
 
         // Restore math
         if (typeof katex !== 'undefined') {

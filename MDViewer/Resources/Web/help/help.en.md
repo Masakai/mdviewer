@@ -153,6 +153,8 @@ func greet(name: String) -> String {
 
 ## Footnotes
 
+A reference becomes a superscript number. Footnotes are numbered in the order they are referenced and listed at the end of the document, each with a ↩ link back to where it was referenced. The definition can go anywhere in the document; a reference without a definition stays as plain text.
+
 ```
 Here is a footnote reference.[^1]
 

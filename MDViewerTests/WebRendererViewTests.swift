@@ -148,3 +148,194 @@ final class WebRendererViewTests: XCTestCase {
         XCTAssertEqual(webView.frame.size, NSSize(width: 400, height: 300))
     }
 }
+
+// MARK: - mdviewer.js（renderer.html を WKWebView に読み込んで描画結果を確かめる）
+
+@MainActor
+final class RendererScriptTests: XCTestCase {
+    private var webView: WKWebView!
+
+    override func setUp() async throws {
+        let rendererURL = try XCTUnwrap(HTMLBuilder.rendererURL())
+        let resourcesDir = try XCTUnwrap(HTMLBuilder.webResourcesDirectory())
+        // 表示判定にレイアウトが要るので、大きさのある WKWebView を使う
+        webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 400))
+        webView.loadFileURL(rendererURL, allowingReadAccessTo: resourcesDir)
+        try await waitUntil("typeof MDViewer !== 'undefined' && document.readyState === 'complete'")
+    }
+
+    override func tearDown() async throws {
+        webView = nil
+    }
+
+    /// JS の式が true になるまで待つ。
+    private func waitUntil(_ condition: String, timeout: TimeInterval = 10) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let ok = try? await webView.evaluateJavaScript(condition) as? Bool, ok { return }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTFail("timed out waiting for: \(condition)")
+    }
+
+    /// Markdown を描画して #content の HTML を返す。
+    @discardableResult
+    private func render(_ markdown: String) async throws -> String {
+        let result = try await webView.callAsyncJavaScript(
+            "await MDViewer.setContent(md); return document.getElementById('content').innerHTML;",
+            arguments: ["md": markdown],
+            in: nil,
+            contentWorld: .page
+        )
+        return try XCTUnwrap(result as? String)
+    }
+
+    private func evaluate(_ script: String) async throws -> Any? {
+        try await webView.callAsyncJavaScript(script, arguments: [:], in: nil, contentWorld: .page)
+    }
+
+    // MARK: Footnotes
+
+    func test_footnote_rendersSuperscriptReferenceAndListWithBackLink() async throws {
+        // Act
+        let html = try await render("Text.[^1]\n\n[^1]: The note.\n")
+
+        // Assert
+        XCTAssertTrue(
+            html
+                .contains(
+                    ##"<sup class="footnote-ref"><a href="#fn:1" id="fnref:1" data-footnote-ref="">1</a></sup>"##
+                ),
+            html
+        )
+        XCTAssertTrue(html.contains(#"<li id="fn:1">"#))
+        XCTAssertTrue(html.contains("The note."))
+        XCTAssertTrue(html.contains(##"href="#fnref:1""##))
+        XCTAssertFalse(html.contains("[^1]"))
+    }
+
+    /// 番号は定義の順ではなく、本文で参照された順に振る。
+    func test_footnote_numbersByFirstReferenceAndSharesNumberForRepeats() async throws {
+        // Act
+        let html = try await render("A[^b] B[^a] C[^b]\n\n[^a]: alpha\n[^b]: beta\n")
+
+        // Assert
+        let footnotes = try await evaluate("""
+        return Array.from(document.querySelectorAll('.footnotes li'))
+            .map(li => li.id + '=' + li.querySelector('p').firstChild.textContent.trim());
+        """) as? [String]
+        XCTAssertEqual(footnotes, ["fn:1=beta", "fn:2=alpha"])
+        XCTAssertTrue(html.contains(#"id="fnref:1:2""#))
+    }
+
+    func test_footnote_undefinedReference_staysAsText() async throws {
+        // Act
+        let html = try await render("Missing[^nope] here.\n")
+
+        // Assert
+        XCTAssertTrue(html.contains("Missing[^nope] here."))
+        XCTAssertFalse(html.contains("footnotes"))
+    }
+
+    /// 定義の行で段落が切れても、行の途中の「[^1]:」で段落が割れてはいけない。
+    func test_footnote_referenceFollowedByColon_staysInParagraph() async throws {
+        // Act
+        try await render("Text[^1]: more text\n\n[^1]: def\n")
+
+        // Assert
+        let paragraphs = try await evaluate("return document.querySelectorAll('#content > p').length;") as? Int
+        XCTAssertEqual(paragraphs, 1)
+    }
+
+    /// 見出しのアンカーは slugify で作るので「:」を含まず、脚注の id と衝突しない。
+    func test_footnote_idsDoNotCollideWithHeadingAnchors() async throws {
+        // Act
+        try await render("# fn 1\n\nText[^1]\n\n[^1]: note\n")
+
+        // Assert
+        let ids =
+            try await evaluate("return Array.from(document.querySelectorAll('[id]')).map(e => e.id);") as? [String]
+        let all = try XCTUnwrap(ids)
+        XCTAssertEqual(all.filter { $0 == "fn-1" }.count, 1)
+        XCTAssertEqual(all.filter { $0 == "fn:1" }.count, 1)
+        XCTAssertEqual(Set(all).count, all.count)
+    }
+
+    /// 見出しは HTML と目次用の文字列とで2回描画されるが、参照は1回と数え、
+    /// 目次の項目名とアンカーに脚注の HTML を入れない。
+    func test_footnote_inHeading_countsOnceAndStaysOutOfTOCTitle() async throws {
+        // Arrange
+        let recorder = MessageRecorder()
+        webView.configuration.userContentController.add(recorder, name: "headingsExtracted")
+
+        // Act
+        let html = try await render("## Results[^1]\n\nBody[^1]\n\n[^1]: note\n")
+        try await waitUntil("true")
+
+        // Assert
+        XCTAssertTrue(html.contains(#"<h2 id="results">"#), html)
+        XCTAssertTrue(html.contains(#"id="fnref:1:2""#))
+        XCTAssertFalse(html.contains("fnref:1:3"))
+        let headings = try XCTUnwrap(recorder.messages.last as? [[String: Any]])
+        XCTAssertEqual(headings.first?["title"] as? String, "Results")
+        XCTAssertEqual(headings.first?["anchor"] as? String, "results")
+    }
+
+    /// 描画し直しても番号は1から振り直し、一覧は1つだけ。
+    func test_footnote_rerender_restartsNumbering() async throws {
+        // Act
+        try await render("A[^x]\n\n[^x]: once\n")
+        let html = try await render("B[^y]\n\n[^y]: twice\n")
+
+        // Assert
+        XCTAssertEqual(html.components(separatedBy: "class=\"footnotes\"").count, 2)
+        XCTAssertTrue(html.contains(#"<li id="fn:1">"#))
+        XCTAssertFalse(html.contains("once"))
+    }
+
+    /// 脚注へのリンクはページ内で移動し、#22 のリンク処理（Swift への linkClicked、
+    /// ファイルとして開く通知）に渡らない。ナビゲーションの判定は本番の Coordinator が行う。
+    func test_footnoteLink_scrollsInPageWithoutOpeningAFile() async throws {
+        // Arrange
+        let coordinator = WebRendererView.Coordinator(renderVM: RenderViewModel(), sidebarVM: SidebarViewModel())
+        webView.navigationDelegate = coordinator
+        let recorder = MessageRecorder()
+        webView.configuration.userContentController.add(recorder, name: "linkClicked")
+        let opened = NotificationRecorder(name: .openLocalDocument)
+        let filler = String(repeating: "Filler paragraph.\n\n", count: 80)
+        try await render("Top[^1]\n\n\(filler)[^1]: Bottom note\n")
+
+        // Act
+        _ = try await evaluate("document.querySelector('a[href=\"#fn:1\"]').click();")
+        try await waitUntil("location.hash === '#fn:1' && window.scrollY > 0")
+
+        // Assert
+        XCTAssertTrue(recorder.messages.isEmpty)
+        XCTAssertEqual(opened.count, 0)
+        XCTAssertEqual(webView.url?.lastPathComponent, "renderer.html")
+        withExtendedLifetime(coordinator) {}
+    }
+}
+
+private final class MessageRecorder: NSObject, WKScriptMessageHandler {
+    private(set) var messages: [Any] = []
+
+    func userContentController(_: WKUserContentController, didReceive message: WKScriptMessage) {
+        messages.append(message.body)
+    }
+}
+
+private final class NotificationRecorder {
+    private(set) var count = 0
+    private var observer: NSObjectProtocol?
+
+    init(name: Notification.Name) {
+        observer = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+            self?.count += 1
+        }
+    }
+
+    deinit {
+        if let observer { NotificationCenter.default.removeObserver(observer) }
+    }
+}
