@@ -92,9 +92,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleOpenLocalDocument(_ notification: Notification) {
-        // 文書内のリンクも他の経路と同じく開く。タブにするかはシステム設定に従い、開いていれば前面に出す
+        // 文書内のリンクは、システム設定にかかわらず前面のドキュメントウィンドウのタブで開く。開いていれば前面に出す
         guard let url = notification.object as? URL else { return }
-        openOrActivateDocument(url: url)
+        if DocumentWindowRegistry.shared.window(for: url) != nil {
+            openOrActivateDocument(url: url)
+        } else {
+            openDocumentInNewTab(url: url)
+        }
     }
 
     @objc private func handleOpenNewDocumentWindow() {
@@ -168,6 +172,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // ContentView が描画されて登録するまでの間に同じURLが来ても重複しないよう、先に登録する
         DocumentWindowRegistry.shared.register(window: window, url: url)
         place(window)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    /// 前面のドキュメントウィンドウにタブとして加える。ヘルプや設定のウィンドウは対象にせず、
+    /// ドキュメントウィンドウが無ければ通常の新しいウィンドウで開く。
+    private func openDocumentInNewTab(url: URL) {
+        let front = NSApp.orderedWindows.first { candidate in
+            candidate.isVisible && DocumentWindowRegistry.shared.contains(candidate)
+        }
+        guard let front else {
+            openDocumentInNewWindow(url: url)
+            return
+        }
+        let window = makeDocumentWindow(rootView: ContentView(initialURL: url), title: url.lastPathComponent)
+        DocumentWindowRegistry.shared.register(window: window, url: url)
+        front.addTabbedWindow(window, ordered: .above)
         window.makeKeyAndOrderFront(nil)
     }
 }

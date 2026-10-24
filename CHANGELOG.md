@@ -13,11 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Document windows can be combined into tabs. Window > Merge All Windows, Move Tab to New Window and View > Show Tab Bar now work, and documents open as tabs when "Prefer tabs when opening documents" in System Settings > Desktop & Dock is set to Always (or In Full Screen while in full screen). The Help and Settings windows stay separate. (Thanks to @sanderberents, #26)
 - File > Print… (⌘P) prints the document in the active window. ⌘P used to belong to Print… in the toolbar's Export menu, which now has no shortcut.
 
-### Changed
-- Links to other Markdown files in a document now open the same way as File > Open…: in a new window or a tab depending on the system setting above, or by bringing the window to the front if the file is already open. Previously they always opened as a new tab, even when the file was already open.
-
 ### Fixed
 - View > Toggle Sidebar did nothing. It now shows and hides the sidebar of the active window, and stays in step with the toolbar button and with dragging the sidebar closed. (Thanks to @sanderberents, #24)
+- Clicking a link to another Markdown file in a document opened the file again in a new tab even if it was already open. The window or tab that shows it is now brought to the front. Links to files that are not open still open as a tab of the front document window, whatever the system setting above.
 - The toolbar button that shows and hides the sidebar was missing in every window except the first one, such as windows for files opened from Finder or with File > Open… while another document was showing. It now appears in all document windows.
 - Opening a file from the welcome screen with File > Open… or File > Open Recent opened it a second time if it was already open in another window. That window is now brought to the front, and the welcome screen stays as it is.
 - The menu bar had two View menus. MDViewer's items (Toggle Editor Mode, Toggle Sidebar, Find… and the font size items) are now in the standard View menu, together with the tab bar and full screen items.
