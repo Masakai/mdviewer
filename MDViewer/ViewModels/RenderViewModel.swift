@@ -18,6 +18,24 @@ final class RenderViewModel: ObservableObject {
     /// and dismissing the alert clears `renderFailureMessage`.
     @Published private(set) var isPreviewInterrupted = false
 
+    /// 検索バーの一致件数。JS 側の検索（MDViewer.search）が数えて
+    /// searchResultsChanged で知らせてくる。検索語を変えてから結果が届くまでは nil。
+    @Published private(set) var searchStatus: SearchStatus?
+
+    struct SearchStatus: Equatable {
+        /// 何件目か（1始まり）。一致がなければ 0
+        var current: Int
+        var total: Int
+    }
+
+    /// 描画し直しは JS 側が同じ語で数え直すが、レンダラーを読み込み直したときは
+    /// JS 側の状態が消えるので、ここで覚えておいて検索し直す。
+    private(set) var searchQuery = ""
+
+    /// 入力が止まるのを待っている検索
+    private var pendingSearch: Task<Void, Never>?
+    private(set) var pendingSearchQuery: String?
+
     @AppStorage("selectedThemeId") private var storedThemeId: String = MarkdownTheme.githubLight.id
     @AppStorage("fontSize") private var storedFontSize: Double = 16
     @AppStorage("pdfPageSize") private var storedPDFPageSize: String = PDFPageSize.a4.rawValue
@@ -280,6 +298,84 @@ final class RenderViewModel: ObservableObject {
             let escaped = escapeForJS(md)
             webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
         }
+
+        // 入力が止まるのを待っている語があれば、そちらで検索する。確定済みの古い語で
+        // 検索すると、待っている検索が取り消されてしまう。
+        let query = pendingSearchQuery ?? searchQuery
+        if !query.isEmpty {
+            search(query)
+        }
+    }
+
+    // MARK: - 検索
+
+    /// 検索欄への入力。1文字ごとに全文を走査しないよう、入力が止まってから検索する。
+    /// 空にしたときはすぐにハイライトを消す。
+    func searchAsTyped(_ query: String, delay: Duration = .milliseconds(150)) {
+        guard !query.isEmpty else {
+            search(query)
+            return
+        }
+        pendingSearch?.cancel()
+        pendingSearchQuery = query
+        pendingSearch = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            self?.search(query)
+        }
+    }
+
+    /// 入力待ちの検索があれば、待たずに今すぐ検索する。
+    /// - Returns: 検索したかどうか
+    private func flushPendingSearch() -> Bool {
+        guard let query = pendingSearchQuery else { return false }
+        search(query)
+        return true
+    }
+
+    private func cancelPendingSearch() {
+        pendingSearch?.cancel()
+        pendingSearch = nil
+        pendingSearchQuery = nil
+    }
+
+    func search(_ query: String) {
+        cancelPendingSearch()
+        searchQuery = query
+        guard !query.isEmpty else {
+            clearSearch()
+            return
+        }
+        searchStatus = nil
+        guard isRendererReady else { return }
+        webView?.callAsyncJavaScript(
+            "MDViewer.search(query);", arguments: ["query": query], in: nil, in: .page, completionHandler: nil
+        )
+    }
+
+    /// 入力の直後に押されたときは、まだ検索していない語で最初の一致へ移る。
+    func findNext() {
+        guard !flushPendingSearch(), isRendererReady, !searchQuery.isEmpty else { return }
+        webView?.evaluateJavaScript("MDViewer.searchNext();", completionHandler: nil)
+    }
+
+    func findPrevious() {
+        guard !flushPendingSearch(), isRendererReady, !searchQuery.isEmpty else { return }
+        webView?.evaluateJavaScript("MDViewer.searchPrevious();", completionHandler: nil)
+    }
+
+    func clearSearch() {
+        cancelPendingSearch()
+        searchQuery = ""
+        searchStatus = nil
+        guard isRendererReady else { return }
+        webView?.evaluateJavaScript("MDViewer.clearSearch();", completionHandler: nil)
+    }
+
+    func searchResultsChanged(current: Int, total: Int) {
+        // 検索を閉じた後に届いた結果で、件数を出し直さない
+        guard !searchQuery.isEmpty else { return }
+        searchStatus = SearchStatus(current: current, total: total)
     }
 
     func scrollToAnchor(_ anchor: String) {

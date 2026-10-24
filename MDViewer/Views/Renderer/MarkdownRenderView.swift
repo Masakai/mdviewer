@@ -53,7 +53,7 @@ struct MarkdownRenderView: View {
                     SearchBarView(
                         searchText: $searchText,
                         isVisible: $isSearchVisible,
-                        webView: renderVM.webView
+                        renderVM: renderVM
                     )
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }

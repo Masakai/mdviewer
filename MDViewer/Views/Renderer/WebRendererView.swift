@@ -24,6 +24,7 @@ struct WebRendererView: NSViewRepresentable {
         contentController.add(context.coordinator, name: "scrollPositionChanged")
         contentController.add(context.coordinator, name: "linkHovered")
         contentController.add(context.coordinator, name: "linkClicked")
+        contentController.add(context.coordinator, name: "searchResultsChanged")
         config.userContentController = contentController
 
         // Register custom scheme for local images
@@ -108,6 +109,12 @@ struct WebRendererView: NSViewRepresentable {
                         NSWorkspace.shared.open(url)
                     }
                 }
+            case "searchResultsChanged":
+                guard let status = message.body as? [String: Any],
+                      let current = status["current"] as? Int,
+                      let total = status["total"] as? Int
+                else { break }
+                Task { @MainActor in self.renderVM.searchResultsChanged(current: current, total: total) }
             default:
                 break
             }

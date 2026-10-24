@@ -1,21 +1,48 @@
+import AppKit
 import SwiftUI
-import WebKit
 
 struct SearchBarView: View {
     @Binding var searchText: String
     @Binding var isVisible: Bool
-    weak var webView: WKWebView?
+    @ObservedObject var renderVM: RenderViewModel
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
 
+            // Return で次、Shift+Return で前の一致へ移る
             TextField("Search", text: $searchText)
                 .textFieldStyle(.plain)
-                .onSubmit { performSearch() }
+                .onSubmit {
+                    if NSEvent.modifierFlags.contains(.shift) {
+                        renderVM.findPrevious()
+                    } else {
+                        renderVM.findNext()
+                    }
+                }
 
             if !searchText.isEmpty {
+                matchCount
+
+                Button {
+                    renderVM.findPrevious()
+                } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .buttonStyle(.plain)
+                .help(Text("Previous Match"))
+                .disabled((renderVM.searchStatus?.total ?? 0) == 0)
+
+                Button {
+                    renderVM.findNext()
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .buttonStyle(.plain)
+                .help(Text("Next Match"))
+                .disabled((renderVM.searchStatus?.total ?? 0) == 0)
+
                 Button {
                     searchText = ""
                 } label: {
@@ -37,19 +64,34 @@ struct SearchBarView: View {
         .shadow(radius: 4)
         .padding(.horizontal, 16)
         .padding(.top, 8)
-        .onChange(of: searchText) { _, _ in
-            performSearch()
+        .onChange(of: searchText) { _, newValue in
+            renderVM.searchAsTyped(newValue)
+        }
+        // 閉じている間はハイライトを消すので、開き直したら同じ語で検索し直す
+        .onAppear {
+            if !searchText.isEmpty {
+                renderVM.search(searchText)
+            }
+        }
+        .onDisappear {
+            renderVM.clearSearch()
         }
     }
 
-    private func performSearch() {
-        guard let webView else { return }
-        // Use WKFindConfiguration-based search (available macOS 13+)
-        if !searchText.isEmpty {
-            let config = WKFindConfiguration()
-            config.caseSensitive = false
-            config.wraps = true
-            webView.find(searchText, configuration: config) { _ in }
+    /// 「3/12」のように何件目か／全件数。結果が届くまでは何も出さない。
+    @ViewBuilder
+    private var matchCount: some View {
+        if let status = renderVM.searchStatus {
+            Group {
+                if status.total == 0 {
+                    Text("No Matches")
+                } else {
+                    Text(verbatim: "\(status.current)/\(status.total)")
+                }
+            }
+            .font(.callout)
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
         }
     }
 }

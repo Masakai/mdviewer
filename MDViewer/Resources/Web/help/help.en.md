@@ -153,6 +153,8 @@ func greet(name: String) -> String {
 
 ## Footnotes
 
+A reference becomes a superscript number. Footnotes are numbered in the order they are referenced and listed at the end of the document, each with a ↩ link back to where it was referenced. The definition can go anywhere in the document; a reference without a definition stays as plain text.
+
 ```
 Here is a footnote reference.[^1]
 
@@ -162,6 +164,20 @@ Here is a footnote reference.[^1]
 Here is a footnote reference.[^1]
 
 [^1]: This is the footnote content.
+
+---
+
+## Emoji
+
+Write an emoji by its shortcode between colons. Every shortcode for a Unicode emoji in GitHub's list is supported (1,913 shortcodes from [gemoji](https://github.com/github/gemoji) 4.1.0). GitHub's own image emoji such as `:octocat:` are not included.
+
+```
+Ship it :rocket: :+1: :white_check_mark:
+```
+
+Ship it :rocket: :+1: :white_check_mark:
+
+Shortcodes inside code and math stay as they are, and so do unknown names such as `:foo:` and colons between letters or digits such as `12:30:45`.
 
 ---
 

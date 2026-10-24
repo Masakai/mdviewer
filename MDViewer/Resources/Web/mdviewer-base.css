@@ -125,6 +125,35 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Footnotes */
+/* 上付きの番号で行の高さが広がらないようにする */
+.footnote-ref {
+    line-height: 0;
+}
+.footnotes {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color, #e1e4e8);
+    font-size: 0.875em;
+    color: var(--blockquote-color, #6a737d);
+}
+.footnotes li p {
+    margin: 0.25em 0;
+}
+
+/* 読み上げ用の見出し。画面には出さない */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* Mermaid diagrams */
 .mermaid {
     text-align: center;
@@ -214,6 +243,17 @@ body.dark-theme .shiki, body.dark-theme .shiki span {
     color: #2da44e;
 }
 
+/* 検索バーで一致した部分。現在の一致は濃い色にする */
+mark.mdviewer-search-hit {
+    background-color: rgba(255, 213, 0, 0.45);
+    color: inherit;
+    border-radius: 2px;
+}
+mark.mdviewer-search-hit.mdviewer-search-current {
+    background-color: #ff9632;
+    color: #000;
+}
+
 /* Heading anchor highlight used by TOC scroll */
 .heading-anchor-target {
     animation: highlight-fade 2s ease-out;
@@ -286,6 +326,13 @@ body.dark-theme .shiki, body.dark-theme .shiki span {
 
     .code-copy-button {
         display: none;
+    }
+
+    /* 検索中に書き出しても、ハイライトは PDF に出さない */
+    mark.mdviewer-search-hit,
+    mark.mdviewer-search-hit.mdviewer-search-current {
+        background: none;
+        color: inherit;
     }
 
     /* Hide scroll-only decorations */

@@ -66,11 +66,12 @@ final class ExportViewModel: ObservableObject {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         isExporting = true
-        // コピーボタンは画面操作用なので、書き出すHTMLには含めない
+        // コピーボタンと検索のハイライトは画面操作用なので、書き出すHTMLには含めない
         let script = """
         (function () {
             const root = document.documentElement.cloneNode(true);
             root.querySelectorAll('.code-copy-button').forEach(function (b) { b.remove(); });
+            root.querySelectorAll('mark.mdviewer-search-hit').forEach(function (m) { m.replaceWith(...m.childNodes); });
             return root.outerHTML;
         })()
         """
