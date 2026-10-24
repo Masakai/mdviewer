@@ -6,12 +6,15 @@ final class RenderViewModelTests: XCTestCase {
     var sut: RenderViewModel!
     /// テストホストは本番と同じバンドルIDなので、.standard に書くと利用者の文字サイズやテーマが変わる
     var defaults: UserDefaults!
-    var suiteName: String!
+    /// 名前を固定する。テストごとに名前を変えると、removePersistentDomain の後も空の plist が
+    /// ~/Library/Preferences に1個ずつ残る。scheme は並列実行しないので固定名でも衝突しない
+    let suiteName = "com.mdviewer.app.tests.RenderViewModel"
 
     override func setUp() async throws {
         try await super.setUp()
-        suiteName = "RenderViewModelTests-\(UUID().uuidString)"
         defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        // 前回の実行が途中で止まって残った値を消す
+        defaults.removePersistentDomain(forName: suiteName)
         sut = RenderViewModel(settings: defaults)
     }
 
@@ -19,7 +22,6 @@ final class RenderViewModelTests: XCTestCase {
         sut = nil
         defaults.removePersistentDomain(forName: suiteName)
         defaults = nil
-        suiteName = nil
         try await super.tearDown()
     }
 
@@ -839,6 +841,42 @@ final class RenderViewModelTests: XCTestCase {
         let vm = RenderViewModel(settings: defaults)
 
         XCTAssertEqual(vm.fontSize, 20)
+    }
+
+    /// 数値として読めない値は double(forKey:) が 0 を返す。0pt では文字が見えなくなる
+    func test_init_unreadableFontSize_usesDefault() {
+        defaults.set("abc", forKey: "fontSize")
+
+        let vm = RenderViewModel(settings: defaults)
+
+        XCTAssertEqual(vm.fontSize, 16)
+    }
+
+    func test_init_zeroFontSize_usesDefault() {
+        defaults.set(0.0, forKey: "fontSize")
+
+        let vm = RenderViewModel(settings: defaults)
+
+        XCTAssertEqual(vm.fontSize, 16)
+    }
+
+    func test_init_fontSizeOutOfRange_clamped() {
+        defaults.set(100.0, forKey: "fontSize")
+        XCTAssertEqual(RenderViewModel(settings: defaults).fontSize, 32)
+
+        defaults.set(4.0, forKey: "fontSize")
+        XCTAssertEqual(RenderViewModel(settings: defaults).fontSize, 10)
+    }
+
+    /// ツールバーや ⌘+ の変更はそのウィンドウだけに効く。同じ保存先を使う他のウィンドウには広がらない
+    func test_setFontSize_doesNotChangeOtherWindowSharingSettings() {
+        let other = RenderViewModel(settings: defaults)
+
+        sut.setFontSize(20)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        XCTAssertEqual(sut.fontSize, 20)
+        XCTAssertEqual(other.fontSize, 16)
     }
 
     func test_setFontSize_writesToGivenSettingsOnly() {

@@ -84,9 +84,11 @@ final class RenderViewModel: ObservableObject {
         {
             theme = saved
         }
-        // 起動引数（-fontSize 20 など）では文字列で入るので、double(forKey:) で読む
+        // 起動引数（-fontSize 20 など）では文字列で入るので、double(forKey:) で読む。
+        // 数値として読めない値は 0 になり、文字が見えなくなるので既定の大きさにする
         if settings.object(forKey: Self.fontSizeKey) != nil {
-            fontSize = settings.double(forKey: Self.fontSizeKey)
+            let saved = settings.double(forKey: Self.fontSizeKey)
+            fontSize = saved > 0 ? Self.clampedFontSize(saved) : 16
         }
 
         NotificationCenter.default
