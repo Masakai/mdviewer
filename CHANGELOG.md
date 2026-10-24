@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - File > Close was not translated into Japanese.
 - View > Increase Font Size, Decrease Font Size and Reset Font Size (⌘+, ⌘−, ⌘0) and Export > Export as PDF… and Export as HTML… (⇧⌘P, ⇧⌘E) did nothing when chosen from the menu bar. They now act on the active window. ⇧⌘P and ⇧⌘E are no longer also assigned to the same items in the toolbar's Export menu.
 - View > Find… (⌘F) opened the search bar in every window. It now opens only in the active window or tab.
+- When a window with both document tabs and welcome screen tabs was closed at once, MDViewer could quit instead of showing the welcome screen, depending on the order in which the tabs closed. It now shows the welcome screen if any of the closed tabs showed a document. When closing several tabs asks to save changes, the tab the question is about is brought to the front first.
 
 ---
 

@@ -276,8 +276,13 @@ struct WindowCloseInterceptor: NSViewRepresentable {
             }
         }
 
-        func windowShouldClose(_: NSWindow) -> Bool {
+        func windowShouldClose(_ window: NSWindow) -> Bool {
             guard documentVM.isDirty else { return true }
+
+            // タブグループをまとめて閉じると背景のタブにも確認が出るので、どのタブの確認か分かるよう前面にする
+            if let tabGroup = window.tabGroup, tabGroup.selectedWindow !== window {
+                tabGroup.selectedWindow = window
+            }
 
             let alert = NSAlert()
             alert.messageText = NSLocalizedString("unsaved_changes_title", comment: "")

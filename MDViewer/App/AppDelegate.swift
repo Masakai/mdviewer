@@ -4,8 +4,8 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 直前に配置したドキュメントウィンドウ。続けて開くウィンドウをずらす基準にする。
     private weak var lastPlacedWindow: NSWindow?
-    /// 最後に閉じたウィンドウがドキュメントを表示していたか。ウェルカム画面を閉じたときは false。
-    private var lastClosedWindowHadDocument = false
+    /// 一連のクローズでドキュメントを表示していたウィンドウがあったか。最後のウィンドウを閉じたときの判定に使う。
+    private var closeTracker = DocumentCloseTracker()
 
     override init() {
         super.init()
@@ -48,8 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         // 最後のドキュメントを閉じただけでは終了せず、ウェルカム画面を出す。ウェルカム画面を閉じたら終了する
-        guard lastClosedWindowHadDocument, !OpenDocumentStore.shared.isTerminating else { return true }
-        lastClosedWindowHadDocument = false
+        guard !OpenDocumentStore.shared.isTerminating, closeTracker.consumeForLastWindowClosed() else { return true }
         openWelcomeWindow()
         return false
     }
@@ -106,7 +105,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleDocumentWindowWillClose(_ notification: Notification) {
-        lastClosedWindowHadDocument = notification.userInfo?["hasDocument"] as? Bool ?? false
+        closeTracker.windowWillClose(hadDocument: notification.userInfo?["hasDocument"] as? Bool ?? false)
+        // タブグループをまとめて閉じると windowWillClose が続けて届く。それが一段落した時点で
+        // ドキュメントウィンドウが残っていれば、記録を次のクローズに持ち越さない
+        DispatchQueue.main.async { [weak self] in
+            let windowsRemain = NSApp.windows.contains { window in
+                DocumentWindowRegistry.shared.contains(window) && (window.isVisible || window.isMiniaturized)
+            }
+            self?.closeTracker.closingFinished(windowsRemain: windowsRemain)
+        }
     }
 
     /// ウェルカム画面のウィンドウを開く。前回終了時のファイルは復元しない。
@@ -189,6 +196,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DocumentWindowRegistry.shared.register(window: window, url: url)
         front.addTabbedWindow(window, ordered: .above)
         window.makeKeyAndOrderFront(nil)
+    }
+}
+
+/// 最後のウィンドウを閉じたときにウェルカム画面を出すか（ドキュメントを閉じた）、終了するか（ウェルカム画面を閉じた）を決める記録。
+/// ドキュメントのタブとウェルカム画面のタブが混在するグループをまとめて閉じても閉じる順に左右されないよう、
+/// 一連のクローズの間は「ドキュメントを表示していたか」を OR で保持する。
+struct DocumentCloseTracker {
+    private(set) var closedWindowHadDocument = false
+
+    mutating func windowWillClose(hadDocument: Bool) {
+        closedWindowHadDocument = closedWindowHadDocument || hadDocument
+    }
+
+    /// 一連のクローズが終わったときに呼ぶ。ウィンドウが残っていれば記録を消す。
+    mutating func closingFinished(windowsRemain: Bool) {
+        if windowsRemain {
+            closedWindowHadDocument = false
+        }
+    }
+
+    /// 最後のウィンドウを閉じたときに呼ぶ。ウェルカム画面を出すべきかを返し、記録を消す。
+    mutating func consumeForLastWindowClosed() -> Bool {
+        defer { closedWindowHadDocument = false }
+        return closedWindowHadDocument
     }
 }
 
