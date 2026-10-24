@@ -37,7 +37,7 @@ struct ContentView: View {
                         HSplitView {
                             // エディタペイン: isEditorMode時のみ表示
                             if isEditorMode {
-                                MarkdownEditorView(documentVM: documentVM)
+                                MarkdownEditorView(documentVM: documentVM, previewFontSize: renderVM.fontSize)
                                     .frame(minWidth: 250)
                             }
                             // プレビューペイン: 常にマウントしておく（破棄しない）

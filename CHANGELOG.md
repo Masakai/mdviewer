@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Emoji shortcodes such as `:smile:` and `:+1:` are shown as emoji. Every GitHub shortcode for a Unicode emoji is supported, 1,913 in all (from gemoji 4.1.0); GitHub's own image emoji such as `:octocat:` are not. Shortcodes in code, math and URLs, unknown names, and times such as `12:30:45` are left as they are. Heading anchors are unchanged: `## :sparkles: Features` still links as `#sparkles-features`.
 - The Find bar (⌘F) shows the selected match and the number of matches, such as "3/12", or "No Matches". Use the arrow buttons, or Return and Shift-Return, to move between matches. The search starts once you stop typing, and the count is updated when the document reloads. Hidden text, such as the MathML that KaTeX adds for screen readers, is not counted.
 
+### Changed
+- The editor in editor mode now uses the same font size as the preview's body text. Changing the size with the toolbar's − / + / reset buttons or View > Increase Font Size, Decrease Font Size and Reset Font Size (⌘+, ⌘−, ⌘0) resizes both the preview and the editor. The editor keeps the system monospaced typeface. Before, the editor text stayed at a small fixed size.
+
 ### Fixed
 - View > Toggle Sidebar did nothing. It now shows and hides the sidebar of the active window, and stays in step with the toolbar button and with dragging the sidebar closed. (Thanks to @sanderberents, #24)
 - Clicking a link to another Markdown file in a document opened the file again in a new tab even if it was already open. The window or tab that shows it is now brought to the front. Links to files that are not open still open as a tab of the front document window, whatever the system setting above.
