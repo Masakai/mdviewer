@@ -104,12 +104,12 @@ struct MainToolbar: ToolbarContent {
 
                 Divider()
 
+                // ⌘P はメニューバーの ファイル > プリント… に割り当てている
                 Button("Print…") {
                     if let wv = renderVM.webView {
                         exportVM.print(webView: wv)
                     }
                 }
-                .keyboardShortcut("p", modifiers: .command)
             } label: {
                 Label("Export", systemImage: "square.and.arrow.up")
             }

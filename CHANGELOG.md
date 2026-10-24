@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - File > Open Recent lists the files you opened or saved recently. Choosing one opens it the same way as File > Open…: in a new window if a document is showing (or brings its window to the front if it is already open), or in the current window if it shows the welcome screen. Clear Menu empties the list. (Thanks to @sanderberents, #25)
 - Document windows can be combined into tabs. Window > Merge All Windows, Move Tab to New Window and View > Show Tab Bar now work, and documents open as tabs when "Prefer tabs when opening documents" in System Settings > Desktop & Dock is set to Always (or In Full Screen while in full screen). The Help and Settings windows stay separate. (Thanks to @sanderberents, #26)
+- File > Print… (⌘P) prints the document in the active window. ⌘P used to belong to Print… in the toolbar's Export menu, which now has no shortcut.
 
 ### Changed
 - Links to other Markdown files in a document now open the same way as File > Open…: in a new window or a tab depending on the system setting above, or by bringing the window to the front if the file is already open. Previously they always opened as a new tab, even when the file was already open.

@@ -76,6 +76,10 @@ struct ContentView: View {
             guard isKeyWindow else { return }
             documentVM.save()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .printDocument)) { _ in
+            guard isKeyWindow, documentVM.hasDocument, let webView = renderVM.webView else { return }
+            exportVM.print(webView: webView)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .toggleEditorMode)) { _ in
             guard isKeyWindow else { return }
             isEditorMode.toggle()

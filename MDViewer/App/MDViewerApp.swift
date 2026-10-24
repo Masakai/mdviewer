@@ -61,6 +61,14 @@ struct MDViewerApp: App {
                 .keyboardShortcut("s", modifiers: .command)
             }
 
+            CommandGroup(replacing: .printItem) {
+                // ドキュメントを表示していないウィンドウでは、受け取った ContentView 側で何もしない
+                Button("Print…") {
+                    NotificationCenter.default.post(name: .printDocument, object: nil)
+                }
+                .keyboardShortcut("p", modifiers: .command)
+            }
+
             CommandMenu("View") {
                 Button("Toggle Editor Mode") {
                     NotificationCenter.default.post(name: .toggleEditorMode, object: nil)
@@ -139,6 +147,7 @@ extension Notification.Name {
     /// object にテーマの id を載せる。
     static let previewThemeChanged = Notification.Name("MDViewer.previewThemeChanged")
     static let newFile = Notification.Name("MDViewer.newFile")
+    static let printDocument = Notification.Name("MDViewer.printDocument")
 }
 
 // MARK: - Window tabbing
