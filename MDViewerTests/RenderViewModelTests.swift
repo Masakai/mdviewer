@@ -764,4 +764,50 @@ final class RenderViewModelTests: XCTestCase {
         XCTAssertEqual(sut.theme.id, "nord")
         XCTAssertEqual(UserDefaults.standard.string(forKey: key), "github-light")
     }
+
+    // MARK: - 検索の件数
+
+    /// 検索語を変えたら、JS から結果が届くまで前の件数を出さない。
+    func test_search_clearsStatusUntilResultsArrive() {
+        // Arrange
+        sut.search("old")
+        sut.searchResultsChanged(current: 2, total: 5)
+
+        // Act
+        sut.search("new")
+
+        // Assert
+        XCTAssertNil(sut.searchStatus)
+
+        // Act
+        sut.searchResultsChanged(current: 1, total: 3)
+
+        // Assert
+        XCTAssertEqual(sut.searchStatus, RenderViewModel.SearchStatus(current: 1, total: 3))
+    }
+
+    /// 検索を閉じた後に届いた結果（描画し直しの数え直しなど）で件数を出し直さない。
+    func test_clearSearch_ignoresLateResults() {
+        // Arrange
+        sut.search("word")
+
+        // Act
+        sut.clearSearch()
+        sut.searchResultsChanged(current: 1, total: 1)
+
+        // Assert
+        XCTAssertNil(sut.searchStatus)
+    }
+
+    func test_search_emptyQuery_clearsStatus() {
+        // Arrange
+        sut.search("word")
+        sut.searchResultsChanged(current: 1, total: 4)
+
+        // Act
+        sut.search("")
+
+        // Assert
+        XCTAssertNil(sut.searchStatus)
+    }
 }

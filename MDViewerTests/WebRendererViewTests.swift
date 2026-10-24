@@ -389,6 +389,164 @@ final class RendererScriptTests: XCTestCase {
         // Assert
         XCTAssertEqual(html, "<p><code>cp $f $f.bak</code> and $5 and $7,463 and $356 😄</p>\n")
     }
+
+    // MARK: Search
+
+    /// 検索の関数を呼び、返ってきた { current, total } を [current, total] で返す。
+    private func search(_ call: String) async throws -> [Int] {
+        let result = try await evaluate("return \(call);") as? [String: Any]
+        let status = try XCTUnwrap(result)
+        return [status["current"] as? Int ?? -1, status["total"] as? Int ?? -1]
+    }
+
+    private func markCount() async throws -> Int? {
+        try await evaluate("return document.querySelectorAll('mark.mdviewer-search-hit').length;") as? Int
+    }
+
+    /// KaTeX の読み上げ用 MathML（見えない）は数えず、見えている数式の文字は数える。
+    func test_search_ignoresKaTeXMathML() async throws {
+        // Arrange
+        try await render("x and $x$ and x")
+
+        // Act
+        let status = try await search("MDViewer.search('x')")
+
+        // Assert
+        XCTAssertEqual(status, [1, 3])
+    }
+
+    func test_search_ignoresHiddenElements() async throws {
+        // Arrange
+        try await render(#"<span style="display:none">word</span> <span style="visibility:hidden">word</span> word"#)
+
+        // Act
+        let status = try await search("MDViewer.search('word')")
+
+        // Assert
+        XCTAssertEqual(status, [1, 1])
+    }
+
+    func test_search_noMatch_reportsZero() async throws {
+        // Arrange
+        try await render("Hello world")
+
+        // Act
+        let status = try await search("MDViewer.search('absent')")
+
+        // Assert
+        XCTAssertEqual(status, [0, 0])
+        let marks = try await markCount()
+        XCTAssertEqual(marks, 0)
+    }
+
+    func test_search_nextAndPrevious_wrapAround() async throws {
+        // Arrange
+        try await render("Apple apple APPLE")
+        let first = try await search("MDViewer.search('apple')")
+
+        // Act
+        let second = try await search("MDViewer.searchNext()")
+        let third = try await search("MDViewer.searchNext()")
+        let wrapped = try await search("MDViewer.searchNext()")
+        let back = try await search("MDViewer.searchPrevious()")
+
+        // Assert
+        XCTAssertEqual(first, [1, 3])
+        XCTAssertEqual(second, [2, 3])
+        XCTAssertEqual(third, [3, 3])
+        XCTAssertEqual(wrapped, [1, 3])
+        XCTAssertEqual(back, [3, 3])
+        let current = try await evaluate("""
+        return Array.from(document.querySelectorAll('mark.mdviewer-search-current')).map(m => m.textContent);
+        """) as? [String]
+        XCTAssertEqual(current, ["APPLE"])
+    }
+
+    /// 太字などで分かれた語も1件として見つけ、段落をまたいでは一致させない。
+    func test_search_matchesAcrossInlineElementsButNotParagraphs() async throws {
+        // Arrange
+        try await render("foo **bar** baz\n\nfoo\n\nbar")
+
+        // Act
+        let status = try await search("MDViewer.search('foo bar')")
+
+        // Assert
+        XCTAssertEqual(status, [1, 1])
+        let marks = try await markCount()
+        XCTAssertEqual(marks, 2)
+    }
+
+    /// シンタックスハイライトで細かく分かれたコードも検索でき、コピーされる文字は変わらない。
+    func test_search_findsTextInHighlightedCode() async throws {
+        // Arrange
+        try await render("```swift\nlet value = compute(value)\n```")
+        let before = try await evaluate("return document.querySelector('pre').textContent;") as? String
+
+        // Act
+        let status = try await search("MDViewer.search('value')")
+
+        // Assert
+        XCTAssertEqual(status, [1, 2])
+        let after = try await evaluate("return document.querySelector('pre').textContent;") as? String
+        XCTAssertEqual(after, before)
+    }
+
+    /// 検索を閉じたら、ハイライトを消して元の DOM に戻す。
+    func test_clearSearch_restoresOriginalDOM() async throws {
+        // Arrange
+        let original = try await render("Some **some** text with some words")
+        _ = try await search("MDViewer.search('some')")
+
+        // Act
+        _ = try await search("MDViewer.clearSearch()")
+
+        // Assert
+        let html = try await evaluate("return document.getElementById('content').innerHTML;") as? String
+        XCTAssertEqual(html, original)
+    }
+
+    /// ファイルの自動再読み込みなどで描画し直したら、同じ語で数え直して Swift に知らせる。
+    func test_search_rerender_recountsAndNotifies() async throws {
+        // Arrange
+        let recorder = MessageRecorder()
+        webView.configuration.userContentController.add(recorder, name: "searchResultsChanged")
+        try await render("one two one two one")
+        _ = try await search("MDViewer.search('two')")
+        _ = try await search("MDViewer.searchNext()")
+
+        // Act
+        try await render("two only")
+        try await waitUntil("true")
+
+        // Assert
+        let last = try XCTUnwrap(recorder.messages.last as? [String: Any])
+        XCTAssertEqual(last["current"] as? Int, 1)
+        XCTAssertEqual(last["total"] as? Int, 1)
+        let marks = try await markCount()
+        XCTAssertEqual(marks, 1)
+    }
+
+    /// Mermaid の図は描き終えてから数え直す。図に置き換える前のソースは数えない。
+    func test_search_countsMermaidLabelsAfterDiagramIsDrawn() async throws {
+        // Arrange
+        let recorder = MessageRecorder()
+        webView.configuration.userContentController.add(recorder, name: "searchResultsChanged")
+        _ = try await search("MDViewer.search('Alphanode')")
+
+        // Act
+        try await render("```mermaid\ngraph TD\n  A[Alphanode] --> B[Betanode]\n```")
+        try await waitUntil("document.querySelector('.mermaid svg') !== null")
+        try await waitUntil("document.querySelectorAll('mark.mdviewer-search-hit').length > 0")
+
+        // Assert
+        let last = try XCTUnwrap(recorder.messages.last as? [String: Any])
+        XCTAssertEqual(last["total"] as? Int, 1)
+        let insideSVG =
+            try await evaluate(
+                "return document.querySelector('mark.mdviewer-search-hit').closest('svg') !== null;"
+            ) as? Bool
+        XCTAssertEqual(insideSVG, true)
+    }
 }
 
 private final class MessageRecorder: NSObject, WKScriptMessageHandler {

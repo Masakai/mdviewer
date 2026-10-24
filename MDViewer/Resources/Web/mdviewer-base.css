@@ -230,6 +230,17 @@ body.dark-theme .shiki, body.dark-theme .shiki span {
     color: #2da44e;
 }
 
+/* 検索バーで一致した部分。現在の一致は濃い色にする */
+mark.mdviewer-search-hit {
+    background-color: rgba(255, 213, 0, 0.45);
+    color: inherit;
+    border-radius: 2px;
+}
+mark.mdviewer-search-hit.mdviewer-search-current {
+    background-color: #ff9632;
+    color: #000;
+}
+
 /* Heading anchor highlight used by TOC scroll */
 .heading-anchor-target {
     animation: highlight-fade 2s ease-out;
@@ -302,6 +313,13 @@ body.dark-theme .shiki, body.dark-theme .shiki span {
 
     .code-copy-button {
         display: none;
+    }
+
+    /* 検索中に書き出しても、ハイライトは PDF に出さない */
+    mark.mdviewer-search-hit,
+    mark.mdviewer-search-hit.mdviewer-search-current {
+        background: none;
+        color: inherit;
     }
 
     /* Hide scroll-only decorations */

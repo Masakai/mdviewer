@@ -470,7 +470,12 @@
         // Render Mermaid diagrams
         if (typeof mermaid !== 'undefined') {
             try {
-                mermaid.run({ querySelector: '.mermaid' });
+                // 図は非同期に描かれるので、描き終えたら図の中の文字も含めて検索し直す
+                const diagramsDone = function () { refreshSearch(); };
+                Promise.resolve(mermaid.run({ querySelector: '.mermaid' })).then(diagramsDone, function (e) {
+                    console.warn('Mermaid render error:', e);
+                    diagramsDone();
+                });
             } catch (e) {
                 console.warn('Mermaid render error:', e);
             }
@@ -479,6 +484,174 @@
         notifyHeadings(headingsRef);
 
         notifyRenderComplete();
+
+        // 描画で検索のハイライトが消えるので、検索中なら同じ語で数え直す
+        refreshSearch();
+    }
+
+    // -- ページ内検索（⌘F の検索バー）
+    // WKWebView の find は一致したかどうかしか返さず件数が取れない。件数と
+    // 「何件目か」とハイライトの位置がずれないよう、検索はすべてここで行う。
+    // 一致した部分は <mark> で囲む（CSS Custom Highlight API は Safari 17.2 からで、
+    // macOS 14.0 の WebKit では使えない）。
+    const SEARCH_HIT_CLASS = 'mdviewer-search-hit';
+    const SEARCH_CURRENT_CLASS = 'mdviewer-search-current';
+    // 画面に見えない文字（KaTeX の読み上げ用 MathML など）と、<mark> を入れられない
+    // 場所（SVG の <text>、Mermaid が図に置き換える前のソース）は数えない
+    const SEARCH_SKIP_SELECTOR = '.katex-mathml, script, style, noscript, template';
+    const SEARCH_BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, td, th, pre, blockquote, div, section, dt, dd, figcaption, caption, #content';
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    let searchQuery = '';
+    let searchHits = [];    // 一致ごとの <mark> の配列。1件が複数の要素にまたがることがある
+    let searchIndex = -1;
+
+    function escapeRegExp(text) {
+        return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function searchStatus() {
+        return { current: searchIndex + 1, total: searchHits.length };
+    }
+
+    function notifySearchStatus() {
+        const status = searchStatus();
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.searchResultsChanged) {
+            window.webkit.messageHandlers.searchResultsChanged.postMessage(status);
+        }
+        return status;
+    }
+
+    function removeSearchMarks() {
+        const contentEl = document.getElementById('content');
+        const parents = new Set();
+        contentEl.querySelectorAll('mark.' + SEARCH_HIT_CLASS).forEach(function (mark) {
+            parents.add(mark.parentNode);
+            mark.replaceWith(...mark.childNodes);
+        });
+        // 分割したテキストノードをつなぎ直し、次の検索で語が途中で切れないようにする
+        parents.forEach(function (parent) { parent.normalize(); });
+        searchHits = [];
+        searchIndex = -1;
+    }
+
+    // 画面に見えているテキストノードを、文書の順に集める
+    function collectVisibleText(root) {
+        const visibility = new Map();
+        const isVisible = function (el) {
+            if (!visibility.has(el)) {
+                visibility.set(el, el.getClientRects().length > 0 &&
+                    window.getComputedStyle(el).visibility === 'visible');
+            }
+            return visibility.get(el);
+        };
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode: function (node) {
+                const parent = node.parentElement;
+                if (!parent || parent.namespaceURI === SVG_NS || parent.closest(SEARCH_SKIP_SELECTOR)) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                if (parent.closest('.mermaid') && !parent.closest('svg')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+                return isVisible(parent) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+            }
+        });
+
+        // ブロックの境目には空白でも語でもない文字を挟み、段落をまたいで一致させない
+        let text = '';
+        const segments = [];
+        let previousBlock = null;
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            const block = node.parentElement.closest(SEARCH_BLOCK_SELECTOR);
+            if (previousBlock !== null && block !== previousBlock) { text += '\u0000'; }
+            previousBlock = block;
+            segments.push({ node: node, start: text.length, end: text.length + node.data.length });
+            text += node.data;
+        }
+        return { text: text, segments: segments };
+    }
+
+    // 一致した範囲を <mark> で囲む。テキストノードを分割するので、後ろの一致から
+    // 処理して、前の一致の位置がずれないようにする。
+    function markMatches(segments, matches) {
+        const hits = [];
+        let segIndex = segments.length - 1;
+        for (let i = matches.length - 1; i >= 0; i--) {
+            const match = matches[i];
+            const marks = [];
+            while (segIndex >= 0 && segments[segIndex].start >= match.end) { segIndex--; }
+            for (let s = segIndex; s >= 0 && segments[s].end > match.start; s--) {
+                const seg = segments[s];
+                const from = Math.max(match.start, seg.start) - seg.start;
+                const to = Math.min(match.end, seg.end) - seg.start;
+                if (from >= to) { continue; }
+                seg.node.splitText(to);
+                const piece = seg.node.splitText(from);
+                const mark = document.createElement('mark');
+                mark.className = SEARCH_HIT_CLASS;
+                piece.parentNode.replaceChild(mark, piece);
+                mark.appendChild(piece);
+                marks.unshift(mark);
+            }
+            hits.unshift(marks);
+        }
+        return hits;
+    }
+
+    function findMatches(text, query) {
+        // 改行などで折り返された語も見つかるよう、検索語の空白は空白の並びに一致させる
+        const words = query.trim().split(/\s+/).map(escapeRegExp);
+        const pattern = new RegExp(words.join('\\s+'), 'giu');
+        const matches = [];
+        let m;
+        while ((m = pattern.exec(text)) !== null) {
+            matches.push({ start: m.index, end: m.index + m[0].length });
+        }
+        return matches;
+    }
+
+    // 検索語で一致を数え直してハイライトする。index は選ぶ一致（範囲外なら丸める）、
+    // null なら画面の上端より下にある最初の一致を選ぶ。
+    function runSearch(index, scroll) {
+        removeSearchMarks();
+        if (!searchQuery.trim()) { return searchStatus(); }
+        const collected = collectVisibleText(document.getElementById('content'));
+        searchHits = markMatches(collected.segments, findMatches(collected.text, searchQuery));
+        if (searchHits.length === 0) { return searchStatus(); }
+
+        if (index === null) {
+            const below = searchHits.findIndex(function (marks) {
+                return marks[0].getBoundingClientRect().bottom > 0;
+            });
+            index = below === -1 ? 0 : below;
+        }
+        selectSearchHit(Math.min(index, searchHits.length - 1), scroll);
+        return searchStatus();
+    }
+
+    function selectSearchHit(index, scroll) {
+        if (searchIndex >= 0 && searchHits[searchIndex]) {
+            searchHits[searchIndex].forEach(function (mark) { mark.classList.remove(SEARCH_CURRENT_CLASS); });
+        }
+        searchIndex = index;
+        const marks = searchHits[index];
+        marks.forEach(function (mark) { mark.classList.add(SEARCH_CURRENT_CLASS); });
+        if (scroll) { marks[0].scrollIntoView({ block: 'center' }); }
+    }
+
+    function moveSearch(step) {
+        if (searchHits.length === 0) { return notifySearchStatus(); }
+        const count = searchHits.length;
+        selectSearchHit(((searchIndex + step) % count + count) % count, true);
+        return notifySearchStatus();
+    }
+
+    // 描画し直した後に、同じ語・同じ番号で数え直す。読んでいる位置は動かさない。
+    function refreshSearch() {
+        if (!searchQuery.trim()) { return; }
+        runSearch(Math.max(searchIndex, 0), false);
+        notifySearchStatus();
     }
 
     // -- Public MDViewer API (called from Swift via evaluateJavaScript)
@@ -546,6 +719,24 @@
             if (window.find) {
                 window.find(text, false, false, true, false, true, false);
             }
+        },
+
+        // 検索バーの検索。どれも { current, total } を返し、searchResultsChanged でも
+        // Swift に知らせる（描画し直したときの数え直しも同じ経路で届く）。
+        search: function (query) {
+            searchQuery = query;
+            runSearch(null, true);
+            return notifySearchStatus();
+        },
+
+        searchNext: function () { return moveSearch(1); },
+
+        searchPrevious: function () { return moveSearch(-1); },
+
+        clearSearch: function () {
+            searchQuery = '';
+            removeSearchMarks();
+            return searchStatus();
         },
 
         setBaseURL: function (url) {

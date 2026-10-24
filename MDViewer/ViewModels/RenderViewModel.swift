@@ -18,6 +18,20 @@ final class RenderViewModel: ObservableObject {
     /// and dismissing the alert clears `renderFailureMessage`.
     @Published private(set) var isPreviewInterrupted = false
 
+    /// 検索バーの一致件数。JS 側の検索（MDViewer.search）が数えて
+    /// searchResultsChanged で知らせてくる。検索語を変えてから結果が届くまでは nil。
+    @Published private(set) var searchStatus: SearchStatus?
+
+    struct SearchStatus: Equatable {
+        /// 何件目か（1始まり）。一致がなければ 0
+        var current: Int
+        var total: Int
+    }
+
+    /// 描画し直しは JS 側が同じ語で数え直すが、レンダラーを読み込み直したときは
+    /// JS 側の状態が消えるので、ここで覚えておいて検索し直す。
+    private var searchQuery = ""
+
     @AppStorage("selectedThemeId") private var storedThemeId: String = MarkdownTheme.githubLight.id
     @AppStorage("fontSize") private var storedFontSize: Double = 16
     @AppStorage("pdfPageSize") private var storedPDFPageSize: String = PDFPageSize.a4.rawValue
@@ -280,6 +294,48 @@ final class RenderViewModel: ObservableObject {
             let escaped = escapeForJS(md)
             webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
         }
+
+        if !searchQuery.isEmpty {
+            search(searchQuery)
+        }
+    }
+
+    // MARK: - 検索
+
+    func search(_ query: String) {
+        searchQuery = query
+        guard !query.isEmpty else {
+            clearSearch()
+            return
+        }
+        searchStatus = nil
+        guard isRendererReady else { return }
+        webView?.callAsyncJavaScript(
+            "MDViewer.search(query);", arguments: ["query": query], in: nil, in: .page, completionHandler: nil
+        )
+    }
+
+    func findNext() {
+        guard isRendererReady, !searchQuery.isEmpty else { return }
+        webView?.evaluateJavaScript("MDViewer.searchNext();", completionHandler: nil)
+    }
+
+    func findPrevious() {
+        guard isRendererReady, !searchQuery.isEmpty else { return }
+        webView?.evaluateJavaScript("MDViewer.searchPrevious();", completionHandler: nil)
+    }
+
+    func clearSearch() {
+        searchQuery = ""
+        searchStatus = nil
+        guard isRendererReady else { return }
+        webView?.evaluateJavaScript("MDViewer.clearSearch();", completionHandler: nil)
+    }
+
+    func searchResultsChanged(current: Int, total: Int) {
+        // 検索を閉じた後に届いた結果で、件数を出し直さない
+        guard !searchQuery.isEmpty else { return }
+        searchStatus = SearchStatus(current: current, total: total)
     }
 
     func scrollToAnchor(_ anchor: String) {
