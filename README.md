@@ -21,6 +21,7 @@ MDViewer started as a viewer — but we wanted editing too, so it now includes a
 - **Math equations** — inline and block LaTeX via [KaTeX](https://github.com/KaTeX/KaTeX)
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, and more
 - **Footnotes** — GitHub-style `[^1]` footnotes, listed at the end of the document with links back to the text
+- **Emoji shortcodes** — `:smile:` and the rest of GitHub's shortcodes become emoji (data from [gemoji](https://github.com/github/gemoji))
 - **Smart link handling** — local `.md` links open in-app; external links open in the browser
 - **Export to PDF** — one-click PDF export preserving all styles
 - **Signed & notarized** — Developer ID signing and Apple notarization
@@ -87,6 +88,7 @@ The libraries below are MIT licensed. Mermaid's single-file build also includes 
 | Shiki | 1.x | MIT |
 | KaTeX | 0.18.9 | MIT |
 | Mermaid | 12.0.0 | MIT |
+| gemoji (emoji shortcode table) | 4.1.0 | MIT |
 
 ## License
 

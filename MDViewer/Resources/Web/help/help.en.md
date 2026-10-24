@@ -167,6 +167,20 @@ Here is a footnote reference.[^1]
 
 ---
 
+## Emoji
+
+Write an emoji by its shortcode between colons. All of GitHub's shortcodes are supported (from [gemoji](https://github.com/github/gemoji)).
+
+```
+Ship it :rocket: :+1: :white_check_mark:
+```
+
+Ship it :rocket: :+1: :white_check_mark:
+
+Shortcodes inside code and math stay as they are, and so do unknown names such as `:foo:` and colons between letters or digits such as `12:30:45`.
+
+---
+
 ## Horizontal rule
 
 ```

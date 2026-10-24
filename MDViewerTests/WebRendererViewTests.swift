@@ -315,6 +315,80 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertEqual(webView.url?.lastPathComponent, "renderer.html")
         withExtendedLifetime(coordinator) {}
     }
+
+    // MARK: Emoji
+
+    func test_emoji_shortcodes_becomeEmoji() async throws {
+        // Act
+        let html = try await render("Ship :rocket: :+1: :100: ok :white_check_mark: 今日は:smile:です :smile::heart:")
+
+        // Assert
+        XCTAssertEqual(html, "<p>Ship 🚀 👍 💯 ok ✅ 今日は😄です 😄❤️</p>\n")
+    }
+
+    func test_emoji_inHeadingTableAndFootnote_becomeEmoji() async throws {
+        // Act
+        let html = try await render("# Title :tada:\n\n| a |\n|---|\n| :smile: |\n\nNote[^1]\n\n[^1]: in :heart:\n")
+
+        // Assert
+        XCTAssertTrue(html.contains("Title 🎉</h1>"), html)
+        XCTAssertTrue(html.contains("<td>😄</td>"), html)
+        XCTAssertTrue(html.contains("in ❤️"), html)
+    }
+
+    /// 変換してはいけないものの回帰サンプル。
+    func test_emoji_leavesCodeMathURLsTimesAndUnknownNamesAlone() async throws {
+        let samples: [(String, String)] = [
+            ("code span", "`:rocket:` here"),
+            ("code block", "```\n:rocket:\n```"),
+            ("inline math", "math $:rocket:$ here"),
+            ("block math", "$$\n:rocket:\n$$"),
+            ("mermaid block", "```mermaid\ngraph TD\n  A:::rocket --> B:::tada:\n```"),
+            ("mermaid-like text", "A:::rocket and B:::tada: here"),
+            ("bare URL", "see https://example.com/:rocket:/x end"),
+            ("autolink", "<https://example.com/:rocket:>"),
+            ("time", "at 12:30:45 and 10:100:20"),
+            ("letters around", "foo:rocket: and :rocket:bar"),
+            ("escaped", "\\:rocket: here"),
+            ("raw HTML attribute", "<span title=\":rocket:\">x</span>"),
+        ]
+        for (name, markdown) in samples {
+            // Act
+            let html = try await render(markdown)
+
+            // Assert
+            XCTAssertFalse(html.contains("🚀") || html.contains("🎉") || html.contains("💯"), "\(name): \(html)")
+        }
+    }
+
+    func test_emoji_bareURLWithShortcode_staysOneLink() async throws {
+        // Act
+        let html = try await render("see https://example.com/:rocket:/x end")
+
+        // Assert
+        XCTAssertTrue(
+            html.contains(#"<a href="https://example.com/:rocket:/x">https://example.com/:rocket:/x</a>"#),
+            html
+        )
+    }
+
+    /// 対応表にない名前と、Object.prototype のプロパティ名は文字のまま残す。
+    func test_emoji_unknownAndPrototypeNames_stayAsText() async throws {
+        // Act
+        let html = try await render(":foo: :constructor: :hasOwnProperty: :toString:")
+
+        // Assert
+        XCTAssertEqual(html, "<p>:foo: :constructor: :hasOwnProperty: :toString:</p>\n")
+    }
+
+    /// $ の判定規則（#20・#23）を壊していないこと。
+    func test_emoji_mathDollarRulesStillHold() async throws {
+        // Act
+        let html = try await render("`cp $f $f.bak` and \\$5 and $7,463 and $356 :smile:")
+
+        // Assert
+        XCTAssertEqual(html, "<p><code>cp $f $f.bak</code> and $5 and $7,463 and $356 😄</p>\n")
+    }
 }
 
 private final class MessageRecorder: NSObject, WKScriptMessageHandler {

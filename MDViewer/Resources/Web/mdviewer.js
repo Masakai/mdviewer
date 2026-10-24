@@ -276,6 +276,54 @@
         };
     }
 
+    // 絵文字ショートコード（:smile:）。対応表は vendor/gemoji.js。
+    // 対応表は Object.prototype を持たないが、:constructor: などを確実に弾くため
+    // 自身のプロパティだけを見る。
+    function emojiFor(name) {
+        const table = window.MDViewerEmoji;
+        return table && Object.prototype.hasOwnProperty.call(table, name) ? table[name] : undefined;
+    }
+
+    const isAsciiAlnum = function (ch) { return /^[A-Za-z0-9]$/.test(ch); };
+
+    // 前後が英数字のもの（12:30:45 の「:30:」など）、直前がコロンのもの（A:::cls: など。
+    // ただし :smile::heart: のように絵文字が続く場合は変換する）、対応表にない名前は
+    // 文字のまま残す。コードや数式、URL、生の HTML の中は marked がそれぞれの
+    // トークンとして先に読むので、ここには来ない。
+    const emojiExtension = {
+        name: 'emoji',
+        level: 'inline',
+        // marked はここで返した位置で地の文を切る。対応表にあるものの位置だけを
+        // 返さないと、「https:」の「:」で切れて URL の自動リンクが効かなくなる。
+        start: function (src) {
+            const re = /:([a-z0-9_+-]+):/g;
+            let m;
+            while ((m = re.exec(src)) !== null) {
+                const prev = src.charAt(m.index - 1);
+                if (emojiFor(m[1]) !== undefined && !isAsciiAlnum(prev) && prev !== ':' &&
+                    !isAsciiAlnum(src.charAt(re.lastIndex))) {
+                    return m.index;
+                }
+                // 「12:30:smile:」の「:smile:」も見つけられるよう1文字だけ進める
+                re.lastIndex = m.index + 1;
+            }
+            return undefined;
+        },
+        tokenizer: function (src, tokens) {
+            const m = /^:([a-z0-9_+-]+):/.exec(src);
+            if (!m) { return undefined; }
+            const emoji = emojiFor(m[1]);
+            if (emoji === undefined || isAsciiAlnum(src.charAt(m[0].length))) { return undefined; }
+            const last = tokens[tokens.length - 1];
+            if (last && last.type !== 'emoji') {
+                const prev = last.raw.slice(-1);
+                if (isAsciiAlnum(prev) || prev === ':') { return undefined; }
+            }
+            return { type: 'emoji', raw: m[0], text: emoji };
+        },
+        renderer: function (token) { return escapeHtml(token.text); }
+    };
+
     // Sends the headings of what is on screen to the sidebar. Swift also builds
     // the sidebar from the raw text as soon as it changes; this message lands
     // afterwards and describes what was actually drawn.
@@ -371,7 +419,7 @@
         });
 
         // 脚注の番号と定義は文書ごとなので、拡張ごと描画のたびに作り直す
-        const markdownParser = new marked.Marked(createFootnoteExtension());
+        const markdownParser = new marked.Marked(createFootnoteExtension(), { extensions: [emojiExtension] });
         let html = markdownParser.parse(processed, { renderer: renderer });
 
         // Restore math

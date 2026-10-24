@@ -167,6 +167,20 @@ func greet(name: String) -> String {
 
 ---
 
+## 絵文字
+
+コロンで囲んだショートコードで絵文字を書けます。GitHub と同じショートコードをすべて使えます（対応表は [gemoji](https://github.com/github/gemoji)）。
+
+```
+リリースします :rocket: :+1: :white_check_mark:
+```
+
+リリースします :rocket: :+1: :white_check_mark:
+
+コードや数式の中のショートコードは変換しません。`:foo:` のような対応表にない名前や、`12:30:45` のように英数字に挟まれたコロンもそのまま表示します。
+
+---
+
 ## 水平線
 
 ```
