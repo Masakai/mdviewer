@@ -194,6 +194,64 @@ final class RendererScriptTests: XCTestCase {
         try await webView.callAsyncJavaScript(script, arguments: [:], in: nil, contentWorld: .page)
     }
 
+    // MARK: Performance
+
+    /// 描画にかかった時間（ミリ秒）。
+    private func renderMilliseconds(_ markdown: String) async throws -> Double {
+        let result = try await webView.callAsyncJavaScript(
+            "const t = performance.now(); await MDViewer.setContent(md); return performance.now() - t;",
+            arguments: ["md": markdown],
+            in: nil,
+            contentWorld: .page
+        )
+        return try XCTUnwrap(result as? Double)
+    }
+
+    /// 見出し・段落・リストを n 組並べた文書（n=5000 で約 800KB）。脚注も絵文字も含まない。
+    private func largeDocument(sections n: Int) -> String {
+        (0 ..< n).map { i in
+            "## Section \(i)\n\nThis is paragraph \(i) with *emphasis*, `code`, a [link](http://x.com/\(i)) "
+                + "and time 12:\(i % 60):00 and note: something.\n\n- item one\n- item two: value\n\n"
+        }.joined()
+    }
+
+    /// 拡張の走査が文書の長さの2乗にならないこと。変更前の約 130ms に対し、
+    /// 2乗だったときは約 2.6 秒かかった（800KB）。
+    func test_render_largeDocument_finishesWithinLinearTime() async throws {
+        // Arrange
+        let markdown = largeDocument(sections: 5000)
+
+        // Act
+        let elapsed = try await renderMilliseconds(markdown)
+
+        // Assert
+        XCTAssertLessThan(elapsed, 1000, "800KB の描画に \(Int(elapsed))ms")
+    }
+
+    /// 脚注の定義が文書末にあると、定義の start() が段落ごとに残り全体を探していた。
+    func test_render_largeDocumentWithFootnotes_finishesWithinLinearTime() async throws {
+        // Arrange
+        let markdown = largeDocument(sections: 5000) + "Ref[^a] :smile:\n\n[^a]: note\n"
+
+        // Act
+        let elapsed = try await renderMilliseconds(markdown)
+
+        // Assert
+        XCTAssertLessThan(elapsed, 1000, "800KB の描画に \(Int(elapsed))ms")
+    }
+
+    /// `_` や `*` が多い長い1段落では、絵文字の start() が地の文を切るたびに残り全体を探していた。
+    func test_render_longParagraphWithManyDelimiters_finishesWithinLinearTime() async throws {
+        // Arrange
+        let markdown = (0 ..< 5000).map { i in "k_\(i): v*\(i) 12:01:00 :x\(i): " }.joined()
+
+        // Act
+        let elapsed = try await renderMilliseconds(markdown)
+
+        // Assert
+        XCTAssertLessThan(elapsed, 1000, "150KB の1段落の描画に \(Int(elapsed))ms")
+    }
+
     // MARK: Footnotes
 
     func test_footnote_rendersSuperscriptReferenceAndListWithBackLink() async throws {

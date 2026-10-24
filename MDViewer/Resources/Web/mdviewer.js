@@ -127,6 +127,53 @@
     // 脚注の参照を描画した HTML（見出しの目次用の文字列から除くのに使う）
     const FOOTNOTE_REF_HTML = /<sup class="footnote-ref">[\s\S]*?<\/sup>/g;
 
+    // marked は段落や地の文を切るたびに、残りの文字列で拡張の start() を呼ぶ。毎回
+    // 先頭から探すと長い文書・段落で2乗の時間がかかるので、直前の結果を使い回す。
+    // 新しい文字列が直前の文字列の末尾部分なら、見つけておいた位置をずらして返し、
+    // その位置を過ぎたときだけ探し直す。find は位置か、見つからなければ -1 を返す。
+    // 強調の中身やリストの項目は別の文字列として読まれるので、外側の文字列の結果が
+    // 上書きされないよう、最近の数件を覚えておく。
+    function memoizeStart(find) {
+        const recent = []; // { src, at }。新しいものが先頭
+        return function (src) {
+            for (let i = 0; i < recent.length; i++) {
+                const last = recent[i];
+                if (src.length > last.src.length) { continue; }
+                const offset = last.src.length - src.length;
+                const isTail = last.src.startsWith(src.slice(0, 64), offset) &&
+                    last.src.endsWith(src.slice(-64));
+                if (isTail && (last.at === -1 || last.at >= offset)) {
+                    // 使った結果は先頭に戻し、外側の文字列の結果が押し出されないようにする
+                    recent.splice(i, 1);
+                    recent.unshift(last);
+                    return last.at === -1 ? undefined : last.at - offset;
+                }
+            }
+            const at = find(src);
+            recent.unshift({ src: src, at: at });
+            if (recent.length > 8) { recent.pop(); }
+            return at === -1 ? undefined : at;
+        };
+    }
+
+    // marked.walkTokens は戻り値を concat で集めるので、トークン数の2乗のコピーが
+    // 起きる。値を集めずに同じ順でたどる。
+    function forEachToken(tokens, visit) {
+        tokens.forEach(function (token) {
+            visit(token);
+            if (token.type === 'table') {
+                token.header.forEach(function (cell) { forEachToken(cell.tokens, visit); });
+                token.rows.forEach(function (row) {
+                    row.forEach(function (cell) { forEachToken(cell.tokens, visit); });
+                });
+            } else if (token.type === 'list') {
+                forEachToken(token.items, visit);
+            } else if (token.tokens) {
+                forEachToken(token.tokens, visit);
+            }
+        });
+    }
+
     // 脚注定義の続きの行としては取り込まない、別のブロックの始まり
     const FOOTNOTE_BLOCK_START = /^ {0,3}(?:#{1,6}(?:\s|$)|>|[-*+](?:\s|$)|\d{1,9}[.)](?:\s|$)|`{3,}|~{3,}|\[\^[^\]\s]+\]:|(?:\*[ \t]*){3,}$|(?:-[ \t]*){3,}$|(?:_[ \t]*){3,}$)/;
 
@@ -149,10 +196,16 @@
             // 段落の途中から定義の行が始まったら、段落をそこで切らせる。marked は
             // 先頭1文字を除いた文字列を渡すので、改行の直後だけを行頭とみなす。
             // 行の途中を返すと「本文[^1]: 続き」のような段落が割れてしまう。
-            start: function (src) {
-                const m = /\n {0,3}\[\^[^\]\s]+\]:/.exec(src);
-                return m ? m.index + 1 : undefined;
-            },
+            start: (function () {
+                const findNewline = memoizeStart(function (src) {
+                    const m = /\n {0,3}\[\^[^\]\s]+\]:/.exec(src);
+                    return m ? m.index : -1;
+                });
+                return function (src) {
+                    const at = findNewline(src);
+                    return at === undefined ? undefined : at + 1;
+                };
+            })(),
             tokenizer: function (src) {
                 const head = /^ {0,3}\[\^([^\]\s]+)\]:[ \t]*/.exec(src);
                 if (!head) { return undefined; }
@@ -233,10 +286,10 @@
                 token.number = fn.number;
                 token.id = refId(fn, fn.refCount);
             };
-            marked.walkTokens(tokens, visit);
+            forEachToken(tokens, visit);
             // 脚注の中の参照で番号が増えることがあるので長さを毎回見る
             for (let i = 0; i < numbered.length; i++) {
-                marked.walkTokens(numbered[i].tokens, visit);
+                forEachToken(numbered[i].tokens, visit);
             }
         };
 
@@ -289,40 +342,42 @@
     // 前後が英数字のもの（12:30:45 の「:30:」など）、直前がコロンのもの（A:::cls: など。
     // ただし :smile::heart: のように絵文字が続く場合は変換する）、対応表にない名前は
     // 文字のまま残す。コードや数式、URL、生の HTML の中は marked がそれぞれの
-    // トークンとして先に読むので、ここには来ない。
-    const emojiExtension = {
-        name: 'emoji',
-        level: 'inline',
-        // marked はここで返した位置で地の文を切る。対応表にあるものの位置だけを
-        // 返さないと、「https:」の「:」で切れて URL の自動リンクが効かなくなる。
-        start: function (src) {
-            const re = /:([a-z0-9_+-]+):/g;
-            let m;
-            while ((m = re.exec(src)) !== null) {
-                const prev = src.charAt(m.index - 1);
-                if (emojiFor(m[1]) !== undefined && !isAsciiAlnum(prev) && prev !== ':' &&
-                    !isAsciiAlnum(src.charAt(re.lastIndex))) {
-                    return m.index;
+    // トークンとして先に読むので、ここには来ない。描画1回ごとに作る。
+    function createEmojiExtension() {
+        return {
+            name: 'emoji',
+            level: 'inline',
+            // marked はここで返した位置で地の文を切る。対応表にあるものの位置だけを
+            // 返さないと、「https:」の「:」で切れて URL の自動リンクが効かなくなる。
+            start: memoizeStart(function (src) {
+                const re = /:([a-z0-9_+-]+):/g;
+                let m;
+                while ((m = re.exec(src)) !== null) {
+                    const prev = src.charAt(m.index - 1);
+                    if (emojiFor(m[1]) !== undefined && !isAsciiAlnum(prev) && prev !== ':' &&
+                        !isAsciiAlnum(src.charAt(re.lastIndex))) {
+                        return m.index;
+                    }
+                    // 「12:30:smile:」の「:smile:」も見つけられるよう1文字だけ進める
+                    re.lastIndex = m.index + 1;
                 }
-                // 「12:30:smile:」の「:smile:」も見つけられるよう1文字だけ進める
-                re.lastIndex = m.index + 1;
-            }
-            return undefined;
-        },
-        tokenizer: function (src, tokens) {
-            const m = /^:([a-z0-9_+-]+):/.exec(src);
-            if (!m) { return undefined; }
-            const emoji = emojiFor(m[1]);
-            if (emoji === undefined || isAsciiAlnum(src.charAt(m[0].length))) { return undefined; }
-            const last = tokens[tokens.length - 1];
-            if (last && last.type !== 'emoji') {
-                const prev = last.raw.slice(-1);
-                if (isAsciiAlnum(prev) || prev === ':') { return undefined; }
-            }
-            return { type: 'emoji', raw: m[0], text: emoji };
-        },
-        renderer: function (token) { return escapeHtml(token.text); }
-    };
+                return -1;
+            }),
+            tokenizer: function (src, tokens) {
+                const m = /^:([a-z0-9_+-]+):/.exec(src);
+                if (!m) { return undefined; }
+                const emoji = emojiFor(m[1]);
+                if (emoji === undefined || isAsciiAlnum(src.charAt(m[0].length))) { return undefined; }
+                const last = tokens[tokens.length - 1];
+                if (last && last.type !== 'emoji') {
+                    const prev = last.raw.slice(-1);
+                    if (isAsciiAlnum(prev) || prev === ':') { return undefined; }
+                }
+                return { type: 'emoji', raw: m[0], text: emoji };
+            },
+            renderer: function (token) { return escapeHtml(token.text); }
+        };
+    }
 
     // Sends the headings of what is on screen to the sidebar. Swift also builds
     // the sidebar from the raw text as soon as it changes; this message lands
@@ -418,8 +473,13 @@
             return codeParts[Number(i)];
         });
 
-        // 脚注の番号と定義は文書ごとなので、拡張ごと描画のたびに作り直す
-        const markdownParser = new marked.Marked(createFootnoteExtension(), { extensions: [emojiExtension] });
+        // 脚注の番号と定義は文書ごとなので、拡張ごと描画のたびに作り直す。
+        // 定義が1つもない文書では、脚注の拡張は使わない。
+        const markedExtensions = [{ extensions: [createEmojiExtension()] }];
+        if (/\[\^[^\]\s]+\]:/.test(processed)) {
+            markedExtensions.unshift(createFootnoteExtension());
+        }
+        const markdownParser = new marked.Marked(...markedExtensions);
         let html = markdownParser.parse(processed, { renderer: renderer });
 
         // Restore math
