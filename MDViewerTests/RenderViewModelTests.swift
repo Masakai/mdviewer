@@ -4,14 +4,22 @@ import XCTest
 @MainActor
 final class RenderViewModelTests: XCTestCase {
     var sut: RenderViewModel!
+    /// テストホストは本番と同じバンドルIDなので、.standard に書くと利用者の文字サイズやテーマが変わる
+    var defaults: UserDefaults!
+    var suiteName: String!
 
     override func setUp() async throws {
         try await super.setUp()
-        sut = RenderViewModel()
+        suiteName = "RenderViewModelTests-\(UUID().uuidString)"
+        defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        sut = RenderViewModel(settings: defaults)
     }
 
     override func tearDown() async throws {
         sut = nil
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults = nil
+        suiteName = nil
         try await super.tearDown()
     }
 
@@ -753,16 +761,55 @@ final class RenderViewModelTests: XCTestCase {
 
     func test_setTheme_doesNotWriteSelectedThemeIdToSettings() throws {
         let key = "selectedThemeId"
-        let saved = UserDefaults.standard.object(forKey: key)
-        defer {
-            if let saved { UserDefaults.standard.set(saved, forKey: key) } else { UserDefaults.standard.removeObject(forKey: key) }
-        }
-        UserDefaults.standard.set("github-light", forKey: key)
+        defaults.set("github-light", forKey: key)
 
         try sut.setTheme(XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "nord" })))
 
         XCTAssertEqual(sut.theme.id, "nord")
-        XCTAssertEqual(UserDefaults.standard.string(forKey: key), "github-light")
+        XCTAssertEqual(defaults.string(forKey: key), "github-light")
+    }
+
+    // MARK: - 設定の保存先
+
+    func test_init_readsThemeAndFontSizeFromGivenSettings() {
+        defaults.set("nord", forKey: "selectedThemeId")
+        defaults.set(20.0, forKey: "fontSize")
+
+        let vm = RenderViewModel(settings: defaults)
+
+        XCTAssertEqual(vm.theme.id, "nord")
+        XCTAssertEqual(vm.fontSize, 20)
+    }
+
+    func test_init_withoutSavedValues_usesDefaults() {
+        XCTAssertEqual(sut.theme, .githubLight)
+        XCTAssertEqual(sut.fontSize, 16)
+        XCTAssertEqual(sut.pdfPageSize, .a4)
+    }
+
+    /// 起動引数（-fontSize 20）で渡すと文字列として入る
+    func test_init_fontSizeStoredAsString_isRead() {
+        defaults.set("20", forKey: "fontSize")
+
+        let vm = RenderViewModel(settings: defaults)
+
+        XCTAssertEqual(vm.fontSize, 20)
+    }
+
+    func test_setFontSize_writesToGivenSettingsOnly() {
+        let standardBefore = UserDefaults.standard.object(forKey: "fontSize") as? NSObject
+
+        sut.setFontSize(23)
+
+        XCTAssertEqual(defaults.double(forKey: "fontSize"), 23)
+        XCTAssertEqual(UserDefaults.standard.object(forKey: "fontSize") as? NSObject, standardBefore)
+    }
+
+    func test_setPDFPageSize_writesToGivenSettings() {
+        sut.setPDFPageSize(.letter)
+
+        XCTAssertEqual(defaults.string(forKey: "pdfPageSize"), PDFPageSize.letter.rawValue)
+        XCTAssertEqual(sut.pdfPageSize, .letter)
     }
 
     // MARK: - 検索の件数

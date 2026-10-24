@@ -36,9 +36,12 @@ final class RenderViewModel: ObservableObject {
     private var pendingSearch: Task<Void, Never>?
     private(set) var pendingSearchQuery: String?
 
-    @AppStorage("selectedThemeId") private var storedThemeId: String = MarkdownTheme.githubLight.id
-    @AppStorage("fontSize") private var storedFontSize: Double = 16
-    @AppStorage("pdfPageSize") private var storedPDFPageSize: String = PDFPageSize.a4.rawValue
+    /// テーマ・文字サイズ・PDF の用紙サイズの保存先。テストでは使い捨ての保存先を渡し、
+    /// 利用者の設定（テストホストは本番と同じバンドルID）を書き換えないようにする。
+    private let settings: UserDefaults
+    private static let themeIdKey = "selectedThemeId"
+    private static let fontSizeKey = "fontSize"
+    private static let pdfPageSizeKey = "pdfPageSize"
 
     weak var webView: WKWebView?
     weak var schemeHandler: LocalSchemeHandler?
@@ -74,11 +77,17 @@ final class RenderViewModel: ObservableObject {
     var onPreviewReset: (() -> Void)?
     private var cancellables = Set<AnyCancellable>()
 
-    init() {
-        if let saved = MarkdownTheme.all.first(where: { $0.id == storedThemeId }) {
+    init(settings: UserDefaults = .standard) {
+        self.settings = settings
+        if let savedId = settings.string(forKey: Self.themeIdKey),
+           let saved = MarkdownTheme.all.first(where: { $0.id == savedId })
+        {
             theme = saved
         }
-        fontSize = storedFontSize
+        // 起動引数（-fontSize 20 など）では文字列で入るので、double(forKey:) で読む
+        if settings.object(forKey: Self.fontSizeKey) != nil {
+            fontSize = settings.double(forKey: Self.fontSizeKey)
+        }
 
         NotificationCenter.default
             .publisher(for: .pdfPageSizeChanged)
@@ -122,7 +131,7 @@ final class RenderViewModel: ObservableObject {
     func setFontSize(_ size: Double) {
         let clamped = min(max(size, 10), 32)
         fontSize = clamped
-        storedFontSize = clamped
+        settings.set(clamped, forKey: Self.fontSizeKey)
         webView?.evaluateJavaScript("MDViewer.setFontSize(\(Int(clamped)))", completionHandler: nil)
     }
 
@@ -384,11 +393,11 @@ final class RenderViewModel: ObservableObject {
     }
 
     var pdfPageSize: PDFPageSize {
-        PDFPageSize(rawValue: storedPDFPageSize) ?? .a4
+        settings.string(forKey: Self.pdfPageSizeKey).flatMap(PDFPageSize.init(rawValue:)) ?? .a4
     }
 
     func setPDFPageSize(_ size: PDFPageSize) {
-        storedPDFPageSize = size.rawValue
+        settings.set(size.rawValue, forKey: Self.pdfPageSizeKey)
         applyPDFPageSize(size)
     }
 
