@@ -236,6 +236,10 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
             guard let window = nsView.window else { return }
             window.delegate = context.coordinator
             windowBox.window = window
+            // SwiftUI が WindowGroup のウィンドウに自前の識別子を付け直しても保てるよう、更新のたびに付け直す
+            if window.tabbingIdentifier != DocumentWindowRegistry.tabbingIdentifier {
+                window.tabbingIdentifier = DocumentWindowRegistry.tabbingIdentifier
+            }
             // 表示中のファイルは切り替わりうるので、値ではなく都度参照する形で登録する
             DocumentWindowRegistry.shared.register(window: window) { documentVM.fileURL }
         }
