@@ -320,9 +320,12 @@
                 const parser = this.parser;
                 const items = numbered.map(function (fn) {
                     let backrefs = '';
+                    // 読み上げでどの参照へ戻るか分かるよう、2つ目からは「1-2」のように
+                    // 番号を付ける（GitHub と同じ）
                     for (let n = 1; n <= fn.refCount; n++) {
                         const sup = n === 1 ? '' : `<sup>${n}</sup>`;
-                        backrefs += ` <a href="#${refId(fn, n)}" class="footnote-backref" data-footnote-backref aria-label="Back to reference ${fn.number}">↩${sup}</a>`;
+                        const label = n === 1 ? `${fn.number}` : `${fn.number}-${n}`;
+                        backrefs += ` <a href="#${refId(fn, n)}" class="footnote-backref" data-footnote-backref aria-label="Back to reference ${label}">↩${sup}</a>`;
                     }
                     // 戻りリンクは最後の段落の末尾に置く（GitHub と同じ）
                     const body = parser.parse(fn.tokens);
@@ -332,7 +335,8 @@
                         : `${body}<p>${backrefs.trim()}</p>\n`;
                     return `<li id="fn:${fn.number}">\n${html}</li>\n`;
                 });
-                return `<section class="footnotes" data-footnotes>\n<ol>\n${items.join('')}</ol>\n</section>\n`;
+                // 読み上げ用の見出し（画面には出さない）。目次には載せない
+                return `<section class="footnotes" data-footnotes>\n<h2 class="sr-only">Footnotes</h2>\n<ol>\n${items.join('')}</ol>\n</section>\n`;
             }
         };
 
@@ -598,9 +602,9 @@
     // macOS 14.0 の WebKit では使えない）。
     const SEARCH_HIT_CLASS = 'mdviewer-search-hit';
     const SEARCH_CURRENT_CLASS = 'mdviewer-search-current';
-    // 画面に見えない文字（KaTeX の読み上げ用 MathML など）と、<mark> を入れられない
-    // 場所（SVG の <text>、Mermaid が図に置き換える前のソース）は数えない
-    const SEARCH_SKIP_SELECTOR = '.katex-mathml, script, style, noscript, template';
+    // 画面に見えない文字（KaTeX の読み上げ用 MathML、脚注の読み上げ用の見出しなど）と、
+    // <mark> を入れられない場所（SVG の <text>、Mermaid が図に置き換える前のソース）は数えない
+    const SEARCH_SKIP_SELECTOR = '.katex-mathml, .sr-only, script, style, noscript, template';
     const SEARCH_BLOCK_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, td, th, pre, blockquote, div, section, dt, dd, figcaption, caption, #content';
     const SVG_NS = 'http://www.w3.org/2000/svg';
 

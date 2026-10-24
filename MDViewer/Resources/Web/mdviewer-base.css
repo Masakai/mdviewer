@@ -141,6 +141,19 @@ a:hover {
     margin: 0.25em 0;
 }
 
+/* 読み上げ用の見出し。画面には出さない */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* Mermaid diagrams */
 .mermaid {
     text-align: center;

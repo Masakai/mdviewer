@@ -286,6 +286,40 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertTrue(html.contains(#"id="fnref:1:2""#))
     }
 
+    /// 戻りリンクは読み上げでどの参照へ戻るか分かるよう、2つ目から「1-2」と区別する（GitHub と同じ）。
+    func test_footnote_backLinks_haveDistinctAccessibleLabels() async throws {
+        // Act
+        try await render("A[^b] B[^a] C[^b]\n\n[^a]: alpha\n[^b]: beta\n")
+
+        // Assert
+        let labels = try await evaluate("""
+        return Array.from(document.querySelectorAll('.footnote-backref')).map(a => a.getAttribute('aria-label'));
+        """) as? [String]
+        XCTAssertEqual(labels, ["Back to reference 1", "Back to reference 1-2", "Back to reference 2"])
+    }
+
+    /// 読み上げ用の「Footnotes」見出しは画面に出さず、目次にも検索の件数にも入れない。
+    func test_footnote_screenReaderHeading_isHiddenFromTOCAndSearch() async throws {
+        // Arrange
+        let recorder = MessageRecorder()
+        webView.configuration.userContentController.add(recorder, name: "headingsExtracted")
+
+        // Act
+        try await render("# Notes\n\nSee the footnotes.[^1]\n\n[^1]: note\n")
+        try await waitUntil("true")
+
+        // Assert
+        let heading = try await evaluate("""
+        const h = document.querySelector('.footnotes h2.sr-only');
+        return h ? h.textContent + ':' + h.getBoundingClientRect().width : null;
+        """) as? String
+        XCTAssertEqual(heading, "Footnotes:1")
+        let headings = try XCTUnwrap(recorder.messages.last as? [[String: Any]])
+        XCTAssertEqual(headings.compactMap { $0["title"] as? String }, ["Notes"])
+        let status = try await search("MDViewer.search('footnotes')")
+        XCTAssertEqual(status, [1, 1])
+    }
+
     func test_footnote_undefinedReference_staysAsText() async throws {
         // Act
         let html = try await render("Missing[^nope] here.\n")
