@@ -18,10 +18,17 @@ final class DocumentViewModel: ObservableObject {
     private let fileWatcher = FileWatcher()
     private let openDocumentStore: OpenDocumentStore
     private let settings: UserDefaults
+    private let recentDocuments: RecentDocuments
 
-    init(openDocumentStore: OpenDocumentStore = .shared, settings: UserDefaults = .standard) {
+    init(
+        openDocumentStore: OpenDocumentStore = .shared,
+        settings: UserDefaults = .standard,
+        recentDocuments: RecentDocuments? = nil
+    ) {
         self.openDocumentStore = openDocumentStore
         self.settings = settings
+        // .shared は MainActor 上にあり、既定引数（非隔離の文脈で評価される）には書けないので、ここで補う
+        self.recentDocuments = recentDocuments ?? .shared
         fileWatcher.onChange = { [weak self] in
             Task { @MainActor in
                 self?.fileDidChange()
@@ -75,6 +82,7 @@ final class DocumentViewModel: ObservableObject {
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
+            recentDocuments.note(url: url)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -138,6 +146,7 @@ final class DocumentViewModel: ObservableObject {
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
+            recentDocuments.note(url: url)
         } catch {
             errorMessage = error.localizedDescription
         }

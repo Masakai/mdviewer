@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- File > Open Recent lists the files you opened or saved recently. Choosing one opens it the same way as File > Open…: in a new window if a document is showing (or brings its window to the front if it is already open), or in the current window if it shows the welcome screen. Clear Menu empties the list. (Thanks to @sanderberents, #25)
+
+### Fixed
+- View > Toggle Sidebar did nothing. It now shows and hides the sidebar of the active window, and stays in step with the toolbar button and with dragging the sidebar closed. (Thanks to @sanderberents, #24)
+
+---
+
 ## [1.7.6] — 2026-10-21
 
 ### Fixed

@@ -19,9 +19,12 @@ struct ContentView: View {
     /// エディタモードはウィンドウごとの状態。新規ドキュメントを作っても他のウィンドウの表示を変えない。
     /// 最後に切り替えた状態だけを、次に開くウィンドウの初期値として保存する。
     @State private var isEditorMode: Bool = UserDefaults.standard.bool(forKey: "isEditorMode")
+    /// サイドバーの開閉。ツールバーのボタンやドラッグで閉じた場合もここに反映されるので、メニューと食い違わない。
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
         NavigationSplitView(
+            columnVisibility: $columnVisibility,
             sidebar: {
                 SidebarView(sidebarVM: sidebarVM, renderVM: renderVM)
                     .frame(minWidth: 180, idealWidth: sidebarWidth, maxWidth: 400)
@@ -61,6 +64,10 @@ struct ContentView: View {
             guard isKeyWindow else { return }
             documentVM.openFile()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openRecentDocument)) { notification in
+            guard isKeyWindow, let url = notification.object as? URL else { return }
+            documentVM.open(url: url)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .reloadFile)) { _ in
             guard isKeyWindow else { return }
             documentVM.reload()
@@ -75,7 +82,9 @@ struct ContentView: View {
             UserDefaults.standard.set(isEditorMode, forKey: "isEditorMode")
         }
         .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
-            // NavigationSplitView handles its own sidebar toggle
+            guard isKeyWindow else { return }
+            // ツールバーのボタンやドラッグで開いたときに .all 以外の値になっても切り替えられるよう、閉じているかどうかだけで判定する
+            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
         }
         // Keyboard shortcuts via Commands are declared in MDViewerApp
         .navigationTitle(
@@ -280,6 +289,8 @@ struct WelcomeView: View {
 
 extension Notification.Name {
     static let openFile = Notification.Name("MDViewer.openFile")
+    /// object に開くファイルの URL を載せる。
+    static let openRecentDocument = Notification.Name("MDViewer.openRecentDocument")
     static let reloadFile = Notification.Name("MDViewer.reloadFile")
     static let saveFile = Notification.Name("MDViewer.saveFile")
     static let toggleSidebar = Notification.Name("MDViewer.toggleSidebar")

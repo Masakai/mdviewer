@@ -5,6 +5,8 @@
 "Open…" = "開く…";
 "Open File…" = "ファイルを開く…";
 "Open Markdown File (⌘O)" = "Markdownファイルを開く (⌘O)";
+"Open Recent" = "最近使った項目を開く";
+"Clear Menu" = "メニューを消去";
 "Open" = "開く";
 "Reload" = "再読み込み";
 "Save" = "保存";

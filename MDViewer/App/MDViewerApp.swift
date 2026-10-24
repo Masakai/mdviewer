@@ -38,6 +38,8 @@ struct MDViewerApp: App {
                     NotificationCenter.default.post(name: .openFile, object: nil)
                 }
                 .keyboardShortcut("o", modifiers: .command)
+
+                OpenRecentMenu(recentDocuments: RecentDocuments.shared)
             }
 
             CommandGroup(after: .newItem) {
@@ -135,6 +137,32 @@ extension Notification.Name {
     /// object にテーマの id を載せる。
     static let previewThemeChanged = Notification.Name("MDViewer.previewThemeChanged")
     static let newFile = Notification.Name("MDViewer.newFile")
+}
+
+// MARK: - Open Recent menu
+
+/// File > Open Recent。一覧の変化でメニューを作り直せるよう、View として一覧を監視する。
+struct OpenRecentMenu: View {
+    @ObservedObject var recentDocuments: RecentDocuments
+
+    var body: some View {
+        Menu("Open Recent") {
+            ForEach(recentDocuments.urls, id: \.self) { url in
+                Button {
+                    NotificationCenter.default.post(name: .openRecentDocument, object: url)
+                } label: {
+                    Text(verbatim: url.lastPathComponent)
+                }
+            }
+
+            Divider()
+
+            Button("Clear Menu") {
+                recentDocuments.clear()
+            }
+            .disabled(recentDocuments.urls.isEmpty)
+        }
+    }
 }
 
 // MARK: - Help window
