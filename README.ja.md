@@ -21,7 +21,7 @@ MDViewer は、ターミナルから Claude Code や Codex などのツールを
 - **数式表示** — [KaTeX](https://github.com/KaTeX/KaTeX) によるインライン・ブロック LaTeX
 - **Mermaid 図** — フローチャート、シーケンス図、ガントチャートなど
 - **脚注** — GitHub と同じ `[^1]` 記法。文書の末尾に一覧で表示し、本文へ戻るリンクを付けます
-- **絵文字ショートコード** — `:smile:` など GitHub と同じショートコードを絵文字で表示（対応表は [gemoji](https://github.com/github/gemoji)）
+- **絵文字ショートコード** — `:smile:` など、GitHub のショートコードのうち Unicode の絵文字のものをすべて絵文字で表示（対応表は [gemoji](https://github.com/github/gemoji)。`:octocat:` のような GitHub 独自の画像の絵文字は対象外）
 - **スマートリンク** — ローカル `.md` リンクはアプリ内で開き、外部リンクはブラウザへ
 - **PDF エクスポート** — スタイルを保持したワンクリック PDF 出力
 - **署名・公証済み** — Developer ID 署名と Apple 公証に対応

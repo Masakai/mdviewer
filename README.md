@@ -21,7 +21,7 @@ MDViewer started as a viewer — but we wanted editing too, so it now includes a
 - **Math equations** — inline and block LaTeX via [KaTeX](https://github.com/KaTeX/KaTeX)
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, and more
 - **Footnotes** — GitHub-style `[^1]` footnotes, listed at the end of the document with links back to the text
-- **Emoji shortcodes** — `:smile:` and the rest of GitHub's shortcodes become emoji (data from [gemoji](https://github.com/github/gemoji))
+- **Emoji shortcodes** — `:smile:` and every other GitHub shortcode for a Unicode emoji become emoji (data from [gemoji](https://github.com/github/gemoji); GitHub's own image emoji such as `:octocat:` are not included)
 - **Smart link handling** — local `.md` links open in-app; external links open in the browser
 - **Export to PDF** — one-click PDF export preserving all styles
 - **Signed & notarized** — Developer ID signing and Apple notarization

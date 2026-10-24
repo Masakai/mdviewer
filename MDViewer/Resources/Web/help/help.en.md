@@ -169,7 +169,7 @@ Here is a footnote reference.[^1]
 
 ## Emoji
 
-Write an emoji by its shortcode between colons. All of GitHub's shortcodes are supported (from [gemoji](https://github.com/github/gemoji)).
+Write an emoji by its shortcode between colons. Every shortcode for a Unicode emoji in GitHub's list is supported (1,913 shortcodes from [gemoji](https://github.com/github/gemoji) 4.1.0). GitHub's own image emoji such as `:octocat:` are not included.
 
 ```
 Ship it :rocket: :+1: :white_check_mark:

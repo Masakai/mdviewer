@@ -169,7 +169,7 @@ func greet(name: String) -> String {
 
 ## 絵文字
 
-コロンで囲んだショートコードで絵文字を書けます。GitHub と同じショートコードをすべて使えます（対応表は [gemoji](https://github.com/github/gemoji)）。
+コロンで囲んだショートコードで絵文字を書けます。GitHub のショートコードのうち、Unicode の絵文字のものはすべて使えます（[gemoji](https://github.com/github/gemoji) 4.1.0 の 1,913 種類）。`:octocat:` のような GitHub 独自の画像の絵文字は対象外です。
 
 ```
 リリースします :rocket: :+1: :white_check_mark:
