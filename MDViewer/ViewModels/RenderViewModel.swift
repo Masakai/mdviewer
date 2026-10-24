@@ -30,7 +30,7 @@ final class RenderViewModel: ObservableObject {
 
     /// 描画し直しは JS 側が同じ語で数え直すが、レンダラーを読み込み直したときは
     /// JS 側の状態が消えるので、ここで覚えておいて検索し直す。
-    private var searchQuery = ""
+    private(set) var searchQuery = ""
 
     /// 入力が止まるのを待っている検索
     private var pendingSearch: Task<Void, Never>?
@@ -299,8 +299,11 @@ final class RenderViewModel: ObservableObject {
             webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
         }
 
-        if !searchQuery.isEmpty {
-            search(searchQuery)
+        // 入力が止まるのを待っている語があれば、そちらで検索する。確定済みの古い語で
+        // 検索すると、待っている検索が取り消されてしまう。
+        let query = pendingSearchQuery ?? searchQuery
+        if !query.isEmpty {
+            search(query)
         }
     }
 

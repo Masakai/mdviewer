@@ -879,4 +879,18 @@ final class RenderViewModelTests: XCTestCase {
         XCTAssertNil(sut.pendingSearchQuery)
         XCTAssertNil(sut.searchStatus)
     }
+
+    /// 入力の直後にレンダラーが読み込み直されたら、待っていた新しい語で検索し直す。
+    func test_rendererDidLoad_whileTyping_searchesThePendingQuery() {
+        // Arrange
+        sut.search("old")
+        sut.searchAsTyped("new", delay: .seconds(10))
+
+        // Act
+        sut.rendererDidLoad()
+
+        // Assert
+        XCTAssertEqual(sut.searchQuery, "new")
+        XCTAssertNil(sut.pendingSearchQuery)
+    }
 }
