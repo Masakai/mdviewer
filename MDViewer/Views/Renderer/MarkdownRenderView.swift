@@ -75,6 +75,8 @@ struct MarkdownRenderView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .showSearchBar)) { _ in
+            // メニューの通知は全ウィンドウに届くので、前面のウィンドウ（タブ）だけで開く
+            guard renderVM.webView?.window?.isKeyWindow == true else { return }
             withAnimation { isSearchVisible = true }
         }
     }

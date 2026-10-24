@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The menu bar had two View menus. MDViewer's items (Toggle Editor Mode, Toggle Sidebar, Find… and the font size items) are now in the standard View menu, together with the tab bar and full screen items.
 - File > Close was not translated into Japanese.
 - View > Increase Font Size, Decrease Font Size and Reset Font Size (⌘+, ⌘−, ⌘0) and Export > Export as PDF… and Export as HTML… (⇧⌘P, ⇧⌘E) did nothing when chosen from the menu bar. They now act on the active window. ⇧⌘P and ⇧⌘E are no longer also assigned to the same items in the toolbar's Export menu.
+- View > Find… (⌘F) opened the search bar in every window. It now opens only in the active window or tab.
 
 ---
 
