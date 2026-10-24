@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [1.8.0] — 2026-10-25
 
 ### Added
 - File > Open Recent lists the files you opened or saved recently. Choosing one opens it the same way as File > Open…: in a new window if a document is showing (or brings its window to the front if it is already open), or in the current window if it shows the welcome screen. Clear Menu empties the list. Files with the same name in different folders are shown with their folder name, such as `README.md — docs`. Bringing an already open file to the front, from Open Recent or Finder, also moves it to the top of the list, and the list is read again whenever MDViewer becomes active. (Thanks to @sanderberents, #25)

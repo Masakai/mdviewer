@@ -23,7 +23,9 @@ MDViewer started as a viewer — but we wanted editing too, so it now includes a
 - **Footnotes** — GitHub-style `[^1]` footnotes, listed at the end of the document with links back to the text
 - **Emoji shortcodes** — `:smile:` and every other GitHub shortcode for a Unicode emoji become emoji (data from [gemoji](https://github.com/github/gemoji); GitHub's own image emoji such as `:octocat:` are not included)
 - **Smart link handling** — local `.md` links open in-app; external links open in the browser
-- **Export to PDF** — one-click PDF export preserving all styles
+- **Find with match count** — ⌘F searches the preview and shows the current match and the total, such as "3/12"
+- **Tabs and recent files** — combine document windows into tabs (Window > Merge All Windows, or "Prefer tabs when opening documents" in System Settings), and reopen files from File > Open Recent
+- **Export and print** — one-click PDF export preserving all styles, HTML export, and File > Print… (⌘P)
 - **Signed & notarized** — Developer ID signing and Apple notarization
 
 ### Editor Mode
@@ -33,6 +35,7 @@ Toggle the built-in editor with **⌘E** or the pencil button in the toolbar.
 - **Split view**: Editor on the left, live preview on the right
 - **New file**: ⌘N, the toolbar button, or the welcome screen starts a blank document in editor mode
 - **Save**: ⌘S saves changes to the current file; for a new (untitled) document it shows a save panel
+- **Font size**: the editor uses the same font size as the preview, changed with the toolbar, ⌘+ / ⌘− / ⌘0, or the slider in Settings > Appearance
 - Unsaved changes are indicated by the Save button becoming active
 - Closing the window, or starting a new file, with unsaved changes prompts Save / Discard / Cancel
 
