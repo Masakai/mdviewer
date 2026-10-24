@@ -877,6 +877,12 @@ final class RenderViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.fontSize, 20)
         XCTAssertEqual(other.fontSize, 16)
+
+        // 同じ待ち方でスライダーの通知なら届くことを確かめ、通知が届かないせいで通る偽陰性を防ぐ
+        NotificationCenter.default.post(name: .previewFontSizeChanged, object: 24.0)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        XCTAssertEqual(other.fontSize, 24)
     }
 
     func test_setFontSize_writesToGivenSettingsOnly() {
