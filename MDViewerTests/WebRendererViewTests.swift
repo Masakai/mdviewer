@@ -252,7 +252,41 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertLessThan(elapsed, 1000, "150KB の1段落の描画に \(Int(elapsed))ms")
     }
 
+    /// 見出しと本文を空行なしで交互に書いた長い領域では、脚注定義の start() が「次の空行まで」
+    /// を段落ごとに探して2乗になっていた（1.5MB で約 8 秒）。
+    func test_render_headingsAndTextWithoutBlankLines_finishesWithinLinearTime() async throws {
+        // Arrange: 約 750KB
+        let markdown = (0 ..< 9000).map { i in
+            "## Heading \(i)\nThis is body text \(i) for the section, written without blank lines.\n"
+        }.joined() + "\nRef[^a]\n\n[^a]: note\n"
+
+        // Act
+        let elapsed = try await renderMilliseconds(markdown)
+
+        // Assert
+        XCTAssertLessThan(elapsed, 1000, "750KB の描画に \(Int(elapsed))ms")
+    }
+
     // MARK: Footnotes
+
+    /// 段落を終わらせる行（見出し・引用・コードフェンス・リスト）の直後の脚注定義も、定義として読む。
+    func test_footnote_definitionRightAfterParagraphEndingLines_isRead() async throws {
+        let samples: [(String, String)] = [
+            ("heading", "Body text\n## Heading\n[^1]: def after heading\n\nRef[^1]\n"),
+            ("quote", "Body text\n> quoted\n[^1]: def after quote\n\nRef[^1]\n"),
+            ("fence", "Body text\n```\ncode\n```\n[^1]: def after fence\n\nRef[^1]\n"),
+            ("list", "Body text\n- item\n\n[^1]: def after list\n\nRef[^1]\n"),
+            ("text then heading", "Body text\n[^1]: def before heading\n## Heading\n\nRef[^1]\n"),
+        ]
+        for (name, markdown) in samples {
+            // Act
+            let html = try await render(markdown)
+
+            // Assert
+            XCTAssertTrue(html.contains(#"<li id="fn:1">"#), "\(name): \(html)")
+            XCTAssertFalse(html.contains("[^1]"), "\(name): \(html)")
+        }
+    }
 
     func test_footnote_rendersSuperscriptReferenceAndListWithBackLink() async throws {
         // Act
