@@ -212,7 +212,7 @@ private final class WindowAttachView: NSView {
 }
 
 /// NSViewRepresentable that attaches an NSWindowDelegate to block window close when there are unsaved changes.
-private struct WindowCloseInterceptor: NSViewRepresentable {
+struct WindowCloseInterceptor: NSViewRepresentable {
     let documentVM: DocumentViewModel
     let windowBox: WindowBox
 
@@ -233,7 +233,8 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
         context.coordinator.documentVM = documentVM
         let documentVM = documentVM
         DispatchQueue.main.async {
-            guard let window = nsView.window else { return }
+            // 閉じた後の更新でレジストリに登録し直さない
+            guard let window = nsView.window, !context.coordinator.didClose else { return }
             window.delegate = context.coordinator
             windowBox.window = window
             // SwiftUI が WindowGroup のウィンドウに自前の識別子を付け直しても保てるよう、更新のたびに付け直す
@@ -251,12 +252,19 @@ private struct WindowCloseInterceptor: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSWindowDelegate {
         var documentVM: DocumentViewModel
+        private(set) var didClose = false
 
         init(documentVM: DocumentViewModel) {
             self.documentVM = documentVM
         }
 
-        func windowWillClose(_: Notification) {
+        func windowWillClose(_ notification: Notification) {
+            didClose = true
+            // 閉じたウィンドウはすぐにレジストリから外す。弱参照の解放を待つと、閉じた直後に同じファイルを
+            // 開いたとき、閉じたウィンドウを前面に出そうとして開けない
+            if let window = notification.object as? NSWindow {
+                DocumentWindowRegistry.shared.register(window: window, url: nil)
+            }
             NotificationCenter.default.post(
                 name: .documentWindowWillClose,
                 object: nil,
