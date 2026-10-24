@@ -4,7 +4,7 @@
 // Unicode を持つ項目の aliases をすべて収録している（1913 件）。
 //
 // 生成手順:
-//   curl -sSfLO https://raw.githubusercontent.com/github/gemoji/v4.1.0/db/emoji.json
+//   curl -sSfLO https://raw.githubusercontent.com/github/gemoji/5476a66d2794e0d1551b1f96e449afc72e9f7bec/db/emoji.json
 //   node -e '
 //     const list = JSON.parse(require("fs").readFileSync("emoji.json", "utf8"));
 //     const t = {};
