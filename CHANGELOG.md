@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [1.9.0] — 2026-10-28
 
 ### Added
 - Find (⌘F) now searches the editor too. With the cursor in the editor, ⌘F counts and moves through the editor's matches, selecting each one; otherwise it works on the preview as before. Matches are highlighted in both the editor and the preview either way, and the pane that is not being searched keeps its scroll position. The search bar now sits above both panes. (Thanks to @sullo, #30)
