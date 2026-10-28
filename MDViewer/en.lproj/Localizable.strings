@@ -47,6 +47,9 @@
 "No Matches" = "No Matches";
 "Previous Match" = "Previous Match";
 "Next Match" = "Next Match";
+"Replace With" = "Replace With";
+"Replace" = "Replace";
+"Replace All" = "Replace All";
 
 /* Preferences */
 "Select Theme" = "Select Theme";

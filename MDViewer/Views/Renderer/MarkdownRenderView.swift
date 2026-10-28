@@ -6,9 +6,6 @@ struct MarkdownRenderView: View {
     @ObservedObject var renderVM: RenderViewModel
     @ObservedObject var sidebarVM: SidebarViewModel
 
-    @State private var isSearchVisible: Bool = false
-    @State private var searchText: String = ""
-
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -40,23 +37,12 @@ struct MarkdownRenderView: View {
                 renderVM.applySystemAppearance(isDark: newScheme == .dark)
             }
 
-            // Stacked so the banner and the search bar never overlap.
-            VStack(spacing: 0) {
-                if renderVM.isPreviewInterrupted {
-                    PreviewInterruptedBanner {
-                        renderVM.retryRendering(documentVM.text)
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            // 検索バーは ContentView がエディタとプレビューの上に出すので、ここでは重ならない
+            if renderVM.isPreviewInterrupted {
+                PreviewInterruptedBanner {
+                    renderVM.retryRendering(documentVM.text)
                 }
-
-                if isSearchVisible {
-                    SearchBarView(
-                        searchText: $searchText,
-                        isVisible: $isSearchVisible,
-                        renderVM: renderVM
-                    )
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             if documentVM.isLoading {
@@ -65,7 +51,6 @@ struct MarkdownRenderView: View {
                     .background(Color(NSColor.windowBackgroundColor).opacity(0.7))
             }
         }
-        .animation(.easeInOut(duration: 0.15), value: isSearchVisible)
         .animation(.easeInOut(duration: 0.15), value: renderVM.isPreviewInterrupted)
         .onAppear {
             renderVM.applyCurrentThemeAndFontSize()
@@ -73,11 +58,6 @@ struct MarkdownRenderView: View {
                 renderVM.renderMarkdown(documentVM.text)
                 sidebarVM.extractTOC(from: documentVM.text)
             }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .showSearchBar)) { _ in
-            // メニューの通知は全ウィンドウに届くので、前面のウィンドウ（タブ）だけで開く
-            guard renderVM.webView?.window?.isKeyWindow == true else { return }
-            withAnimation { isSearchVisible = true }
         }
     }
 }

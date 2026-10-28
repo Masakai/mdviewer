@@ -856,9 +856,10 @@
 
         // 検索バーの検索。どれも { current, total } を返し、searchResultsChanged でも
         // Swift に知らせる（描画し直したときの数え直しも同じ経路で届く）。
-        search: function (query) {
+        // scroll が false なら一致を強調するだけで、読んでいる位置は動かさない
+        search: function (query, scroll) {
             searchQuery = query;
-            runSearch(null, true);
+            runSearch(null, scroll !== false);
             return notifySearchStatus();
         },
 

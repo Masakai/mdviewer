@@ -47,6 +47,9 @@
 "No Matches" = "0件";
 "Previous Match" = "前の一致";
 "Next Match" = "次の一致";
+"Replace With" = "置換後の文字列";
+"Replace" = "置換";
+"Replace All" = "すべて置換";
 
 /* Preferences */
 "Select Theme" = "テーマを選択";

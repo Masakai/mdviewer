@@ -804,6 +804,28 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertEqual(insideSVG, true)
     }
 
+    /// エディタが検索の対象のときは、プレビューは一致を強調するだけで、読んでいる位置を動かさない（#30）
+    func test_search_withoutScroll_highlightsButKeepsPosition() async throws {
+        // Arrange: 一致が画面の外（下）にある文書
+        let filler = (0 ..< 80).map { "Paragraph \($0)." }.joined(separator: "\n\n")
+        try await render(filler + "\n\nfarawayword\n")
+        _ = try await evaluate("window.scrollTo(0, 0); return null;")
+
+        // Act: スクロールは少し遅れて反映されるので、待ってから確かめる
+        _ = try await evaluate("MDViewer.search('farawayword', false); return null;")
+        try await Task.sleep(nanoseconds: 300_000_000)
+        let notScrolled = try await evaluate(
+            "return [window.scrollY, document.querySelectorAll('mark.mdviewer-search-hit').length];"
+        ) as? [Int]
+
+        // Assert
+        XCTAssertEqual(notScrolled, [0, 1])
+
+        // 対象のときは一致までスクロールする（これまでどおり）
+        _ = try await evaluate("MDViewer.search('farawayword', true); return null;")
+        try await waitUntil("window.scrollY > 0")
+    }
+
     // MARK: Sanitize（#28）
 
     /// 文書に書かれた HTML のイベントハンドラは DOM に入らず、実行もされない。

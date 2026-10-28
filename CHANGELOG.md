@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Find (⌘F) now searches the editor too. With the cursor in the editor, ⌘F counts and moves through the editor's matches, selecting each one; otherwise it works on the preview as before. Matches are highlighted in both the editor and the preview either way, and the pane that is not being searched keeps its scroll position. The search bar now sits above both panes. (Thanks to @sullo, #30)
+- When the editor is being searched, the search bar has a Replace With field with Replace and Replace All buttons. Replace changes the selected match and moves to the next; Replace All changes every match, and one ⌘Z undoes it. Text is matched the same way as in the preview: case is ignored, and a space in the search text matches spaces or a line break but not a blank line.
+
 ## [1.8.1] — 2026-10-28
 
 ### Security

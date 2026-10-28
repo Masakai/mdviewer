@@ -31,6 +31,8 @@ final class RenderViewModel: ObservableObject {
     /// 描画し直しは JS 側が同じ語で数え直すが、レンダラーを読み込み直したときは
     /// JS 側の状態が消えるので、ここで覚えておいて検索し直す。
     private(set) var searchQuery = ""
+    /// 一致の位置までスクロールするか。エディタが検索の対象のときは、プレビューは強調だけにする。
+    private(set) var searchScrolls = true
 
     /// 入力が止まるのを待っている検索
     private var pendingSearch: Task<Void, Never>?
@@ -335,7 +337,7 @@ final class RenderViewModel: ObservableObject {
         // 検索すると、待っている検索が取り消されてしまう。
         let query = pendingSearchQuery ?? searchQuery
         if !query.isEmpty {
-            search(query)
+            search(query, scroll: searchScrolls)
         }
     }
 
@@ -343,17 +345,18 @@ final class RenderViewModel: ObservableObject {
 
     /// 検索欄への入力。1文字ごとに全文を走査しないよう、入力が止まってから検索する。
     /// 空にしたときはすぐにハイライトを消す。
-    func searchAsTyped(_ query: String, delay: Duration = .milliseconds(150)) {
+    func searchAsTyped(_ query: String, scroll: Bool = true, delay: Duration = .milliseconds(150)) {
         guard !query.isEmpty else {
-            search(query)
+            search(query, scroll: scroll)
             return
         }
         pendingSearch?.cancel()
         pendingSearchQuery = query
+        searchScrolls = scroll
         pendingSearch = Task { [weak self] in
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
-            self?.search(query)
+            self?.search(query, scroll: scroll)
         }
     }
 
@@ -361,7 +364,7 @@ final class RenderViewModel: ObservableObject {
     /// - Returns: 検索したかどうか
     private func flushPendingSearch() -> Bool {
         guard let query = pendingSearchQuery else { return false }
-        search(query)
+        search(query, scroll: searchScrolls)
         return true
     }
 
@@ -371,9 +374,11 @@ final class RenderViewModel: ObservableObject {
         pendingSearchQuery = nil
     }
 
-    func search(_ query: String) {
+    /// - Parameter scroll: false なら一致を強調するだけで、読んでいる位置は動かさない。
+    func search(_ query: String, scroll: Bool = true) {
         cancelPendingSearch()
         searchQuery = query
+        searchScrolls = scroll
         guard !query.isEmpty else {
             clearSearch()
             return
@@ -381,7 +386,11 @@ final class RenderViewModel: ObservableObject {
         searchStatus = nil
         guard isRendererReady else { return }
         webView?.callAsyncJavaScript(
-            "MDViewer.search(query);", arguments: ["query": query], in: nil, in: .page, completionHandler: nil
+            "MDViewer.search(query, scroll);",
+            arguments: ["query": query, "scroll": scroll],
+            in: nil,
+            in: .page,
+            completionHandler: nil
         )
     }
 

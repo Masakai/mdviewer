@@ -13,6 +13,7 @@ struct ContentView: View {
     @StateObject private var renderVM = RenderViewModel()
     @StateObject private var exportVM = ExportViewModel()
     @StateObject private var windowBox = WindowBox()
+    @StateObject private var editorSearch = EditorSearchController()
 
     @AppStorage("sidebarWidth") private var sidebarWidth: Double = 240
     @AppStorage("isSidebarVisible") private var isSidebarVisible: Bool = true
@@ -21,6 +22,7 @@ struct ContentView: View {
     @State private var isEditorMode: Bool = UserDefaults.standard.bool(forKey: "isEditorMode")
     /// サイドバーの開閉。ツールバーのボタンやドラッグで閉じた場合もここに反映されるので、メニューと食い違わない。
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var search = SearchBarState()
 
     var body: some View {
         NavigationSplitView(
@@ -34,20 +36,41 @@ struct ContentView: View {
                     if !documentVM.hasDocument {
                         WelcomeView(documentVM: documentVM, onNewFile: startNewDocumentInThisWindow)
                     } else {
-                        HSplitView {
-                            // エディタペイン: isEditorMode時のみ表示
-                            if isEditorMode {
-                                MarkdownEditorView(documentVM: documentVM, previewFontSize: renderVM.fontSize)
-                                    .frame(minWidth: 250)
+                        VStack(spacing: 0) {
+                            // 検索バーはエディタとプレビューの上に1本だけ出す
+                            if search.isVisible {
+                                SearchBarView(
+                                    searchText: $search.text,
+                                    replaceText: $search.replaceText,
+                                    isVisible: $search.isVisible,
+                                    target: search.target,
+                                    focusRequest: search.focusRequest,
+                                    renderVM: renderVM,
+                                    editorSearch: editorSearch
+                                )
+                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
-                            // プレビューペイン: 常にマウントしておく（破棄しない）
-                            MarkdownRenderView(
-                                documentVM: documentVM,
-                                renderVM: renderVM,
-                                sidebarVM: sidebarVM
-                            )
-                            .frame(minWidth: 250)
+
+                            HSplitView {
+                                // エディタペイン: isEditorMode時のみ表示
+                                if isEditorMode {
+                                    MarkdownEditorView(
+                                        documentVM: documentVM,
+                                        previewFontSize: renderVM.fontSize,
+                                        editorSearch: editorSearch
+                                    )
+                                    .frame(minWidth: 250)
+                                }
+                                // プレビューペイン: 常にマウントしておく（破棄しない）
+                                MarkdownRenderView(
+                                    documentVM: documentVM,
+                                    renderVM: renderVM,
+                                    sidebarVM: sidebarVM
+                                )
+                                .frame(minWidth: 250)
+                            }
                         }
+                        .animation(.easeInOut(duration: 0.15), value: search.isVisible)
                     }
                 }
             }
@@ -80,6 +103,13 @@ struct ContentView: View {
             guard isKeyWindow, documentVM.hasDocument, let webView = renderVM.webView else { return }
             exportVM.print(webView: webView)
         }
+        .modifier(SearchCommand(
+            windowBox: windowBox,
+            documentVM: documentVM,
+            editorSearch: editorSearch,
+            isEditorMode: isEditorMode,
+            search: $search
+        ))
         .modifier(FontSizeAndExportCommands(
             windowBox: windowBox,
             documentVM: documentVM,
@@ -148,6 +178,55 @@ struct ContentView: View {
     private func startNewDocumentInThisWindow() {
         documentVM.newDocument()
         isEditorMode = true
+    }
+}
+
+// MARK: - Search command
+
+/// 検索バーの開閉と入力。ウィンドウごとに持つ。
+struct SearchBarState {
+    var isVisible = false
+    var text = ""
+    var replaceText = ""
+    var target: SearchTarget = .preview
+    /// ⌘F が押された回数。開いたまま押し直したときに検索欄へ入力を戻すのに使う。
+    var focusRequest = 0
+}
+
+/// 表示 > 検索…（⌘F）。そのときエディタに入力があればエディタを、そうでなければプレビューを
+/// 件数と移動の対象にする。検索欄に入力があるとき（開いたまま押し直したとき）は対象を変えない。
+struct SearchCommand: ViewModifier {
+    let windowBox: WindowBox
+    let documentVM: DocumentViewModel
+    let editorSearch: EditorSearchController
+    let isEditorMode: Bool
+    @Binding var search: SearchBarState
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .showSearchBar)) { _ in
+                // メニューの通知は全ウィンドウに届くので、前面のウィンドウ（タブ）だけで開く
+                guard let window = windowBox.window, window.isKeyWindow, documentVM.hasDocument else { return }
+                search.target = Self.target(
+                    editorHasFocus: isEditorMode && editorSearch.isTextViewFirstResponder,
+                    searchFieldHasFocus: search.isVisible && window.firstResponder is NSTextView,
+                    current: search.target
+                )
+                withAnimation { search.isVisible = true }
+                search.focusRequest += 1
+            }
+            .onChange(of: isEditorMode) { _, isEditorMode in
+                if !isEditorMode, search.target == .editor {
+                    search.target = .preview
+                }
+            }
+    }
+
+    /// エディタを先に調べる。エディタも NSTextView なので、検索欄（のフィールドエディタ）と区別できない。
+    static func target(editorHasFocus: Bool, searchFieldHasFocus: Bool, current: SearchTarget) -> SearchTarget {
+        if editorHasFocus { return .editor }
+        if searchFieldHasFocus { return current }
+        return .preview
     }
 }
 
