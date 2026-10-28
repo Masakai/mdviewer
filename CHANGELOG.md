@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [1.8.1] — 2026-10-28
 
 ### Security
 - A Markdown file could run JavaScript in the preview through HTML written in the document (such as an `<img>` with an `onerror` attribute) or through HTML in a Mermaid diagram's labels. The preview now removes scripts, event handler attributes and `javascript:` links from the document's HTML with DOMPurify 3.4.17 before showing it, and Mermaid runs with `securityLevel: 'strict'`. A Content Security Policy also keeps any script that is not part of MDViewer from running and blocks network requests from the page. Images from the web are still shown. (Thanks to @sullo, #28)
