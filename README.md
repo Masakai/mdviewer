@@ -76,6 +76,7 @@ Build and run with ⌘R. No Swift Package dependencies — all vendor libraries 
 | UI framework | SwiftUI + AppKit |
 | Rendering engine | WKWebView |
 | Markdown parser | [marked](https://github.com/markedjs/marked) v12 |
+| HTML sanitizer | [DOMPurify](https://github.com/cure53/DOMPurify) v3 |
 | Syntax highlighting | [Shiki](https://github.com/shikijs/shiki) v1 |
 | Math | [KaTeX](https://github.com/KaTeX/KaTeX) v0.18 |
 | Diagrams | [Mermaid](https://github.com/mermaid-js/mermaid) v12 |
@@ -83,7 +84,7 @@ Build and run with ⌘R. No Swift Package dependencies — all vendor libraries 
 
 ## Open source libraries
 
-The libraries below are MIT licensed. Mermaid's single-file build also includes its own dependencies, some under other licenses (Apache-2.0, EPL-2.0, ISC, BSD-3-Clause). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full license texts.
+The libraries below are MIT licensed, except DOMPurify (Apache-2.0 or MPL-2.0; used under Apache-2.0). Mermaid's single-file build also includes its own dependencies, some under other licenses (Apache-2.0, EPL-2.0, ISC, BSD-3-Clause). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full license texts.
 
 | Library | Version | License |
 |---------|---------|---------|
@@ -92,6 +93,7 @@ The libraries below are MIT licensed. Mermaid's single-file build also includes 
 | KaTeX | 0.18.9 | MIT |
 | Mermaid | 12.0.0 | MIT |
 | gemoji (emoji shortcode table) | 4.1.0 | MIT |
+| DOMPurify | 3.4.17 | Apache-2.0 |
 
 ## License
 

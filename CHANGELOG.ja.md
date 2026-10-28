@@ -6,6 +6,13 @@ MDViewer の主な変更はこのファイルに記録されます。
 
 ---
 
+## [Unreleased]
+
+### セキュリティ
+- 文書に書いた HTML（`onerror` 属性を付けた `<img>` など）や Mermaid の図のラベルに書いた HTML から、プレビューで JavaScript が実行できる問題を修正しました。文書の HTML は DOMPurify 3.4.17 で script・イベントハンドラの属性・`javascript:` のリンクを取り除いてから表示し、Mermaid は `securityLevel: 'strict'` で描画します。あわせて Content Security Policy で、MDViewer のもの以外の script の実行と、ページからの通信を止めます。Web 上の画像はこれまでどおり表示します。（@sullo さん、#28）
+- プレビューのリンクで開くのは `http`・`https`・`mailto`・`file` の URL だけにしました。他のアプリを起動するものなど、それ以外の URL scheme のリンクはクリックしても何もしません。文書の HTML からも、これら以外のリンク先は取り除きます。
+- レンダラーに不要だった WebKit の `allowFileAccessFromFileURLs` を有効にするのをやめました。
+
 ## [1.8.0] — 2026-10-25
 
 ### 追加

@@ -141,6 +141,21 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 ---
 
+## DOMPurify
+
+**Version:** 3.4.17 (`vendor/purify.min.js`)  
+**License:** Apache License 2.0 (DOMPurify is dual licensed under MPL-2.0 or Apache-2.0; MDViewer uses it under Apache-2.0)  
+**Source:** https://github.com/cure53/DOMPurify
+
+```
+DOMPurify
+Copyright 2025 Dr.-Ing. Mario Heiderich, Cure53
+```
+
+The full text of the Apache License 2.0 is reproduced under "Libraries bundled inside Mermaid" below.
+
+---
+
 ## Mermaid
 
 **Version:** 12.0.0  

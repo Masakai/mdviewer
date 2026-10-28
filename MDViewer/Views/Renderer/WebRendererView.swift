@@ -30,9 +30,6 @@ struct WebRendererView: NSViewRepresentable {
         // Register custom scheme for local images
         config.setURLSchemeHandler(context.coordinator.schemeHandler, forURLScheme: "mdviewer-local")
 
-        // Allow local file access
-        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
-
         let webView = RendererWebView(frame: .zero, configuration: config)
         webView.allowsLinkPreview = false
         webView.navigationDelegate = context.coordinator
@@ -105,7 +102,7 @@ struct WebRendererView: NSViewRepresentable {
                        ["md", "markdown"].contains(url.pathExtension.lowercased())
                     {
                         NotificationCenter.default.post(name: .openLocalDocument, object: url)
-                    } else {
+                    } else if Self.isOpenableLinkURL(url) {
                         NSWorkspace.shared.open(url)
                     }
                 }
@@ -126,6 +123,14 @@ struct WebRendererView: NSViewRepresentable {
         ///
         /// - Returns: nil for a relative href when no file is open, since there
         ///   is nothing to resolve it against.
+        /// Schemes a link in the preview may hand to `NSWorkspace`. linkClicked
+        /// can be posted by any script on the page, so anything else — app URL
+        /// schemes included — is not opened.
+        static func isOpenableLinkURL(_ url: URL) -> Bool {
+            guard let scheme = url.scheme?.lowercased() else { return false }
+            return ["http", "https", "mailto", "file"].contains(scheme)
+        }
+
         static func resolveLinkURL(_ href: String, relativeTo directory: URL?) -> URL? {
             if let url = URL(string: href), url.scheme != nil {
                 return url
@@ -291,7 +296,8 @@ struct WebRendererView: NSViewRepresentable {
                 return
             }
 
-            decisionHandler(.allow)
+            // Any other link would navigate the renderer itself away
+            decisionHandler(.cancel)
         }
     }
 }

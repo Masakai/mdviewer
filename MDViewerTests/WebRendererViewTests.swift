@@ -111,6 +111,23 @@ final class WebRendererViewTests: XCTestCase {
         XCTAssertEqual(url?.absoluteString, "https://example.com")
     }
 
+    // MARK: - isOpenableLinkURL
+
+    func test_isOpenableLinkURL_webMailAndFile_areOpened() throws {
+        for href in ["http://example.com", "https://example.com", "mailto:a@example.com", "file:///Users/me/a.pdf"] {
+            let url = try XCTUnwrap(URL(string: href))
+            XCTAssertTrue(WebRendererView.Coordinator.isOpenableLinkURL(url), href)
+        }
+    }
+
+    /// linkClicked はページ上のどのスクリプトからも送れるので、アプリの URL scheme は開かない（#28）。
+    func test_isOpenableLinkURL_otherSchemes_areNotOpened() throws {
+        for href in ["javascript:void(0)", "vscode://file/a", "x-apple.systempreferences:", "ftp://example.com"] {
+            let url = try XCTUnwrap(URL(string: href))
+            XCTAssertFalse(WebRendererView.Coordinator.isOpenableLinkURL(url), href)
+        }
+    }
+
     // MARK: - RendererWebView
 
     /// HSplitView sends a zero-height frame on every live-resize step; applying
@@ -292,14 +309,11 @@ final class RendererScriptTests: XCTestCase {
         // Act
         let html = try await render("Text.[^1]\n\n[^1]: The note.\n")
 
-        // Assert
-        XCTAssertTrue(
-            html
-                .contains(
-                    ##"<sup class="footnote-ref"><a href="#fn:1" id="fnref:1" data-footnote-ref="">1</a></sup>"##
-                ),
-            html
-        )
+        // Assert（サニタイズで属性の並びが変わるので、DOM で確かめる）
+        let ref = try await evaluate(
+            ##"return document.querySelector('sup.footnote-ref > a[href="#fn:1"][id="fnref:1"][data-footnote-ref]')?.textContent ?? null;"##
+        ) as? String
+        XCTAssertEqual(ref, "1", html)
         XCTAssertTrue(html.contains(#"<li id="fn:1">"#))
         XCTAssertTrue(html.contains("The note."))
         XCTAssertTrue(html.contains(##"href="#fnref:1""##))
@@ -606,7 +620,10 @@ final class RendererScriptTests: XCTestCase {
             let html = try await render(markdown)
 
             // Assert
-            XCTAssertTrue(html.contains(##"<a href="#fn:1" id="fnref:1""##), html)
+            let hasRef = try await evaluate(
+                ##"return document.querySelector('a[href="#fn:1"][id="fnref:1"]') !== null;"##
+            ) as? Bool
+            XCTAssertEqual(hasRef, true, html)
             XCTAssertTrue(html.contains(#"<li id="fn:1">"#), html)
             XCTAssertFalse(html.contains("[^1]"), html)
         }
@@ -785,6 +802,111 @@ final class RendererScriptTests: XCTestCase {
                 "return document.querySelector('mark.mdviewer-search-hit').closest('svg') !== null;"
             ) as? Bool
         XCTAssertEqual(insideSVG, true)
+    }
+
+    // MARK: Sanitize（#28）
+
+    /// 文書に書かれた HTML のイベントハンドラは DOM に入らず、実行もされない。
+    func test_sanitize_eventHandlerInRawHTML_isRemovedAndNotRun() async throws {
+        // Act
+        let html = try await render("text\n\n<img src=\"missing.png\" onerror=\"window.__mdvRan = true\">\n")
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        // Assert
+        XCTAssertFalse(html.contains("onerror"))
+        XCTAssertTrue(html.contains("<img"))
+        let ran = try await evaluate("return window.__mdvRan === true;") as? Bool
+        XCTAssertEqual(ran, false)
+    }
+
+    func test_sanitize_scriptTag_isRemovedAndNotRun() async throws {
+        // Act
+        let html = try await render("<script>window.__mdvRan = true</script>\n\ntext")
+
+        // Assert
+        XCTAssertFalse(html.contains("<script"))
+        let ran = try await evaluate("return window.__mdvRan === true;") as? Bool
+        XCTAssertEqual(ran, false)
+    }
+
+    func test_sanitize_javascriptLink_losesHref() async throws {
+        // Act
+        let html = try await render("[a](javascript:void(0)) <a href=\"vscode://file/a\">b</a>")
+
+        // Assert
+        XCTAssertFalse(html.contains("javascript:"))
+        XCTAssertFalse(html.contains("vscode:"))
+    }
+
+    func test_sanitize_keepsLinksImagesAndMarkup() async throws {
+        // Act
+        let html = try await render(
+            "## Title\n\n[rel](other.md) [abs](file:///Users/me/a.pdf) [web](https://example.com) "
+                + "<a href=\"mailto:a@example.com\">mail</a>\n\n![img](pic.png)\n\n"
+                + "<details><summary>more</summary>body</details>\n\n- [x] done\n"
+        )
+
+        // Assert
+        XCTAssertTrue(html.contains("id=\"title\""))
+        XCTAssertTrue(html.contains("href=\"other.md\""))
+        XCTAssertTrue(html.contains("href=\"file:///Users/me/a.pdf\""))
+        XCTAssertTrue(html.contains("href=\"https://example.com\""))
+        XCTAssertTrue(html.contains("href=\"mailto:a@example.com\""))
+        XCTAssertTrue(html.contains("<details>"))
+        XCTAssertTrue(html.contains("type=\"checkbox\""))
+    }
+
+    func test_sanitize_keepsMathAndCopyButton() async throws {
+        // Act
+        let html = try await render("$x^2$\n\n```swift\nlet a = 1\n```\n")
+
+        // Assert
+        XCTAssertTrue(html.contains("class=\"katex\""))
+        XCTAssertTrue(html.contains("code-copy-button"))
+    }
+
+    /// strict では、図のラベルに書いた HTML のイベントハンドラは動かない。
+    func test_mermaid_htmlInLabel_isNotRun() async throws {
+        // Act
+        try await render("```mermaid\ngraph TD\n  A[\"<img src=missing.png onerror=window.__mdvRan=true>\"] --> B\n```")
+        try await waitUntil("document.querySelector('.mermaid svg') !== null")
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        // Assert
+        let ran = try await evaluate("return window.__mdvRan === true;") as? Bool
+        XCTAssertEqual(ran, false)
+        let svg = try await evaluate("return document.querySelector('.mermaid svg').outerHTML;") as? String
+        XCTAssertFalse(try XCTUnwrap(svg).contains("onerror"))
+    }
+
+    /// サニタイズをすり抜けたインラインの script も、CSP が実行させない。
+    func test_csp_blocksInlineScript() async throws {
+        // Act
+        let ran = try await evaluate("""
+        const s = document.createElement('script');
+        s.textContent = 'window.__mdvRan = true';
+        document.body.appendChild(s);
+        await new Promise(function (r) { setTimeout(r, 100); });
+        return window.__mdvRan === true;
+        """) as? Bool
+
+        // Assert
+        XCTAssertEqual(ran, false)
+    }
+
+    /// CSP は外への通信を止める。
+    func test_csp_blocksNetworkRequests() async throws {
+        // Act
+        let directive = try await evaluate("""
+        const violation = new Promise(function (r) {
+            document.addEventListener('securitypolicyviolation', function (e) { r(e.effectiveDirective); }, { once: true });
+        });
+        fetch('http://127.0.0.1:9/').catch(function () {});
+        return await Promise.race([violation, new Promise(function (r) { setTimeout(function () { r('none'); }, 2000); })]);
+        """) as? String
+
+        // Assert
+        XCTAssertEqual(directive, "connect-src")
     }
 }
 

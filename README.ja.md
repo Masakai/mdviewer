@@ -76,6 +76,7 @@ open MDViewer.xcodeproj
 | UI フレームワーク | SwiftUI + AppKit |
 | レンダリングエンジン | WKWebView |
 | Markdown パーサー | [marked](https://github.com/markedjs/marked) v12 |
+| HTML サニタイザ | [DOMPurify](https://github.com/cure53/DOMPurify) v3 |
 | シンタックスハイライト | [Shiki](https://github.com/shikijs/shiki) v1 |
 | 数式 | [KaTeX](https://github.com/KaTeX/KaTeX) v0.18 |
 | 図 | [Mermaid](https://github.com/mermaid-js/mermaid) v12 |
@@ -83,7 +84,7 @@ open MDViewer.xcodeproj
 
 ## オープンソースライブラリ
 
-下表のライブラリは MIT ライセンスです。Mermaid の単一ファイル版には Mermaid 自身の依存ライブラリも含まれており、その一部は MIT 以外のライセンス（Apache-2.0、EPL-2.0、ISC、BSD-3-Clause）です。ライセンス全文は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
+下表のライブラリは、DOMPurify（Apache-2.0 と MPL-2.0 のデュアルライセンスで、Apache-2.0 を選択）を除き MIT ライセンスです。Mermaid の単一ファイル版には Mermaid 自身の依存ライブラリも含まれており、その一部は MIT 以外のライセンス（Apache-2.0、EPL-2.0、ISC、BSD-3-Clause）です。ライセンス全文は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
 
 | ライブラリ | バージョン | ライセンス |
 |-----------|-----------|-----------|
@@ -92,6 +93,7 @@ open MDViewer.xcodeproj
 | KaTeX | 0.18.9 | MIT |
 | Mermaid | 12.0.0 | MIT |
 | gemoji（絵文字の対応表） | 4.1.0 | MIT |
+| DOMPurify | 3.4.17 | Apache-2.0 |
 
 ## ライセンス
 

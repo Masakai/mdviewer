@@ -21,8 +21,30 @@
         mermaid.initialize({
             startOnLoad: false,
             theme: 'default',
-            securityLevel: 'loose'
+            securityLevel: 'strict'
         });
+    }
+
+    // 文書に書かれた HTML は marked がそのまま通すので、DOM に入れる前に
+    // script・イベントハンドラ・javascript: などの URL を取り除く。リンクの
+    // scheme は Swift 側で開くもの（http・https・mailto・file）と相対パスに限る。
+    const ALLOWED_URI = /^(?:(?:https?|mailto|file):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
+
+    // DOMPurify は document のプロパティと同じ名前の id（"title" や "images"）を
+    // 消すが、それでは「## Title」の見出しへのリンクが切れる。id では document の
+    // プロパティは上書きされない（されるのは img・form などの name）ので、id は残す。
+    if (typeof DOMPurify !== 'undefined') {
+        DOMPurify.addHook('uponSanitizeAttribute', function (_, data) {
+            if (data.attrName === 'id') { data.forceKeepAttr = true; }
+        });
+    }
+
+    function sanitizeHTML(html) {
+        // サニタイザが読めていなければ、HTML として描かずに文字として見せる
+        if (typeof DOMPurify === 'undefined') {
+            return `<pre>${escapeHtml(html)}</pre>`;
+        }
+        return DOMPurify.sanitize(html, { ALLOWED_URI_REGEXP: ALLOWED_URI });
     }
 
     function slugify(text) {
@@ -527,9 +549,10 @@
             markedExtensions.unshift(createFootnoteExtension());
         }
         const markdownParser = new marked.Marked(...markedExtensions);
-        let html = markdownParser.parse(processed, { renderer: renderer });
+        let html = sanitizeHTML(markdownParser.parse(processed, { renderer: renderer }));
 
-        // Restore math
+        // Restore math. KaTeX の出力はサニタイズの後に戻す（数式の文字列は
+        // KaTeX がエスケープするので、ここで入る HTML は KaTeX が作ったものだけ）。
         if (typeof katex !== 'undefined') {
             mathBlocks.forEach(function (m, i) {
                 const blockPh = new RegExp(`MATHBLOCK_${i}_END`, 'g');
@@ -797,7 +820,7 @@
                 mermaid.initialize({
                     startOnLoad: false,
                     theme: isDark ? 'dark' : 'default',
-                    securityLevel: 'loose'
+                    securityLevel: 'strict'
                 });
             }
         },
