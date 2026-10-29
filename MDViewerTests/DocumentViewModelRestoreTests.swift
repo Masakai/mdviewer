@@ -3,6 +3,7 @@ import XCTest
 
 @MainActor
 final class DocumentViewModelRestoreTests: XCTestCase {
+    /// 復元一覧と設定の保存先。設定も渡さないと、利用者が「起動時に復元」をオフにしたときに復元のテストが落ちる
     var defaults: UserDefaults!
     var suiteName: String!
     var tempDir: URL!
@@ -32,7 +33,7 @@ final class DocumentViewModelRestoreTests: XCTestCase {
     private func makeRelaunchedViewModel(previouslyOpen urls: [URL]) -> DocumentViewModel {
         let previous = OpenDocumentStore(defaults: defaults)
         urls.forEach { previous.add(url: $0) }
-        return DocumentViewModel(openDocumentStore: OpenDocumentStore(defaults: defaults))
+        return DocumentViewModel(openDocumentStore: OpenDocumentStore(defaults: defaults), settings: defaults)
     }
 
     private func collectOpenInWindowURLs(_ body: () -> Void) -> [URL] {
@@ -49,7 +50,7 @@ final class DocumentViewModelRestoreTests: XCTestCase {
 
     func test_load_recordsFileForNextLaunch() throws {
         let url = try makeFile("a.md")
-        let sut = DocumentViewModel(openDocumentStore: OpenDocumentStore(defaults: defaults))
+        let sut = DocumentViewModel(openDocumentStore: OpenDocumentStore(defaults: defaults), settings: defaults)
 
         sut.load(url: url)
 
@@ -117,8 +118,8 @@ final class DocumentViewModelRestoreTests: XCTestCase {
         let store = OpenDocumentStore(defaults: defaults)
         store.add(url: a)
         let launchStore = OpenDocumentStore(defaults: defaults)
-        let first = DocumentViewModel(openDocumentStore: launchStore)
-        let second = DocumentViewModel(openDocumentStore: launchStore)
+        let first = DocumentViewModel(openDocumentStore: launchStore, settings: defaults)
+        let second = DocumentViewModel(openDocumentStore: launchStore, settings: defaults)
 
         first.restoreLastOpened()
         second.restoreLastOpened()
