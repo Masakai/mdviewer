@@ -495,3 +495,4 @@ timeline
 - **Table of contents**: the sidebar (⌘⇧S) lists headings from the current document — including this one.
 - **Theme**: pick a light or dark syntax theme from the toolbar palette icon.
 - **Export**: render this or any document to PDF or HTML from the Export menu.
+- **Updates**: Help > Check for Updates… asks GitHub for the latest release and tells you whether a newer version is out. If there is one, Open Release Page takes you to the download. MDViewer only connects when you choose the menu item, and it does not install updates itself.

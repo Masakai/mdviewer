@@ -81,3 +81,13 @@
 "preview_crash_loop_message" = "プレビューが繰り返しクラッシュしたためリセットしました。プレビュー上部の［再試行］から再表示できます。";
 "preview_interrupted_message" = "プレビューが繰り返しクラッシュしたため中断しています。";
 "preview_try_again_button" = "再試行";
+
+/* Check for Updates */
+"update_available_title" = "MDViewer %@ が公開されています";
+"update_available_message" = "お使いの版は %@ です。新しい版はリリースページからダウンロードできます。";
+"update_open_release_page_button" = "リリースページを開く";
+"update_later_button" = "あとで";
+"up_to_date_title" = "最新の版をお使いです";
+"up_to_date_message" = "MDViewer %@ が最新の版です。";
+"update_check_failed_title" = "アップデートを確認できませんでした";
+"update_check_failed_message" = "ネットワークの接続を確かめるか、リリースページで最新の版を確認してください。";

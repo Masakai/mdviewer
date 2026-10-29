@@ -81,3 +81,13 @@
 "preview_crash_loop_message" = "The preview kept crashing and was reset. Use Try Again above the preview to render it again.";
 "preview_interrupted_message" = "The preview was interrupted after crashing repeatedly.";
 "preview_try_again_button" = "Try Again";
+
+/* Check for Updates */
+"update_available_title" = "MDViewer %@ is available";
+"update_available_message" = "You have version %@. Download the new version from the release page.";
+"update_open_release_page_button" = "Open Release Page";
+"update_later_button" = "Later";
+"up_to_date_title" = "You're up to date";
+"up_to_date_message" = "MDViewer %@ is the latest version.";
+"update_check_failed_title" = "Couldn't check for updates";
+"update_check_failed_message" = "Check your network connection, or see the release page for the latest version.";

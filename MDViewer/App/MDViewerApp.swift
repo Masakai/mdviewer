@@ -4,7 +4,6 @@ import SwiftUI
 struct MDViewerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.openURL) private var openURL
 
     var body: some Scene {
         WindowGroup {
@@ -21,10 +20,8 @@ struct MDViewerApp: App {
                 }
 
                 Button("Check for Updates…") {
-                    // 自動更新はせず、リリースページを既定のブラウザで開くだけにする
-                    if let url = URL(string: "https://github.com/Masakai/mdviewer/releases") {
-                        openURL(url)
-                    }
+                    // GitHub の最新リリースと比べて知らせる。入れ替えはせず、リリースページを開けるようにするだけ
+                    Task { await UpdateChecker.shared.checkForUpdates() }
                 }
             }
 

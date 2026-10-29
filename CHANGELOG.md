@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Help > Check for Updates… now tells you whether a newer version is out. It asks GitHub for the latest release and compares it with the version you have: if there is a newer one, it shows its version number with an Open Release Page button; otherwise it says you are up to date. If the check fails, you can still open the release page. MDViewer only connects when you choose the menu item, and it does not download or install updates. Before, the menu item only opened the release page.
+
 ## [1.10.0] — 2026-10-29
 
 ### Added
