@@ -46,11 +46,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         OpenDocumentStore.shared.isTerminating = true
     }
 
+    /// 最後の文書を閉じたあとにウェルカム画面を出すか。オフなら、ウィンドウを出さずに起動し続ける。既定はオン
+    static let showsWelcomeAfterLastCloseKey = "showWelcomeAfterLastDocumentClosed"
+
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
-        // 最後のドキュメントを閉じただけでは終了せず、ウェルカム画面を出す。ウェルカム画面を閉じたら終了する
-        guard !OpenDocumentStore.shared.isTerminating, closeTracker.consumeForLastWindowClosed() else { return true }
-        openWelcomeWindow()
-        return false
+        let defaults = UserDefaults.standard
+        let action = LastWindowClosedAction.decide(
+            isTerminating: OpenDocumentStore.shared.isTerminating,
+            closedDocument: closeTracker.consumeForLastWindowClosed(),
+            // 起動引数（-showWelcomeAfterLastDocumentClosed NO など）では文字列で入るので、bool(forKey:) で読む
+            showsWelcome: defaults.object(forKey: Self.showsWelcomeAfterLastCloseKey) == nil
+                || defaults.bool(forKey: Self.showsWelcomeAfterLastCloseKey)
+        )
+        switch action {
+        case .showWelcome:
+            openWelcomeWindow()
+            return false
+        case .keepRunning:
+            return false
+        case .quit:
+            return true
+        }
     }
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -220,6 +236,27 @@ struct DocumentCloseTracker {
     mutating func consumeForLastWindowClosed() -> Bool {
         defer { closedWindowHadDocument = false }
         return closedWindowHadDocument
+    }
+}
+
+/// 最後のウィンドウを閉じたあとにすること。
+enum LastWindowClosedAction: Equatable {
+    /// ウェルカム画面を開く（#13）
+    case showWelcome
+    /// ウィンドウを出さずに起動し続ける。ほかの Mac のアプリと同じ動き
+    case keepRunning
+    case quit
+
+    /// - Parameters:
+    ///   - isTerminating: ⌘Q などで終了処理中か。終了に伴うウィンドウ閉鎖では何も出さない
+    ///   - closedDocument: 一連のクローズで文書のウィンドウを閉じたか（DocumentCloseTracker）
+    ///   - showsWelcome: 最後の文書を閉じたあとにウェルカム画面を出す設定か
+    static func decide(isTerminating: Bool, closedDocument: Bool, showsWelcome: Bool) -> Self {
+        if isTerminating { return .quit }
+        // ウェルカム画面を出さない設定では、ウェルカム画面を閉じたときも終了しない
+        guard showsWelcome else { return .keepRunning }
+        // ウェルカム画面そのものを閉じたときは、これまでどおり終了する
+        return closedDocument ? .showWelcome : .quit
     }
 }
 

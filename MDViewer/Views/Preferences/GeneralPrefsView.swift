@@ -3,6 +3,7 @@ import SwiftUI
 struct GeneralPrefsView: View {
     @AppStorage(DocumentViewModel.restoreOnLaunchKey) private var restoreLastFile: Bool = true
     @AppStorage(DocumentViewModel.autoReloadKey) private var autoReload: Bool = true
+    @AppStorage(AppDelegate.showsWelcomeAfterLastCloseKey) private var showsWelcomeAfterLastClose: Bool = true
     @AppStorage("pdfPageSize") private var pdfPageSizeRaw: String = PDFPageSize.a4.rawValue
     @AppStorage(RenderViewModel.mathBracketDelimitersKey) private var mathBracketDelimiters: Bool = false
 
@@ -11,6 +12,10 @@ struct GeneralPrefsView: View {
             Section {
                 Toggle("Reopen documents from last time on launch", isOn: $restoreLastFile)
                 Toggle("Auto-reload file when changed on disk", isOn: $autoReload)
+                Toggle("Show the welcome window after closing the last document", isOn: $showsWelcomeAfterLastClose)
+                Text("When off, MDViewer keeps running without a window. Open files from the File menu or the Dock.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("PDF") {

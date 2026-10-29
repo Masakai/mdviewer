@@ -61,6 +61,8 @@
 "Heading Font" = "Heading Font";
 "System" = "System";
 "Same as Body" = "Same as Body";
+"Show the welcome window after closing the last document" = "Show the welcome window after closing the last document";
+"When off, MDViewer keeps running without a window. Open files from the File menu or the Dock." = "When off, MDViewer keeps running without a window. Open files from the File menu or the Dock.";
 "Math" = "Math";
 "Treat \\( \\) and \\[ \\] as math delimiters" = "Treat \\( \\) and \\[ \\] as math delimiters";
 "When on, paired \\( \\) and \\[ \\] are shown as math, not brackets." = "When on, paired \\( \\) and \\[ \\] are shown as math, not brackets.";
