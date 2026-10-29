@@ -1,0 +1,60 @@
+name: "CodeQL"
+
+# 既定セットアップでは Swift を -target で自動ビルドするため、Swift Package（swift-markdown）が
+# 解決できずに失敗する。Swift だけは -scheme を指定して手動でビルドする。
+on:
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
+    schedule:
+        - cron: "17 3 * * 1"
+
+jobs:
+    analyze:
+        name: Analyze (${{ matrix.language }})
+        runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+        permissions:
+            security-events: write
+            packages: read
+            actions: read
+            contents: read
+
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - language: javascript-typescript
+                      build-mode: none
+                    - language: swift
+                      build-mode: manual
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v6
+
+            - name: Initialize CodeQL
+              uses: github/codeql-action/init@v4
+              with:
+                  languages: ${{ matrix.language }}
+                  build-mode: ${{ matrix.build-mode }}
+
+            # CodeQL の自動ビルドと同じく、署名とコンパイルキャッシュを切ってビルドする
+            - name: Build (Swift)
+              if: matrix.build-mode == 'manual'
+              run: |
+                  xcodebuild build \
+                      -project MDViewer.xcodeproj \
+                      -scheme MDViewer \
+                      -configuration Debug \
+                      -destination 'platform=macOS' \
+                      CODE_SIGNING_REQUIRED=NO \
+                      CODE_SIGNING_ALLOWED=NO \
+                      COMPILATION_CACHE_ENABLE_CACHING=NO \
+                      SWIFT_ENABLE_COMPILE_CACHE=NO \
+                      SWIFT_USE_INTEGRATED_DRIVER=NO
+
+            - name: Perform CodeQL Analysis
+              uses: github/codeql-action/analyze@v4
+              with:
+                  category: "/language:${{ matrix.language }}"
