@@ -146,6 +146,7 @@ extension Notification.Name {
     static let exportHTML = Notification.Name("MDViewer.exportHTML")
     static let pdfPageSizeChanged = Notification.Name("MDViewer.pdfPageSizeChanged")
     static let previewFontsChanged = Notification.Name("MDViewer.previewFontsChanged")
+    static let mathOptionsChanged = Notification.Name("MDViewer.mathOptionsChanged")
     /// object にテーマの id を載せる。
     static let previewThemeChanged = Notification.Name("MDViewer.previewThemeChanged")
     /// object に文字サイズ（Double）を載せる。設定のスライダーを操作したときだけ送る。

@@ -61,6 +61,9 @@
 "Heading Font" = "見出しフォント";
 "System" = "システム";
 "Same as Body" = "本文と同じ";
+"Math" = "数式";
+"Treat \\( \\) and \\[ \\] as math delimiters" = "\\( \\) と \\[ \\] を数式の区切りとして扱う";
+"When on, paired \\( \\) and \\[ \\] are shown as math, not brackets." = "オンにすると、対になった \\( \\) と \\[ \\] は括弧ではなく数式として表示します。";
 
 /* Alerts */
 "Error" = "エラー";

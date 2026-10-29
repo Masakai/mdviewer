@@ -887,6 +887,169 @@ final class RendererScriptTests: XCTestCase {
         XCTAssertTrue(html.contains("code-copy-button"))
     }
 
+    // MARK: 数式の区切り \(...\) と \[...\]（#31）
+
+    private func enableBracketDelimiters() async throws {
+        _ = try await evaluate("MDViewer.setMathOptions({ bracketDelimiters: true })")
+    }
+
+    /// KaTeX が読み上げ用に残す TeX の原文。数式の中身が Markdown に書き換えられていないかを見る。
+    private func texAnnotations(_ html: String) -> [String] {
+        let pattern = #"<annotation encoding="application/x-tex">([\s\S]*?)</annotation>"#
+        let regex = try! NSRegularExpression(pattern: pattern)
+        return regex.matches(in: html, range: NSRange(html.startIndex..., in: html)).compactMap {
+            Range($0.range(at: 1), in: html).map { String(html[$0]) }
+        }
+    }
+
+    /// 既定ではオフで、\( と \[ はこれまでどおり括弧のエスケープになる。
+    func test_mathBrackets_default_staysEscapedBrackets() async throws {
+        // Act
+        let html = try await render("Let \\(x\\) be \\[注意\\] and a\\[0\\].")
+
+        // Assert
+        XCTAssertEqual(html, "<p>Let (x) be [注意] and a[0].</p>\n")
+    }
+
+    /// issue #31 の再現例。インラインの2つとディスプレイの1つがすべて数式になる。
+    func test_mathBrackets_enabled_issueExample_rendersAllThree() async throws {
+        // Arrange
+        try await enableBracketDelimiters()
+
+        // Act
+        let html = try await render("Let \\(x\\) belong to \\(\\mathbb{R}\\).\n\n\\[\na_i + b_j = \\frac{1}{2}\n\\]\n")
+
+        // Assert
+        XCTAssertEqual(texAnnotations(html), ["x", "\\mathbb{R}", "a_i + b_j = \\frac{1}{2}"], html)
+        XCTAssertEqual(html.components(separatedBy: "class=\"katex-display\"").count - 1, 1, html)
+        XCTAssertFalse(html.contains("(x)") || html.contains("\\("), html)
+    }
+
+    /// `_` `*` `\{` `\\` が強調やエスケープとして解釈されず、そのまま KaTeX に渡る。
+    func test_mathBrackets_enabled_markdownSensitiveCharacters_reachKaTeXIntact() async throws {
+        // Arrange
+        try await enableBracketDelimiters()
+        let display = "\\begin{aligned} a &= 1 \\\\ b &= 2 \\end{aligned}"
+
+        // Act
+        let html = try await render(
+            "\\(\\hat{x}_{i} - \\bar{y}_{j}\\) and \\(x^{*} + y^{*}\\) and \\(\\{x \\mid x > 0\\}\\)\n\n\\[\n\(display)\n\\]"
+        )
+
+        // Assert
+        XCTAssertEqual(
+            texAnnotations(html),
+            [
+                "\\hat{x}_{i} - \\bar{y}_{j}",
+                "x^{*} + y^{*}",
+                "\\{x \\mid x &gt; 0\\}",
+                display.replacingOccurrences(of: "&", with: "&amp;"),
+            ],
+            html
+        )
+        XCTAssertFalse(html.contains("<em>"), html)
+    }
+
+    /// `\\(` は「\ の後に (」なので数式にしない。
+    func test_mathBrackets_enabled_escapedBackslash_staysText() async throws {
+        // Arrange
+        try await enableBracketDelimiters()
+
+        // Act
+        let html = try await render("\\\\(x\\\\) and \\\\[y\\\\]")
+
+        // Assert
+        XCTAssertEqual(html, "<p>\\(x\\) and \\[y\\]</p>\n")
+    }
+
+    /// 空行をまたぐ \[ … \] は対にしない。閉じていない \[ は括弧のエスケープのまま。
+    func test_mathBrackets_enabled_acrossBlankLine_staysEscapedBrackets() async throws {
+        // Arrange
+        try await enableBracketDelimiters()
+
+        // Act
+        let html = try await render("\\[注意\n\nnext\\]")
+
+        // Assert
+        XCTAssertEqual(html, "<p>[注意</p>\n<p>next]</p>\n")
+    }
+
+    /// コードスパンとフェンスのコードブロックの中は数式にしない。
+    func test_mathBrackets_enabled_insideCodeSpanAndFence_staysLiteral() async throws {
+        // Arrange
+        try await enableBracketDelimiters()
+
+        // Act
+        let html = try await render("`\\(x\\)` text\n\n```\ngrep '\\[a\\]' f\n```\n")
+
+        // Assert
+        XCTAssertTrue(html.contains("<code>\\(x\\)</code>"), html)
+        XCTAssertTrue(html.contains("grep"), html)
+        XCTAssertTrue(html.contains("\\[a\\]"), html)
+        XCTAssertFalse(html.contains("katex"), html)
+    }
+
+    /// インデントで書いたコードブロックの中も数式にしない。$ の区切りも同じ（#31 で直した）。
+    func test_math_insideIndentedCodeBlock_staysLiteral() async throws {
+        // Arrange
+        try await enableBracketDelimiters()
+
+        // Act
+        let html = try await render("text\n\n    echo $x$y \\(a\\)\n")
+
+        // Assert
+        XCTAssertTrue(html.contains("echo $x$y \\(a\\)"), html)
+        XCTAssertFalse(html.contains("katex") || html.contains("MATH"), html)
+    }
+
+    /// 閉じていない \[ と \( が多い長い1段落でも、開き記号ごとに段落の残り全体を探さない。
+    /// 次の開き記号で探すのをやめる前は、この 174KB の区切りの判定だけで約 5.3 秒かかった（node で計測）。
+    func test_mathBrackets_enabled_longParagraphWithUnclosedOpeners_finishesWithinLinearTime() async throws {
+        // Arrange
+        try await enableBracketDelimiters()
+        let markdown = (0 ..< 10000).map { i in "a\\[\(i)] f\\(\(i)) " }.joined()
+
+        // Act
+        let elapsed = try await renderMilliseconds(markdown)
+
+        // Assert
+        XCTAssertLessThan(elapsed, 1000, "\(markdown.utf8.count / 1024)KB の1段落の描画に \(Int(elapsed))ms")
+    }
+
+    /// ヘルプで区切りの設定を説明する段落は、設定がオンでもオフでも区切りを文字のまま見せる。
+    func test_help_mathBracketParagraph_showsDelimitersAsText() async throws {
+        let helpDir = try XCTUnwrap(HTMLBuilder.webResourcesDirectory()).appendingPathComponent("help")
+        for language in ["en", "ja"] {
+            // Arrange
+            let help = try String(contentsOf: helpDir.appendingPathComponent("help.\(language).md"), encoding: .utf8)
+            let paragraph = try XCTUnwrap(
+                help.components(separatedBy: "\n").first { $0.contains("`\\(` `\\)`") },
+                "help.\(language).md"
+            )
+            for enabled in [false, true] {
+                _ = try await evaluate("MDViewer.setMathOptions({ bracketDelimiters: \(enabled) })")
+
+                // Act
+                let html = try await render(paragraph)
+
+                // Assert
+                XCTAssertFalse(html.contains("katex"), "\(language) \(enabled): \(html)")
+                XCTAssertTrue(html.contains("<code>\\(</code> <code>\\)</code>"), "\(language) \(enabled): \(html)")
+                XCTAssertTrue(html.contains("<code>\\\\(</code>"), "\(language) \(enabled): \(html)")
+            }
+        }
+    }
+
+    /// $ と $$ の区切りでも、`_` `*` `\\` がそのまま KaTeX に渡る。
+    func test_mathDollars_markdownSensitiveCharacters_reachKaTeXIntact() async throws {
+        // Act
+        let html = try await render("$\\hat{x}_{i} - \\bar{y}_{j}$ and $x^{*} + y^{*}$\n\n$$\na \\\\ b\n$$")
+
+        // Assert
+        XCTAssertEqual(texAnnotations(html), ["\\hat{x}_{i} - \\bar{y}_{j}", "x^{*} + y^{*}", "a \\\\ b"], html)
+        XCTAssertFalse(html.contains("<em>"), html)
+    }
+
     /// strict では、図のラベルに書いた HTML のイベントハンドラは動かない。
     func test_mermaid_htmlInLabel_isNotRun() async throws {
         // Act

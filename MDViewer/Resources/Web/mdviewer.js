@@ -126,6 +126,10 @@
     // mdviewer-local:// custom scheme. Set by Swift through setBaseURL().
     let localBaseURL = null;
 
+    // \(...\) と \[...\] を数式として扱うか。Markdown では \( と \[ は括弧の
+    // エスケープなので既定はオフ。Swift が setMathOptions() で設定の値を渡す（#31）。
+    let mathBracketDelimiters = false;
+
     // Rewrite relative image sources (and other local resources) to the
     // mdviewer-local:// scheme so the Swift scheme handler can serve them.
     // Absolute URLs (http, https, data, file, the scheme itself) are left alone.
@@ -485,7 +489,12 @@
             }
         };
 
+        // インデントで書いたコードブロックは下の退避より先に見分けられないので、
+        // 数式として取り出した部分があれば元の文字列に戻す。
         renderer.code = function (code, lang) {
+            code = code.replace(/MATH(?:BLOCK|INLINE)_(\d+)_END/g, function (_, i) {
+                return mathBlocks[Number(i)].raw;
+            });
             if (lang === 'mermaid') {
                 return `<div class="mermaid">${escapeHtml(code)}</div>`;
             }
@@ -509,8 +518,28 @@
 
         // Set escapes aside too, so `\$` is a literal dollar sign. `\\` is
         // taken first in the same pass, so in `\\$` the `$` still opens math.
+        //
+        // \[...\] and \(...\) are taken in the same pass, for the same reason:
+        // `\\[` is a backslash followed by `[`, not display math. Inside,
+        // a backslash and the character after it are read as one unit, so
+        // `\\)` does not close. A blank line ends the search, since TeX does
+        // not allow one in math either; an unclosed `\[` stays an escape.
+        // The search also ends at the next opener of the same kind, so a long
+        // paragraph full of unclosed `\[` is scanned once, not once per `\[`.
         const escapeParts = [];
-        processed = processed.replace(/\\[\\$]/g, function (esc) {
+        const escapePattern = mathBracketDelimiters
+            ? /\\\\|\\\$|\\\[((?:\\[^[\n]|[^\\\n]|\\?\n(?![ \t]*\n))+?)\\\]|\\\(((?:\\[^(\n]|[^\\\n]|\\?\n(?![ \t]*\n))+?)\\\)/g
+            : /\\[\\$]/g;
+        // オフのときの正規表現にはグループがなく、2つ目以降の引数は一致した位置と全文になる
+        processed = processed.replace(escapePattern, function (esc, display, inline) {
+            if (mathBracketDelimiters && display !== undefined) {
+                mathBlocks.push({ type: 'block', expr: display.trim(), raw: esc });
+                return `MATHBLOCK_${mathBlocks.length - 1}_END`;
+            }
+            if (mathBracketDelimiters && inline !== undefined) {
+                mathBlocks.push({ type: 'inline', expr: inline, raw: esc });
+                return `MATHINLINE_${mathBlocks.length - 1}_END`;
+            }
             escapeParts.push(esc);
             return `MDESC_${escapeParts.length - 1}_END`;
         });
@@ -520,18 +549,18 @@
             });
         };
 
-        processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (_, expr) {
+        processed = processed.replace(/\$\$([^$]+?)\$\$/gs, function (raw, expr) {
             const placeholder = `MATHBLOCK_${mathBlocks.length}_END`;
-            mathBlocks.push({ type: 'block', expr: restoreEscapes(expr.trim()) });
+            mathBlocks.push({ type: 'block', expr: restoreEscapes(expr.trim()), raw: restoreEscapes(raw) });
             return placeholder;
         });
 
         // Pandoc's rule for inline math: the opening `$` is followed by a
         // non-space, the closing `$` is preceded by a non-space and not
         // followed by a digit. Prices such as `$7,463 and $356` stay text.
-        processed = processed.replace(/\$(?=[^\s$])([^$\n]*?[^\s$])\$(?!\d)/g, function (_, expr) {
+        processed = processed.replace(/\$(?=[^\s$])([^$\n]*?[^\s$])\$(?!\d)/g, function (raw, expr) {
             const placeholder = `MATHINLINE_${mathBlocks.length}_END`;
-            mathBlocks.push({ type: 'inline', expr: restoreEscapes(expr) });
+            mathBlocks.push({ type: 'inline', expr: restoreEscapes(expr), raw: restoreEscapes(raw) });
             return placeholder;
         });
 
@@ -835,6 +864,11 @@
 
         setFontSize: function (size) {
             document.documentElement.style.setProperty('--font-size', size + 'px');
+        },
+
+        // 次の setContent から効く。描画し直すのは Swift 側。
+        setMathOptions: function (options) {
+            mathBracketDelimiters = options.bracketDelimiters === true;
         },
 
         scrollToAnchor: function (anchorId) {

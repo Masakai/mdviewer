@@ -18,7 +18,7 @@ MDViewer は、ターミナルから Claude Code や Codex などのツールを
 - **シンタックスハイライト** — [Shiki v1](https://github.com/shikijs/shiki) による 27 言語対応
 - **コードブロックのコピーボタン** — コードブロックにマウスを重ねると表示されます
 - **テーマとフォント** — 6種類のテーマに加え、本文・見出し・コードのフォントをそれぞれ選べます（設定 > Appearance）
-- **数式表示** — [KaTeX](https://github.com/KaTeX/KaTeX) によるインライン・ブロック LaTeX
+- **数式表示** — [KaTeX](https://github.com/KaTeX/KaTeX) によるインライン・ブロック LaTeX。`$...$` と `$$...$$` で書きます。`\(...\)` と `\[...\]` は設定 > General でオンにできます
 - **Mermaid 図** — フローチャート、シーケンス図、ガントチャートなど
 - **脚注** — GitHub と同じ `[^1]` 記法。文書の末尾に一覧で表示し、本文へ戻るリンクを付けます
 - **絵文字ショートコード** — `:smile:` など、GitHub のショートコードのうち Unicode の絵文字のものをすべて絵文字で表示（対応表は [gemoji](https://github.com/github/gemoji)。`:octocat:` のような GitHub 独自の画像の絵文字は対象外）

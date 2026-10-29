@@ -736,6 +736,32 @@ final class RenderViewModelTests: XCTestCase {
         )
     }
 
+    // MARK: - 数式の区切り（#31）
+
+    /// 保存された値がなければオフ。\[ を括弧のエスケープとして書いた文書の表示を変えないため
+    func test_mathBracketDelimiters_noSavedSetting_isOff() {
+        XCTAssertFalse(sut.mathBracketDelimiters)
+    }
+
+    func test_mathBracketDelimiters_savedOn_isOn() {
+        // Arrange
+        defaults.set(true, forKey: RenderViewModel.mathBracketDelimitersKey)
+
+        // Act & Assert
+        XCTAssertTrue(sut.mathBracketDelimiters)
+    }
+
+    func test_setMathOptionsScript_passesFlag() {
+        XCTAssertEqual(
+            RenderViewModel.setMathOptionsScript(bracketDelimiters: true),
+            "MDViewer.setMathOptions({ bracketDelimiters: true })"
+        )
+        XCTAssertEqual(
+            RenderViewModel.setMathOptionsScript(bracketDelimiters: false),
+            "MDViewer.setMathOptions({ bracketDelimiters: false })"
+        )
+    }
+
     // MARK: - 設定画面のテーマ変更（#19）
 
     func test_previewThemeChanged_appliesThemeToOpenWindow() throws {

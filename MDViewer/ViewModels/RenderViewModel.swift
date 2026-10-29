@@ -38,12 +38,14 @@ final class RenderViewModel: ObservableObject {
     private var pendingSearch: Task<Void, Never>?
     private(set) var pendingSearchQuery: String?
 
-    /// テーマ・文字サイズ・PDF の用紙サイズの保存先。テストでは使い捨ての保存先を渡し、
+    /// テーマ・文字サイズ・PDF の用紙サイズ・数式の区切りの保存先。テストでは使い捨ての保存先を渡し、
     /// 利用者の設定（テストホストは本番と同じバンドルID）を書き換えないようにする。
     private let settings: UserDefaults
     private static let themeIdKey = "selectedThemeId"
     private static let fontSizeKey = "fontSize"
     private static let pdfPageSizeKey = "pdfPageSize"
+    /// \(...\) と \[...\] を数式として扱うか（#31）。既定はオフ
+    static let mathBracketDelimitersKey = "mathBracketDelimiters"
 
     weak var webView: WKWebView?
     weak var schemeHandler: LocalSchemeHandler?
@@ -104,6 +106,13 @@ final class RenderViewModel: ObservableObject {
             .publisher(for: .previewFontsChanged)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.applyFonts() }
+            .store(in: &cancellables)
+
+        // 設定画面で数式の区切りを切り替えたら、開いている文書を描画し直す
+        NotificationCenter.default
+            .publisher(for: .mathOptionsChanged)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.mathOptionsDidChange() }
             .store(in: &cancellables)
 
         // 設定画面でテーマを選んだら、開いているウィンドウにもすぐ反映する
@@ -315,6 +324,8 @@ final class RenderViewModel: ObservableObject {
         }
         applyCurrentThemeAndFontSize()
         applyPDFPageSize()
+        // 区切りの判定は setContent の中で行うので、内容より先に渡す
+        applyMathOptions()
 
         // Fall back to the base URL of the last render: the renderer can be
         // reloaded without anything pending — the context menu offers a native
@@ -454,6 +465,31 @@ final class RenderViewModel: ObservableObject {
 
     func applyFonts() {
         webView?.evaluateJavaScript(PreviewFont.setFontsScript(), completionHandler: nil)
+    }
+
+    var mathBracketDelimiters: Bool {
+        settings.bool(forKey: Self.mathBracketDelimitersKey)
+    }
+
+    static func setMathOptionsScript(bracketDelimiters: Bool) -> String {
+        "MDViewer.setMathOptions({ bracketDelimiters: \(bracketDelimiters) })"
+    }
+
+    func applyMathOptions() {
+        webView?.evaluateJavaScript(
+            Self.setMathOptionsScript(bracketDelimiters: mathBracketDelimiters),
+            completionHandler: nil
+        )
+    }
+
+    /// 区切りは描画のときにしか効かないので、表示中の内容を描画し直す。
+    /// レンダラーの準備ができていなければ、rendererDidLoad() が設定を渡してから描画する。
+    private func mathOptionsDidChange() {
+        guard isRendererReady else { return }
+        applyMathOptions()
+        if let markdown = lastRenderedMarkdown {
+            renderMarkdown(markdown)
+        }
     }
 
     func applySystemAppearance(isDark: Bool) {

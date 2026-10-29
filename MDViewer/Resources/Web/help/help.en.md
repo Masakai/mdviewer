@@ -205,6 +205,8 @@ $$
 \int_0^\infty e^{-x^2} \, dx = \frac{\sqrt{\pi}}{2}
 $$
 
+The LaTeX delimiters `\(...\)` (inline) and `\[...\]` (block) are off by default, because in Markdown `\(` and `\[` write a literal `(` and `[`. Turn on "Treat `\(` `\)` and `\[` `\]` as math delimiters" in Settings > General to render them as math. With it on, `\\(` is still text, and a `\[` with no `\]` before the next `\[` or blank line is still a bracket.
+
 ---
 
 ## Mermaid diagrams

@@ -61,6 +61,9 @@
 "Heading Font" = "Heading Font";
 "System" = "System";
 "Same as Body" = "Same as Body";
+"Math" = "Math";
+"Treat \\( \\) and \\[ \\] as math delimiters" = "Treat \\( \\) and \\[ \\] as math delimiters";
+"When on, paired \\( \\) and \\[ \\] are shown as math, not brackets." = "When on, paired \\( \\) and \\[ \\] are shown as math, not brackets.";
 
 /* Alerts */
 "Error" = "Error";

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Math written with the LaTeX delimiters `\(...\)` (inline) and `\[...\]` (display), which MathJax also uses by default, can now be rendered. Turn on "Treat `\(` `\)` and `\[` `\]` as math delimiters" in Settings > General. It is off by default, because in Markdown `\(` and `\[` are how you write a literal `(` or `[`, and with the setting on, a paired `\[ … \]` such as `\[Note\]` is shown as math. `\\(` stays text, and a `\[` with no `\]` before the next `\[` or blank line stays a bracket. (Thanks to @tarzanjunior, #31)
+
+### Fixed
+- Math delimiters inside an indented code block (four spaces) were rendered as math, so `echo $x$y` showed a formula in the code. Code is now left as written, as it already was in fenced code blocks and inline code.
+
 ## [1.9.0] — 2026-10-28
 
 ### Added
