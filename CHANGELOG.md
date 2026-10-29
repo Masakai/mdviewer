@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [1.11.0] — 2026-10-30
 
 ### Added
 - Settings > General has a new switch, "Show the welcome window after closing the last document". It is on by default, which keeps the current behavior: closing the last document shows the welcome screen, and closing the welcome screen quits. Turn it off to have MDViewer keep running without a window after you close the last document, as other Mac apps do; open files from the File menu or by dropping them on the Dock icon. With it off, closing the welcome screen does not quit either. ⌘Q quits either way.
