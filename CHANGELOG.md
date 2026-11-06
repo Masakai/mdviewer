@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [1.12.0] — 2026-11-06
 
 ### Changed
 - Code Font in Settings > Appearance now lists every font installed on your Mac, not just four fixed choices. Monospaced fonts come first, followed by the rest after a divider. Fonts that are not installed, such as SF Mono or JetBrains Mono on a Mac that does not have them, are no longer offered; if one is still selected, it stays at the top of the menu, and the preview keeps using the fallback font as before. (Thanks to @Kerrick, #33)
