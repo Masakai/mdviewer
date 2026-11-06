@@ -24,6 +24,23 @@ enum PreviewFont {
         family.isEmpty ? codeFallback : "\(quoted(family)), \(codeFallback)"
     }
 
+    /// コードフォントの選択肢。等幅フォントを先に、残りのフォントを後に並べる。
+    struct CodeFontChoices: Equatable {
+        /// 保存されているが、この Mac に入っていないフォント。メニューの表示が空にならないよう先頭に出す
+        var unavailable: String?
+        var monospaced: [String]
+        var others: [String]
+    }
+
+    /// `families` の並び順を保ったまま、`monospaced` に含まれるものとそれ以外に分ける。
+    static func codeFontChoices(families: [String], monospaced: Set<String>, current: String) -> CodeFontChoices {
+        CodeFontChoices(
+            unavailable: current.isEmpty || families.contains(current) ? nil : current,
+            monospaced: families.filter { monospaced.contains($0) },
+            others: families.filter { !monospaced.contains($0) }
+        )
+    }
+
     /// フォントを切り替える JS。値は JSON で渡し、フォント名に引用符などが含まれても壊れないようにする。
     static func setFontsScript(body: String, heading: String, code: String) -> String {
         let fonts = ["body": bodyCSS(body), "heading": headingCSS(heading), "code": codeCSS(code)]

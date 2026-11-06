@@ -28,6 +28,34 @@ final class PreviewFontTests: XCTestCase {
         XCTAssertEqual(PreviewFont.bodyCSS("A\"B"), "\"A\\\"B\", \(PreviewFont.bodyFallback)")
     }
 
+    // MARK: - コードフォントの選択肢
+
+    func test_codeFontChoices_putsMonospacedFirstAndKeepsOrder() {
+        let choices = PreviewFont.codeFontChoices(
+            families: ["Avenir", "Courier New", "Georgia", "Menlo"],
+            monospaced: ["Menlo", "Courier New"],
+            current: "Menlo"
+        )
+        XCTAssertEqual(choices.monospaced, ["Courier New", "Menlo"])
+        XCTAssertEqual(choices.others, ["Avenir", "Georgia"])
+        XCTAssertNil(choices.unavailable)
+    }
+
+    func test_codeFontChoices_nonMonospacedSelection_isNotUnavailable() {
+        let choices = PreviewFont.codeFontChoices(
+            families: ["Georgia", "Menlo"], monospaced: ["Menlo"], current: "Georgia"
+        )
+        XCTAssertNil(choices.unavailable)
+    }
+
+    func test_codeFontChoices_notInstalledSelection_isReportedAsUnavailable() {
+        let choices = PreviewFont.codeFontChoices(
+            families: ["Menlo"], monospaced: ["Menlo"], current: "JetBrains Mono"
+        )
+        XCTAssertEqual(choices.unavailable, "JetBrains Mono")
+        XCTAssertEqual(choices.monospaced, ["Menlo"])
+    }
+
     // MARK: - JS
 
     func test_setFontsScript_passesAllThreeStacksAsJSON() throws {
