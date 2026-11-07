@@ -19,7 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleOpenNewDocumentWindow),
+            selector: #selector(handleOpenNewDocumentWindow(_:)),
             name: .openNewDocumentWindow,
             object: nil
         )
@@ -116,8 +116,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func handleOpenNewDocumentWindow() {
-        openNewDocumentWindow()
+    @objc private func handleOpenNewDocumentWindow(_ notification: Notification) {
+        // File > Duplicate は userInfo に複製する内容と保存パネルの初期名を載せる
+        openNewDocumentWindow(
+            initialText: notification.userInfo?["text"] as? String,
+            suggestedFileName: notification.userInfo?["suggestedFileName"] as? String
+        )
     }
 
     @objc private func handleDocumentWindowWillClose(_ notification: Notification) {
@@ -134,14 +138,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// ウェルカム画面のウィンドウを開く。前回終了時のファイルは復元しない。
     private func openWelcomeWindow() {
-        let window = makeDocumentWindow(rootView: ContentView(restoresLastOpened: false), title: "MDViewer")
+        let window = makeDocumentWindow(
+            rootView: ContentView(restoresLastOpened: false),
+            title: NSLocalizedString("Welcome", comment: "")
+        )
         place(window)
         window.makeKeyAndOrderFront(nil)
     }
 
     /// 空の新規ドキュメントを新しいウィンドウで開く（システム設定によってはタブになる）。
-    private func openNewDocumentWindow() {
-        let window = makeDocumentWindow(rootView: ContentView(startsAsNewDocument: true), title: "Untitled")
+    private func openNewDocumentWindow(initialText: String? = nil, suggestedFileName: String? = nil) {
+        let window = makeDocumentWindow(
+            rootView: ContentView(
+                startsAsNewDocument: true,
+                initialText: initialText,
+                suggestedFileName: suggestedFileName
+            ),
+            title: "Untitled"
+        )
         place(window)
         window.makeKeyAndOrderFront(nil)
     }

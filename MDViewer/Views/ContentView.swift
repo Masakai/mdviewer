@@ -7,6 +7,9 @@ struct ContentView: View {
     var startsAsNewDocument = false
     /// false のとき、前回終了時のファイルを復元しない（最後のドキュメントを閉じた後のウェルカム画面用）。
     var restoresLastOpened = true
+    /// startsAsNewDocument のときの初期内容と保存パネルの初期名（File > Duplicate で作るウィンドウ用）。
+    var initialText: String?
+    var suggestedFileName: String?
 
     @StateObject private var documentVM = DocumentViewModel()
     @StateObject private var sidebarVM = SidebarViewModel()
@@ -110,6 +113,19 @@ struct ContentView: View {
             isEditorMode: isEditorMode,
             search: $search
         ))
+        .modifier(DocumentFileCommands(
+            windowBox: windowBox,
+            documentVM: documentVM,
+            renderVM: renderVM
+        ))
+        .modifier(FindNavigationCommands(
+            windowBox: windowBox,
+            documentVM: documentVM,
+            renderVM: renderVM,
+            editorSearch: editorSearch,
+            isEditorMode: isEditorMode,
+            search: $search
+        ))
         .modifier(FontSizeAndExportCommands(
             windowBox: windowBox,
             documentVM: documentVM,
@@ -129,7 +145,7 @@ struct ContentView: View {
         // Keyboard shortcuts via Commands are declared in MDViewerApp
         .navigationTitle(
             documentVM.fileURL.map { Text(verbatim: $0.lastPathComponent) }
-                ?? (documentVM.hasDocument ? Text("Untitled") : Text("MDViewer"))
+                ?? (documentVM.hasDocument ? Text("Untitled") : Text("Welcome"))
         )
         .frame(minWidth: 800, minHeight: 600)
         .alert("Error", isPresented: Binding(
@@ -153,6 +169,9 @@ struct ContentView: View {
                 documentVM.load(url: url)
             } else if startsAsNewDocument {
                 startNewDocumentInThisWindow()
+                if let initialText {
+                    documentVM.newDocument(duplicating: initialText, suggestedFileName: suggestedFileName)
+                }
             } else if restoresLastOpened {
                 documentVM.restoreLastOpened()
             }
@@ -442,4 +461,160 @@ extension Notification.Name {
     static let saveFile = Notification.Name("MDViewer.saveFile")
     static let toggleSidebar = Notification.Name("MDViewer.toggleSidebar")
     static let toggleEditorMode = Notification.Name("MDViewer.toggleEditorMode")
+}
+
+// MARK: - Document window state
+
+/// ウィンドウのタイトルのプロキシアイコン（representedURL）と未保存の印（isDocumentEdited）を、
+/// 表示中のファイルと未保存状態に合わせる。ウィンドウに載った時点と、値が変わるたびに反映する。
+private struct DocumentWindowStateView: NSViewRepresentable {
+    let fileURL: URL?
+    let isDirty: Bool
+
+    final class StateView: NSView {
+        var fileURL: URL?
+        var isDirty = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            apply()
+        }
+
+        func apply() {
+            guard let window else { return }
+            if window.representedURL != fileURL {
+                window.representedURL = fileURL
+            }
+            if window.isDocumentEdited != isDirty {
+                window.isDocumentEdited = isDirty
+            }
+        }
+    }
+
+    func makeNSView(context _: Context) -> StateView {
+        let view = StateView()
+        view.fileURL = fileURL
+        view.isDirty = isDirty
+        return view
+    }
+
+    func updateNSView(_ nsView: StateView, context _: Context) {
+        nsView.fileURL = fileURL
+        nsView.isDirty = isDirty
+        nsView.apply()
+    }
+}
+
+// MARK: - File menu commands
+
+/// ファイルメニューの 複製・別名で保存・名前を変更・移動 と、表示メニューのテーマの通知を処理する。
+/// プロキシアイコンと未保存の印もここで付ける。前面のメニューから選んだ値を受けられるよう、
+/// このウィンドウのビューモデルを focusedSceneObject で渡す。
+private struct DocumentFileCommands: ViewModifier {
+    let windowBox: WindowBox
+    @ObservedObject var documentVM: DocumentViewModel
+    let renderVM: RenderViewModel
+
+    private var isKeyWindow: Bool {
+        windowBox.window?.isKeyWindow == true
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background(DocumentWindowStateView(fileURL: documentVM.fileURL, isDirty: documentVM.isDirty))
+            .focusedSceneObject(documentVM)
+            .focusedSceneObject(renderVM)
+            .onReceive(NotificationCenter.default.publisher(for: .duplicateDocument)) { _ in
+                guard isKeyWindow, documentVM.hasDocument else { return }
+                NotificationCenter.default.post(
+                    name: .openNewDocumentWindow,
+                    object: nil,
+                    userInfo: [
+                        "text": documentVM.text,
+                        "suggestedFileName": DocumentViewModel.duplicateFileName(for: documentVM.fileURL),
+                    ]
+                )
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .saveFileAs)) { _ in
+                guard isKeyWindow, documentVM.hasDocument else { return }
+                documentVM.saveAs()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .renameFile)) { _ in
+                guard isKeyWindow else { return }
+                documentVM.renameFile()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .moveFile)) { _ in
+                guard isKeyWindow else { return }
+                documentVM.moveFile()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .selectWindowTheme)) { notification in
+                guard isKeyWindow else { return }
+                if let theme = notification.object as? MarkdownTheme {
+                    renderVM.setTheme(theme)
+                } else {
+                    renderVM.useSettingsTheme()
+                }
+            }
+    }
+}
+
+// MARK: - Find menu commands
+
+/// 編集 > 検索 の 検索と置換・次を検索・前を検索。
+private struct FindNavigationCommands: ViewModifier {
+    let windowBox: WindowBox
+    let documentVM: DocumentViewModel
+    let renderVM: RenderViewModel
+    let editorSearch: EditorSearchController
+    let isEditorMode: Bool
+    @Binding var search: SearchBarState
+
+    private var isKeyWindow: Bool {
+        windowBox.window?.isKeyWindow == true
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .showFindAndReplace)) { _ in
+                guard isKeyWindow, documentVM.hasDocument else { return }
+                // エディタモードでなければ置換できないので、⌘F と同じにする
+                guard isEditorMode else {
+                    NotificationCenter.default.post(name: .showSearchBar, object: nil)
+                    return
+                }
+                search.target = .editor
+                withAnimation { search.isVisible = true }
+                search.focusRequest += 1
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .findNextMatch)) { _ in
+                guard canMove else { return }
+                switch search.target {
+                case .editor: editorSearch.findNext()
+                case .preview: renderVM.findNext()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .findPreviousMatch)) { _ in
+                guard canMove else { return }
+                switch search.target {
+                case .editor: editorSearch.findPrevious()
+                case .preview: renderVM.findPrevious()
+                }
+            }
+    }
+
+    private var canMove: Bool {
+        isKeyWindow && documentVM.hasDocument && search.isVisible && !search.text.isEmpty
+    }
+}
+
+extension Notification.Name {
+    static let duplicateDocument = Notification.Name("MDViewer.duplicateDocument")
+    static let saveFileAs = Notification.Name("MDViewer.saveFileAs")
+    static let renameFile = Notification.Name("MDViewer.renameFile")
+    static let moveFile = Notification.Name("MDViewer.moveFile")
+    /// object に MarkdownTheme を載せる。nil なら設定のテーマに戻す。
+    static let selectWindowTheme = Notification.Name("MDViewer.selectWindowTheme")
+    static let showFindAndReplace = Notification.Name("MDViewer.showFindAndReplace")
+    static let findNextMatch = Notification.Name("MDViewer.findNextMatch")
+    static let findPreviousMatch = Notification.Name("MDViewer.findPreviousMatch")
 }

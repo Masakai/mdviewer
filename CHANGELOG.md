@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Document windows now show a proxy icon next to the file name in the title bar. Command-click it, or right-click the title, to see where the file is saved, and drag the icon to use the file elsewhere. (Thanks to @sanderberents, #36)
+- The close button and the Window menu show a dot while a document has unsaved changes.
+- File menu: Duplicate (⇧⌘S), Save As… (⌥⇧⌘S), Rename…, and Move To….
+- View menu: a Theme submenu with the same choices as the toolbar theme menu.
+- Edit > Find submenu: Find… (⌘F), Find and Replace… (⌥⌘F), Find Next (⌘G), and Find Previous (⇧⌘G).
+
+### Changed
+- Find… moved from the View menu to Edit > Find.
+- Export as PDF… and Export as HTML… moved from the Export menu to File > Export. Their shortcuts are unchanged.
+- Toggle Sidebar is now ⌃⌘S (was ⇧⌘S, which Duplicate now uses).
+- The welcome window is titled "Welcome" instead of "MDViewer".
+
 ## [1.13.0] — 2026-11-07
 
 ### Added

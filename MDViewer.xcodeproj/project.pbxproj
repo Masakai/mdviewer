@@ -47,6 +47,7 @@
 		A739EF050629669FD0DF7D9C /* FileWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09A371577BF803F4ACDBAC2 /* FileWatcher.swift */; };
 		AB640E64508C5F599CD843E2 /* FileWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70800FD1FA47681F67DCD38C /* FileWatcherTests.swift */; };
 		ABBDA16DE1717766497D5135 /* PreviewFontTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD628DDC55F18B9EC5AF1802 /* PreviewFontTests.swift */; };
+		B139404BB30E0CF26BC1BE0C /* DocumentViewModelRelocateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FAF230B720CC56AFBAA3509 /* DocumentViewModelRelocateTests.swift */; };
 		B498686705F579F54A6B1B74 /* RenderViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6E4A2AD373F6041D40DEA56 /* RenderViewModelTests.swift */; };
 		BD552CED92488D339AEC4229 /* AppearancePrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298DB17004CE01CE37DC9066 /* AppearancePrefsView.swift */; };
 		C01B502E545B587AD007B508 /* RecentDocumentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE9F6825BF37D57A1441CE89 /* RecentDocumentsTests.swift */; };
@@ -110,6 +111,7 @@
 		279B78E56308371FA6A87216 /* PreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewViewController.swift; sourceTree = "<group>"; };
 		298DB17004CE01CE37DC9066 /* AppearancePrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearancePrefsView.swift; sourceTree = "<group>"; };
 		3F03734F45BD47E88B304D97 /* WebRendererView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebRendererView.swift; sourceTree = "<group>"; };
+		3FAF230B720CC56AFBAA3509 /* DocumentViewModelRelocateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentViewModelRelocateTests.swift; sourceTree = "<group>"; };
 		4190DF1AE310356C4387E00F /* WindowPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPlacementTests.swift; sourceTree = "<group>"; };
 		456AEF9783EA3DF224C14D57 /* MarkdownEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownEditorView.swift; sourceTree = "<group>"; };
 		4DF89884BBC1752B97068893 /* GeneralPrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPrefsView.swift; sourceTree = "<group>"; };
@@ -211,6 +213,7 @@
 				886BABE38FE8E89BFFA9F9D6 /* BookmarkManagerTests.swift */,
 				19D55620D2D3ACF6A045CDC9 /* DocumentCloseTrackerTests.swift */,
 				8E016E3C60E5A2AC882A7E81 /* DocumentViewModelOpenTests.swift */,
+				3FAF230B720CC56AFBAA3509 /* DocumentViewModelRelocateTests.swift */,
 				25A8038B6BB52858CE1F2C24 /* DocumentViewModelRestoreTests.swift */,
 				AA110D736343C7A23A6671A4 /* DocumentViewModelSettingsTests.swift */,
 				608200058552B02007CD760E /* DocumentWindowRegistryTests.swift */,
@@ -548,6 +551,7 @@
 				270D40A631DA13826DEF4096 /* BookmarkManagerTests.swift in Sources */,
 				130A2CC74D300C5866F5797F /* DocumentCloseTrackerTests.swift in Sources */,
 				5C2121A5B68B730D663630DF /* DocumentViewModelOpenTests.swift in Sources */,
+				B139404BB30E0CF26BC1BE0C /* DocumentViewModelRelocateTests.swift in Sources */,
 				3E7DF4643FA85E1460B35AF3 /* DocumentViewModelRestoreTests.swift in Sources */,
 				83CED1117EEFFAFEC1742E4D /* DocumentViewModelSettingsTests.swift in Sources */,
 				9076AE3C0D7617B2ABB9B142 /* DocumentWindowRegistryTests.swift in Sources */,
