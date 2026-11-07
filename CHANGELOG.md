@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.13.0] — 2026-11-07
+
+### Added
+- Settings > Appearance has a new "Follow System Appearance" switch. When it is on, you choose a Light Theme and a Dark Theme, and the preview follows the Mac's light or dark appearance in every window, including the welcome window and Help, and changes live when the appearance changes. When it is off, the single Theme menu works as before. Existing settings are kept: if you had GitHub Light, GitHub Dark or no theme chosen, the switch starts on; with Solarized, Dracula or Nord, it starts off and that theme stays fixed. (Thanks to @harasuke, #32)
+- The toolbar theme menu has a new "Use Settings Theme" item. A theme chosen from the toolbar stays on that window when the appearance or Settings change, until you choose Use Settings Theme. As before, a toolbar choice is not saved.
+
+### Changed
+- With GitHub Dark chosen and the Mac in light mode, windows now open in GitHub Light. To keep GitHub Dark at all times, turn Follow System Appearance off.
+
+### Fixed
+- With GitHub Light saved and the Mac already in dark mode, every window opened in the light theme, and only switched if the appearance changed while it was open. The Help window did not follow the appearance at all.
+- Opening a document with a dark theme no longer flashes white before the page is drawn.
+- In a document with Mermaid diagrams, redrawing the preview (after a light/dark switch, or after an edit) no longer moves the reading position. If you jump to a heading, a search match or an in-page link while the diagrams are being drawn, the preview ends there instead.
+
 ## [1.12.0] — 2026-11-06
 
 ### Changed
