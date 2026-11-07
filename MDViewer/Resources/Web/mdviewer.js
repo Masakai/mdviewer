@@ -12,6 +12,73 @@
     // freshly loaded page never reports an empty list over the sidebar.
     let displayedHeadings = null;
 
+    // Reading position held across a redraw. Replacing #content drops the drawn diagrams, so
+    // the page is briefly much shorter and WebKit pulls scrollY back; once the diagrams are in,
+    // it ends somewhere else. The old height is kept on #content until the latest render's
+    // diagrams are drawn, and the position is put back then.
+    //
+    // y is where the reader was when the first render of the hold started. A navigation during
+    // the hold (sidebar heading, search hit, in-page link) sets target: the page then goes to
+    // that element as it is laid out once the diagrams are drawn. The element is looked up
+    // again at that point (a later render replaces the nodes); if it is gone, y is used.
+    let heldPosition = null; // { y, target: null | { resolve, block } }
+    let redrawGeneration = 0;
+
+    function holdReadingPosition(contentEl) {
+        if (heldPosition === null) {
+            heldPosition = { y: window.scrollY, target: null };
+        }
+        const height = contentEl.getBoundingClientRect().height;
+        const held = parseFloat(contentEl.style.minHeight) || 0;
+        contentEl.style.minHeight = Math.max(height, held) + 'px';
+        return ++redrawGeneration;
+    }
+
+    // Called by a navigation that has just scrolled. resolve() returns the element to end on.
+    // kind is 'search' for a search hit, which a later search can re-point (see MDViewer.search).
+    function retargetReadingPosition(resolve, block, kind) {
+        if (heldPosition !== null) {
+            heldPosition.target = { resolve: resolve, block: block, kind: kind || 'element' };
+        }
+    }
+
+    // The Mermaid run drawing the diagrams #content shows, until it settles. A render that keeps
+    // the page as it is releases the hold only once these diagrams are drawn.
+    let diagramsRun = null;
+
+    function releaseReadingPosition(contentEl, generation) {
+        if (generation !== redrawGeneration || heldPosition === null) { return; }
+        const position = heldPosition;
+        heldPosition = null;
+        contentEl.style.minHeight = '';
+        const el = position.target ? position.target.resolve() : null;
+        if (el && el.isConnected) {
+            el.scrollIntoView({ block: position.target.block, inline: 'nearest', behavior: 'instant' });
+        } else {
+            window.scrollTo({ left: window.scrollX, top: position.y, behavior: 'instant' });
+        }
+    }
+
+    // The element an in-page link goes to, as WebKit resolves it: the id as written, then
+    // percent-decoded; "#" and "#top" go to the top of the page. Null if nothing matches.
+    function fragmentTarget(fragment) {
+        let el = fragment ? document.getElementById(fragment) : null;
+        if (!el && fragment) {
+            try {
+                el = document.getElementById(decodeURIComponent(fragment));
+            } catch (e) {
+                el = null; // malformed escape: WebKit finds nothing either
+            }
+        }
+        if (el) { return el; }
+        if (fragment === '' || fragment.toLowerCase() === 'top') { return document.documentElement; }
+        return null;
+    }
+
+    // Theme stylesheet requested by setTheme and not loaded yet. A diagram drawn before it has
+    // loaded can come out taller, which moves everything below it, so a render waits for it.
+    let themeLoading = null;
+
     if (window.__shikiReady) {
         window.__shikiReady.then(function (h) { shikiHighlighter = h; });
     }
@@ -479,13 +546,40 @@
     }
 
     // Renders the Markdown. Exceptions are caught by the calling setContent.
+    // The reading position is held from the start, before any wait, so a navigation issued
+    // right after setContent is kept. Every path that does not hand the release to the
+    // diagrams releases it on the way out, including a throw.
+    // Only a page showing drawn diagrams gets shorter when it is replaced, so only then (or
+    // while a hold is already on) is the position held. Holding costs two forced layouts,
+    // which an edit in a long document without diagrams would pay on every keystroke.
     async function renderContent(markdown) {
+        const contentEl = document.getElementById('content');
+        const needsHold = heldPosition !== null || contentEl.querySelector('.mermaid svg') !== null;
+        // Without a hold the releases below find nothing held and do nothing.
+        const generation = needsHold ? holdReadingPosition(contentEl) : ++redrawGeneration;
+        let releasedByDiagrams = false;
+        try {
+            releasedByDiagrams = await renderContentHeld(markdown, contentEl, generation);
+        } finally {
+            if (!releasedByDiagrams) {
+                if (diagramsRun) {
+                    diagramsRun.then(function () { releaseReadingPosition(contentEl, generation); });
+                } else {
+                    releaseReadingPosition(contentEl, generation);
+                }
+            }
+        }
+    }
+
+    // Returns true when the release has been handed to the Mermaid run.
+    async function renderContentHeld(markdown, contentEl, generation) {
         if (!shikiHighlighter && window.__shikiReady) {
             shikiHighlighter = await Promise.race([
                 window.__shikiReady,
                 new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 8000); })
             ]);
         }
+        if (themeLoading) { await themeLoading; }
 
         const headingsRef = [];
         const renderer = new marked.Renderer();
@@ -625,8 +719,6 @@
             });
         }
 
-        const contentEl = document.getElementById('content');
-
         // #content is the only element in <body>, so replacing it with an
         // empty string turns the page white. If marked returned nothing
         // (a failed read, a file caught mid-write), keep the previous
@@ -643,27 +735,38 @@
                 notifyHeadings(displayedHeadings);
             }
             notifyRenderComplete();
-            return;
+            return false;
         }
 
         contentEl.innerHTML = html;
         displayedHeadings = headingsRef;
+        diagramsRun = null; // its diagrams are no longer on the page
 
         // Resolve relative image paths against the Markdown file's directory
         rewriteLocalResources(contentEl);
 
         // Render Mermaid diagrams
+        // Without diagrams the page has its final height now, and the hold is released on the
+        // way out of renderContent.
+        let releasedByDiagrams = false;
         if (typeof mermaid !== 'undefined') {
             try {
-                // 図は非同期に描かれるので、描き終えたら図の中の文字も含めて検索し直す
+                // 図は非同期に描かれるので、描き終えたら図の中の文字も含めて検索し直す。
+                // 数え直してから位置を戻す: 検索で移動していたら、強調された一致に戻るように
                 const hasDiagrams = contentEl.querySelector('.mermaid') !== null;
                 const diagramsDone = function () {
                     if (hasDiagrams) { refreshSearch(); }
+                    releaseReadingPosition(contentEl, generation);
                 };
-                Promise.resolve(mermaid.run({ querySelector: '.mermaid' })).then(diagramsDone, function (e) {
+                const run = Promise.resolve(mermaid.run({ querySelector: '.mermaid' })).then(diagramsDone, function (e) {
                     console.warn('Mermaid render error:', e);
                     diagramsDone();
                 });
+                if (hasDiagrams) {
+                    diagramsRun = run;
+                    run.then(function () { if (diagramsRun === run) { diagramsRun = null; } });
+                    releasedByDiagrams = true;
+                }
             } catch (e) {
                 console.warn('Mermaid render error:', e);
             }
@@ -675,6 +778,8 @@
 
         // 描画で検索のハイライトが消えるので、検索中なら同じ語で数え直す
         refreshSearch();
+
+        return releasedByDiagrams;
     }
 
     // -- ページ内検索（⌘F の検索バー）
@@ -799,6 +904,18 @@
         return matches;
     }
 
+    // The element holding the index-th match of query in #content, without marking anything.
+    function elementOfMatch(query, index) {
+        if (!query.trim()) { return null; }
+        const collected = collectVisibleText(document.getElementById('content'));
+        const match = findMatches(collected.text, query)[index];
+        if (!match) { return null; }
+        const segment = collected.segments.find(function (seg) {
+            return seg.start <= match.start && match.start < seg.end;
+        });
+        return segment ? segment.node.parentElement : null;
+    }
+
     // 検索語で一致を数え直してハイライトする。index は選ぶ一致（範囲外なら丸める）、
     // null なら画面の上端より下にある最初の一致を選ぶ。
     function runSearch(index, scroll) {
@@ -825,7 +942,13 @@
         searchIndex = index;
         const marks = searchHits[index];
         marks.forEach(function (mark) { mark.classList.add(SEARCH_CURRENT_CLASS); });
-        if (scroll) { marks[0].scrollIntoView({ block: 'center' }); }
+        if (scroll) {
+            marks[0].scrollIntoView({ block: 'center' });
+            // During a redraw, end on the hit that is highlighted once the diagrams are drawn
+            retargetReadingPosition(function () {
+                return searchHits[searchIndex] ? searchHits[searchIndex][0] : null;
+            }, 'center', 'search');
+        }
     }
 
     function moveSearch(step) {
@@ -864,8 +987,18 @@
         // are dark without saying so.
         setTheme: function (themeName, isDark) {
             const link = document.getElementById('theme-css');
-            if (link) {
-                link.href = `themes/${themeName}.css`;
+            const href = `themes/${themeName}.css`;
+            if (link && link.getAttribute('href') !== href) {
+                const loading = new Promise(function (resolve) {
+                    link.addEventListener('load', resolve, { once: true });
+                    link.addEventListener('error', resolve, { once: true });
+                    setTimeout(resolve, 2000); // never hold a render for good
+                });
+                themeLoading = loading;
+                loading.then(function () {
+                    if (themeLoading === loading) { themeLoading = null; }
+                });
+                link.href = href;
             }
             // Toggle Shiki dark-theme class
             document.body.classList.toggle('dark-theme', isDark);
@@ -901,6 +1034,7 @@
             const el = document.getElementById(anchorId);
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                retargetReadingPosition(function () { return document.getElementById(anchorId); }, 'start');
                 el.classList.add('heading-anchor-target');
                 setTimeout(function () {
                     el.classList.remove('heading-anchor-target');
@@ -918,6 +1052,18 @@
         // Swift に知らせる（描画し直したときの数え直しも同じ経路で届く）。
         // scroll が false なら一致を強調するだけで、読んでいる位置は動かさない
         search: function (query, scroll) {
+            // During a redraw the reader may be on a hit of the previous search. A search that
+            // does not scroll must not take them to its own hit when the redraw ends, so the
+            // target stays on that hit: the same match of the previous query, found again
+            // once the diagrams are drawn (the redraw may replace the nodes in between).
+            if (scroll === false && heldPosition !== null && heldPosition.target
+                    && heldPosition.target.kind === 'search' && searchIndex >= 0) {
+                const previousQuery = searchQuery;
+                const previousIndex = searchIndex;
+                retargetReadingPosition(function () {
+                    return elementOfMatch(previousQuery, previousIndex);
+                }, 'center');
+            }
             searchQuery = query;
             runSearch(null, scroll !== false);
             return notifySearchStatus();
@@ -1003,7 +1149,16 @@
         const href = link.getAttribute('href');
         if (!href) return;
 
-        if (href.startsWith('#')) return;
+        if (href.startsWith('#')) {
+            // WebKit follows the link itself. During a redraw, end on its target.
+            const followed = !e.defaultPrevented && e.button === 0
+                && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+            const fragment = href.slice(1);
+            if (followed && fragmentTarget(fragment)) {
+                retargetReadingPosition(function () { return fragmentTarget(fragment); }, 'start');
+            }
+            return;
+        }
 
         e.preventDefault();
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.linkClicked) {
