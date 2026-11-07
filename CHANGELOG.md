@@ -6,20 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [1.14.0] — 2026-11-08
 
 ### Added
-- Document windows now show a proxy icon next to the file name in the title bar. Command-click it, or right-click the title, to see where the file is saved, and drag the icon to use the file elsewhere. (Thanks to @sanderberents, #36)
+- Document windows now show a proxy icon when you hover over the file name in the title bar. Right-click (or Command-click) the title to see where the file is saved, and drag the icon to use the file elsewhere. (Thanks to @sanderberents, #36)
 - The close button and the Window menu show a dot while a document has unsaved changes.
 - File menu: Duplicate (⇧⌘S), Save As… (⌥⇧⌘S), Rename…, and Move To….
 - View menu: a Theme submenu with the same choices as the toolbar theme menu.
 - Edit > Find submenu: Find… (⌘F), Find and Replace… (⌥⌘F), Find Next (⌘G), and Find Previous (⇧⌘G).
+- Read-only files (locked in Finder, or without write permission) can no longer be edited. The editor pane still opens so you can read and select the Markdown, but typing is turned off and the toolbar editor button shows a crossed-out pencil. Save, File > Save and the Replace field are dimmed. MDViewer checks again when the file changes or when you come back to the app. (Thanks to @sanderberents, #37)
 
 ### Changed
 - Find… moved from the View menu to Edit > Find.
 - Export as PDF… and Export as HTML… moved from the Export menu to File > Export. Their shortcuts are unchanged.
 - Toggle Sidebar is now ⌃⌘S (was ⇧⌘S, which Duplicate now uses).
 - The welcome window is titled "Welcome" instead of "MDViewer".
+
+### Fixed
+- Saving a read-only file no longer fails with a permission error. A file whose permissions were read-only could even be replaced silently when its folder was writable. MDViewer now shows why the file cannot be saved and keeps your changes until you close the window.
 
 ## [1.13.0] — 2026-11-07
 
