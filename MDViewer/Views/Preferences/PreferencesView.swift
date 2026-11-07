@@ -18,7 +18,7 @@ struct PreferencesView: View {
                 .tabItem { Label("Appearance", systemImage: "paintbrush") }
                 .tag(Tab.appearance)
         }
-        .frame(width: 400, height: 340)
+        .frame(width: 400, height: 380)
         .padding()
     }
 }

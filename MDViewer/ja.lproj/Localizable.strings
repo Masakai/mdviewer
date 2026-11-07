@@ -52,6 +52,10 @@
 "Replace All" = "すべて置換";
 
 /* Preferences */
+"Follow System Appearance" = "システムの外観に合わせる";
+"Light Theme" = "ライトテーマ";
+"Dark Theme" = "ダークテーマ";
+"Use Settings Theme" = "設定のテーマを使う";
 "Select Theme" = "テーマを選択";
 "Theme" = "テーマ";
 "Font" = "フォント";

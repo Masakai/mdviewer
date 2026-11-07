@@ -76,10 +76,20 @@ struct MainToolbar: ToolbarContent {
 
             // Theme picker
             Menu {
+                // Toggles, so the menu shows the current choice with its standard checkmark.
+                // Choosing a checked item again does nothing.
+                Toggle("Use Settings Theme", isOn: Binding(
+                    get: { renderVM.windowThemeOverride == nil },
+                    set: { isOn in if isOn { renderVM.useSettingsTheme() } }
+                ))
+
+                Divider()
+
                 ForEach(MarkdownTheme.all) { theme in
-                    Button(theme.displayName) {
-                        renderVM.setTheme(theme)
-                    }
+                    Toggle(theme.displayName, isOn: Binding(
+                        get: { renderVM.windowThemeOverride == theme },
+                        set: { isOn in if isOn { renderVM.setTheme(theme) } }
+                    ))
                 }
             } label: {
                 Label("Theme", systemImage: "paintpalette")

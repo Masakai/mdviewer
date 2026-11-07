@@ -17,7 +17,7 @@ MDViewer started as a viewer — but we wanted editing too, so it now includes a
 - **Table of contents** — auto-generated sidebar from headings with smooth scroll
 - **Syntax highlighting** — 27 languages via [Shiki v1](https://github.com/shikijs/shiki)
 - **Copy button on code blocks** — appears when you hover a code block
-- **Themes and fonts** — six themes, and separate fonts for body text, headings and code (Settings > Appearance)
+- **Themes and fonts** — six themes that can follow the Mac's light and dark appearance, and separate fonts for body text, headings and code (Settings > Appearance)
 - **Math equations** — inline and block LaTeX via [KaTeX](https://github.com/KaTeX/KaTeX), written with `$...$` and `$$...$$`. `\(...\)` and `\[...\]` can be turned on in Settings > General
 - **Mermaid diagrams** — flowcharts, sequence diagrams, Gantt charts, and more
 - **Footnotes** — GitHub-style `[^1]` footnotes, listed at the end of the document with links back to the text

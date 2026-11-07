@@ -144,7 +144,7 @@ extension Notification.Name {
     static let pdfPageSizeChanged = Notification.Name("MDViewer.pdfPageSizeChanged")
     static let previewFontsChanged = Notification.Name("MDViewer.previewFontsChanged")
     static let mathOptionsChanged = Notification.Name("MDViewer.mathOptionsChanged")
-    /// object にテーマの id を載せる。
+    /// object is nil: observers reload the theme preference from the settings.
     static let previewThemeChanged = Notification.Name("MDViewer.previewThemeChanged")
     /// object に文字サイズ（Double）を載せる。設定のスライダーを操作したときだけ送る。
     static let previewFontSizeChanged = Notification.Name("MDViewer.previewFontSizeChanged")
@@ -215,6 +215,7 @@ struct HelpView: View {
             },
             detail: {
                 WebRendererView(renderVM: renderVM, sidebarVM: sidebarVM)
+                    .background(renderVM.theme.backgroundColor)
                     .frame(minWidth: 500, minHeight: 400)
             }
         )

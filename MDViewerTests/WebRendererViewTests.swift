@@ -211,6 +211,609 @@ final class RendererScriptTests: XCTestCase {
         try await webView.callAsyncJavaScript(script, arguments: [:], in: nil, contentWorld: .page)
     }
 
+    // MARK: Initial theme
+
+    func test_initialTheme_userScript_setsStylesheetBeforeLoad() async throws {
+        let rendererURL = try XCTUnwrap(HTMLBuilder.rendererURL())
+        let resourcesDir = try XCTUnwrap(HTMLBuilder.webResourcesDirectory())
+        let nord = try XCTUnwrap(MarkdownTheme.withId("nord"))
+        let config = WKWebViewConfiguration()
+        config.userContentController.addUserScript(WKUserScript(
+            source: RenderViewModel.initialThemeScriptSource(for: nord),
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+        // #content is inside <body>: it is parsed after every <head> script has run and before
+        // DOMContentLoaded. Recording the href at that moment shows the swap happened before load.
+        config.userContentController.addUserScript(WKUserScript(
+            source: """
+            new MutationObserver(function (_, observer) {
+                if (document.getElementById('content')) {
+                    var link = document.getElementById('theme-css');
+                    window.__hrefAtBodyParse = link ? link.getAttribute('href') : null;
+                    observer.disconnect();
+                }
+            }).observe(document, { childList: true, subtree: true });
+            """,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+        webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 400), configuration: config)
+        webView.loadFileURL(rendererURL, allowingReadAccessTo: resourcesDir)
+        try await waitUntil("typeof MDViewer !== 'undefined' && document.readyState === 'complete'")
+
+        let hrefAtBodyParse = try await evaluate("return window.__hrefAtBodyParse") as? String
+        XCTAssertEqual(hrefAtBodyParse, "themes/nord.css")
+        let href = try await evaluate("return document.getElementById('theme-css').getAttribute('href')") as? String
+        XCTAssertEqual(href, "themes/nord.css")
+        let dark = try await evaluate("return document.body.classList.contains('dark-theme')") as? Bool
+        XCTAssertEqual(dark, true)
+
+        _ = try await evaluate("MDViewer.setTheme('github-light', false)")
+        try await waitUntil("getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)'")
+        let htmlBackground = try await evaluate("return getComputedStyle(document.documentElement).backgroundColor") as? String
+        XCTAssertEqual(htmlBackground, "rgba(0, 0, 0, 0)")
+    }
+
+    // MARK: Diagrams reported with renderComplete
+
+    private func renderCompleteHasDiagrams(after markdown: String) async throws -> Bool? {
+        let recorder = MessageRecorder()
+        webView.configuration.userContentController.add(recorder, name: "renderComplete")
+        defer { webView.configuration.userContentController.removeScriptMessageHandler(forName: "renderComplete") }
+        try await render(markdown)
+        try await waitUntil("true")
+        let body = try XCTUnwrap(recorder.messages.last as? [String: Any])
+        return body["hasDiagrams"] as? Bool
+    }
+
+    func test_renderComplete_mermaidBlock_reportsDiagram() async throws {
+        let hasDiagrams = try await renderCompleteHasDiagrams(after: "# Flow\n\n```mermaid\ngraph TD; A-->B\n```\n")
+        XCTAssertEqual(hasDiagrams, true)
+    }
+
+    func test_renderComplete_wordMermaidOnly_reportsNoDiagram() async throws {
+        let markdown = "Mermaid notes: `mermaid` inline.\n\n```js\nconst mermaid = 1;\n```\n"
+        let hasDiagrams = try await renderCompleteHasDiagrams(after: markdown)
+        XCTAssertEqual(hasDiagrams, false)
+    }
+
+    func test_renderComplete_keptPreviousRender_reportsWhatIsShown() async throws {
+        try await render("```mermaid\ngraph TD; A-->B\n```\n")
+        // Markdown that renders to nothing keeps the previous content on screen.
+        let hasDiagrams = try await renderCompleteHasDiagrams(after: "[x]: https://example.com\n")
+        XCTAssertEqual(hasDiagrams, true)
+    }
+
+    // MARK: Reading position across a redraw
+
+    /// n sections, each with a heading, some text and a Mermaid diagram. `extra[i]` is a block
+    /// put at the start of section i, `prefix` goes before the first section.
+    private func documentWithDiagrams(_ n: Int, prefix: String = "", extra: [Int: String] = [:]) -> String {
+        prefix + (0 ..< n).map { i in
+            "## Part \(i)\n\n" + (extra[i].map { $0 + "\n\n" } ?? "")
+                + String(repeating: "Some text about part \(i). ", count: 30)
+                + "\n\n```mermaid\ngraph TD\n  A\(i)[Start] --> B\(i)[Middle]\n  B\(i) --> C\(i)[More]\n"
+                + "  C\(i) --> D\(i)[End]\n  D\(i) --> E\(i)[Done]\n```\n\n"
+        }.joined()
+    }
+
+    /// Replaces the default web view with one in a window, with hidden-page timer throttling off.
+    /// The window is never shown, so WebKit treats the page as hidden and would throttle its
+    /// timers to about one every 2s. Mermaid moves from one diagram to the next on a timer, so a
+    /// dozen diagrams would not be drawn within the wait. Turning the throttling off keeps the
+    /// tests independent of whether the screen is on, locked or covered by other windows.
+    /// The caller keeps the window and sets its contentView to nil when done.
+    private func loadRendererWithDiagramTimers() async throws -> NSWindow {
+        let config = WKWebViewConfiguration()
+        guard config.preferences.responds(to: NSSelectorFromString("_setHiddenPageDOMTimerThrottlingEnabled:")) else {
+            throw XCTSkip("WKPreferences no longer lets the test turn off hidden-page timer throttling")
+        }
+        config.preferences.setValue(false, forKey: "hiddenPageDOMTimerThrottlingEnabled")
+        webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 400), configuration: config)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 400),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = webView
+        let rendererURL = try XCTUnwrap(HTMLBuilder.rendererURL())
+        let resourcesDir = try XCTUnwrap(HTMLBuilder.webResourcesDirectory())
+        webView.loadFileURL(rendererURL, allowingReadAccessTo: resourcesDir)
+        try await waitUntil("typeof MDViewer !== 'undefined' && document.readyState === 'complete'")
+        return window
+    }
+
+    /// Waits until the n diagrams are drawn and the reading position is no longer held.
+    private func waitForDiagrams(_ n: Int) async throws {
+        try await waitUntil(
+            "document.querySelectorAll('.mermaid svg').length === \(n)"
+                + " && document.getElementById('content').style.minHeight === ''"
+        )
+        // Let layout settle after the last diagram.
+        try await Task.sleep(nanoseconds: 100_000_000)
+    }
+
+    /// Scrolls without animation (mdviewer-base.css sets scroll-behavior: smooth).
+    private func scrollTo(_ id: String) async throws {
+        try await evaluate("document.getElementById('\(id)').scrollIntoView({ block: 'start', behavior: 'instant' })")
+        try await Task.sleep(nanoseconds: 100_000_000)
+    }
+
+    private func top(_ id: String) async throws -> Double {
+        let value = try await evaluate(
+            "return Math.round(document.getElementById('\(id)').getBoundingClientRect().top)"
+        )
+        return try XCTUnwrap((value as? NSNumber)?.doubleValue)
+    }
+
+    private func scrollY() async throws -> Double {
+        let value = try await evaluate("return window.scrollY")
+        return try XCTUnwrap((value as? NSNumber)?.doubleValue)
+    }
+
+    /// Starts a theme redraw (setTheme, then setContent as Swift does) and runs `navigation` in
+    /// the same JS turn, so it happens while the redraw is still drawing the diagrams. Returns
+    /// whether the reading position was still held after the navigation ran.
+    private func redraw(_ markdown: String, then navigation: String = "") async throws -> Bool {
+        let result = try await webView.callAsyncJavaScript(
+            """
+            MDViewer.setTheme('github-dark', true);
+            MDViewer.setContent(md);
+            \(navigation);
+            return document.getElementById('content').style.minHeight !== '';
+            """,
+            arguments: ["md": markdown], in: nil, contentWorld: .page
+        )
+        return try XCTUnwrap(result as? Bool)
+    }
+
+    /// The highlighted search hit: its vertical centre, the viewport height, and whether it lies
+    /// in section `part`.
+    private func currentHit(inPart part: Int) async throws -> (centre: Double, viewport: Double, inPart: Bool) {
+        let value = try await evaluate(
+            """
+            const mark = document.querySelector('.mdviewer-search-current');
+            if (!mark) { return null; }
+            const r = mark.getBoundingClientRect();
+            const start = document.getElementById('part-\(part)').getBoundingClientRect().top;
+            const end = document.getElementById('part-\(part + 1)').getBoundingClientRect().top;
+            return [(r.top + r.bottom) / 2, window.innerHeight, r.top >= start && r.top < end];
+            """
+        )
+        let hit = try XCTUnwrap(value as? [Any], "no highlighted search hit")
+        return (try XCTUnwrap((hit[0] as? NSNumber)?.doubleValue),
+                try XCTUnwrap((hit[1] as? NSNumber)?.doubleValue),
+                try XCTUnwrap(hit[2] as? Bool))
+    }
+
+    /// A light/dark switch redraws the page (setTheme, then setContent). With diagrams the page is
+    /// briefly much shorter until they are drawn, and the reading position must survive that.
+    func test_themeSwitchRedraw_manyDiagrams_keepsReadingPosition() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12)
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-9")
+        let before = try await top("part-9")
+
+        // Act
+        try await evaluate("MDViewer.setTheme('github-dark', true)")
+        try await render(markdown)
+        try await waitForDiagrams(12)
+
+        // Assert
+        let after = try await top("part-9")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// A sidebar heading clicked while the diagrams are being redrawn is where the reader ends up.
+    func test_themeSwitchRedraw_scrollToAnchorDuringRedraw_endsAtHeading() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12)
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        let startY = try await scrollY()
+
+        // Act
+        let held = try await redraw(markdown, then: "MDViewer.scrollToAnchor('part-9')")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let headingTop = try await top("part-9")
+        XCTAssertEqual(headingTop, 0, accuracy: 2, "heading top is \(headingTop)")
+        let endY = try await scrollY()
+        XCTAssertGreaterThan(endY - startY, 1000)
+    }
+
+    /// A search started while the diagrams are being redrawn ends on the highlighted hit, centred.
+    func test_themeSwitchRedraw_searchDuringRedraw_endsAtCentredHit() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12, extra: [9: "A zebrafish swims here."])
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        let startY = try await scrollY()
+
+        // Act
+        let held = try await redraw(markdown, then: "MDViewer.search('zebrafish', true)")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let hit = try await currentHit(inPart: 9)
+        XCTAssertTrue(hit.inPart)
+        XCTAssertEqual(hit.centre, hit.viewport / 2, accuracy: 5, "hit centre is \(hit.centre)")
+        let endY = try await scrollY()
+        XCTAssertGreaterThan(endY - startY, 1000)
+    }
+
+    /// "Next" pressed while the diagrams are being redrawn ends on the next hit, centred.
+    func test_themeSwitchRedraw_searchNextDuringRedraw_endsAtNextHit() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12, extra: [1: "A zebrafish swims here.", 9: "A zebrafish swims here."])
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await evaluate("MDViewer.search('zebrafish', false)")
+        let startY = try await scrollY()
+
+        // Act
+        let held = try await redraw(markdown, then: "MDViewer.searchNext()")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let hit = try await currentHit(inPart: 9)
+        XCTAssertTrue(hit.inPart, "the second hit (in part 9) must be the highlighted one")
+        XCTAssertEqual(hit.centre, hit.viewport / 2, accuracy: 5, "hit centre is \(hit.centre)")
+        let endY = try await scrollY()
+        XCTAssertGreaterThan(endY - startY, 1000)
+    }
+
+    /// An in-page link clicked while the diagrams are being redrawn is where the reader ends up.
+    func test_themeSwitchRedraw_fragmentLinkDuringRedraw_endsAtTarget() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12, prefix: "[Go to part 9](#part-9)\n\n")
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        let startY = try await scrollY()
+
+        // Act
+        let held = try await redraw(markdown, then: "document.querySelector('a[href=\"#part-9\"]').click()")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let headingTop = try await top("part-9")
+        XCTAssertEqual(headingTop, 0, accuracy: 2, "heading top is \(headingTop)")
+        let endY = try await scrollY()
+        XCTAssertGreaterThan(endY - startY, 1000)
+    }
+
+    /// WebKit follows a percent-encoded fragment to the decoded id; the redraw must agree.
+    func test_themeSwitchRedraw_percentEncodedFragmentDuringRedraw_endsAtTarget() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12, prefix: "[Go](#caf%C3%A9)\n\n",
+                                            extra: [9: "<div id=\"café\">Marker</div>"])
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        let startY = try await scrollY()
+
+        // Act
+        let held = try await redraw(markdown, then: "document.querySelector('a[href=\"#caf%C3%A9\"]').click()")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let targetTop = try await top("café")
+        XCTAssertEqual(targetTop, 0, accuracy: 2, "target top is \(targetTop)")
+        let endY = try await scrollY()
+        XCTAssertGreaterThan(endY - startY, 1000)
+    }
+
+    /// A link to an id that does not exist does not scroll, so the reading position is kept.
+    func test_themeSwitchRedraw_fragmentToUnknownIdDuringRedraw_keepsReadingPosition() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12, prefix: "[Nowhere](#nowhere)\n\n")
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-9")
+        let before = try await top("part-9")
+
+        // Act
+        let held = try await redraw(markdown, then: "document.querySelector('a[href=\"#nowhere\"]').click()")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let after = try await top("part-9")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// A search closed before the redraw ends leaves nothing to go to: the reading position is kept.
+    func test_themeSwitchRedraw_searchThenClearDuringRedraw_keepsReadingPosition() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12, extra: [9: "A zebrafish swims here."])
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-2")
+        let before = try await top("part-2")
+
+        // Act
+        let held = try await redraw(markdown, then: "MDViewer.search('zebrafish', true); MDViewer.clearSearch()")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let after = try await top("part-2")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// A second redraw keeps the position the reader moved to after the first one.
+    func test_themeSwitchRedraw_secondRedrawAfterScrolling_keepsNewPosition() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12)
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-9")
+        _ = try await redraw(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-4")
+        let before = try await top("part-4")
+
+        // Act
+        _ = try await redraw(markdown)
+        try await waitForDiagrams(12)
+
+        // Assert
+        let after = try await top("part-4")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// Two redraws in a row, the second before the first one's diagrams are drawn, keep the
+    /// position from before the first.
+    func test_themeSwitchRedraw_twoRedrawsInARow_keepReadingPosition() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12)
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-9")
+        let before = try await top("part-9")
+
+        // Act
+        let held = try await redraw(markdown, then: "MDViewer.setContent(md)")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held)
+        let after = try await top("part-9")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// A diagram Mermaid cannot draw still ends the redraw: no height is left pinned on #content.
+    func test_themeSwitchRedraw_invalidDiagram_releasesHeight() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(6, extra: [2: "```mermaid\nthis is not a diagram\n```"])
+        try await render(markdown)
+        try await waitUntil("document.getElementById('content').style.minHeight === ''")
+        try await scrollTo("part-4")
+        let before = try await top("part-4")
+
+        // Act
+        let held = try await redraw(markdown)
+        try await waitUntil("document.getElementById('content').style.minHeight === ''")
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        // Assert
+        XCTAssertTrue(held)
+        let after = try await top("part-4")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// A sidebar heading clicked once the redraw has replaced the page and is part-way through
+    /// the diagrams (the usual case for a reader) is where the reader ends up.
+    func test_themeSwitchRedraw_scrollToAnchorMidDiagrams_endsAtHeading() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12)
+        try await render(markdown)
+        try await waitForDiagrams(12)
+
+        // Act
+        let state = try await webView.callAsyncJavaScript(
+            """
+            MDViewer.setTheme('github-dark', true);
+            MDViewer.setContent(md);
+            await new Promise(function (resolve) {
+                const timer = setInterval(function () {
+                    if (document.querySelectorAll('.mermaid svg').length >= 3) { clearInterval(timer); resolve(); }
+                }, 5);
+            });
+            const drawn = document.querySelectorAll('.mermaid svg').length;
+            const held = document.getElementById('content').style.minHeight !== '';
+            MDViewer.scrollToAnchor('part-9');
+            return [held, drawn];
+            """,
+            arguments: ["md": markdown], in: nil, contentWorld: .page
+        ) as? [Any]
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertEqual(state?[0] as? Bool, true, "the navigation must happen while the redraw is drawing the diagrams")
+        let drawn = try XCTUnwrap((state?[1] as? NSNumber)?.intValue)
+        XCTAssertLessThan(drawn, 12, "precondition: some diagrams were still to be drawn")
+        let headingTop = try await top("part-9")
+        XCTAssertEqual(headingTop, 0, accuracy: 2, "heading top is \(headingTop)")
+    }
+
+    /// A search that does not scroll, run after one that did, leaves the reader at the first hit.
+    func test_themeSwitchRedraw_searchWithoutScrollAfterSearch_staysAtFirstHit() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12, extra: [9: "A zebrafish swims here."])
+        try await render(markdown)
+        try await waitForDiagrams(12)
+
+        // Act
+        let held = try await redraw(markdown, then: "MDViewer.search('zebrafish', true); MDViewer.search('part 3', false)")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held, "the navigation must happen while the redraw is drawing the diagrams")
+        let value = try await evaluate(
+            """
+            const p = Array.from(document.querySelectorAll('#content p')).find(function (el) {
+                return el.textContent.includes('zebrafish');
+            });
+            const r = p.getBoundingClientRect();
+            return [(r.top + r.bottom) / 2, window.innerHeight];
+            """
+        ) as? [Any]
+        let centre = try XCTUnwrap((value?[0] as? NSNumber)?.doubleValue)
+        let viewport = try XCTUnwrap((value?[1] as? NSNumber)?.doubleValue)
+        XCTAssertEqual(centre, viewport / 2, accuracy: 5, "paragraph centre is \(centre)")
+    }
+
+    /// Switching back before the first theme's stylesheet has loaded: the earlier redraw must not
+    /// finish after the later one and redraw the page with nothing holding the position.
+    func test_themeSwitchRedraw_switchBackBeforeStylesheetLoads_keepsReadingPosition() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12)
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-9")
+        let before = try await top("part-9")
+
+        // Act
+        _ = try await webView.callAsyncJavaScript(
+            """
+            MDViewer.setTheme('github-dark', true);
+            MDViewer.setContent(md);
+            MDViewer.setTheme('github-light', false);
+            MDViewer.setContent(md);
+            """,
+            arguments: ["md": markdown], in: nil, contentWorld: .page
+        )
+        try await waitForDiagrams(12)
+        // Past the 2 s that setTheme waits at most for a stylesheet.
+        try await Task.sleep(nanoseconds: 2_500_000_000)
+        try await waitForDiagrams(12)
+
+        // Assert
+        let after = try await top("part-9")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// A render whose text produces nothing keeps the previous page; if that page's diagrams are
+    /// still being drawn, the position is held until they are.
+    func test_themeSwitchRedraw_emptyRenderWhileDiagramsDraw_keepsReadingPosition() async throws {
+        // Arrange
+        let window = try await loadRendererWithDiagramTimers()
+        defer { window.contentView = nil }
+        let markdown = documentWithDiagrams(12)
+        try await render(markdown)
+        try await waitForDiagrams(12)
+        try await scrollTo("part-9")
+        let before = try await top("part-9")
+
+        // Act: an HTML comment alone renders to nothing, so the previous page stays.
+        let held = try await redraw(markdown, then: "MDViewer.setContent('<!-- nothing to show -->')")
+        try await waitForDiagrams(12)
+
+        // Assert
+        XCTAssertTrue(held)
+        let after = try await top("part-9")
+        XCTAssertEqual(after, before, accuracy: 2, "heading moved from \(before) to \(after)")
+    }
+
+    /// A render waits for a new theme's stylesheet, but only as long as it takes to load.
+    func test_setContent_afterThemeChange_doesNotWaitForTimeout() async throws {
+        // Act
+        let value = try await evaluate(
+            """
+            const start = performance.now();
+            MDViewer.setTheme('github-dark', true);
+            await MDViewer.setContent('# Title');
+            return performance.now() - start;
+            """
+        )
+
+        // Assert
+        let elapsed = try XCTUnwrap((value as? NSNumber)?.doubleValue)
+        XCTAssertLessThan(elapsed, 1000, "the render waited \(elapsed) ms")
+    }
+
+    /// A page without drawn diagrams keeps its height when replaced, so an edit does not hold
+    /// the position (holding costs two forced layouts per keystroke).
+    func test_setContent_pageWithoutDiagrams_doesNotHoldPosition() async throws {
+        // Arrange
+        try await render("# Title\n\nSome text.")
+
+        // Act
+        let held = try await webView.callAsyncJavaScript(
+            """
+            const rendering = MDViewer.setContent(md);
+            const held = document.getElementById('content').style.minHeight !== '';
+            await rendering;
+            return held;
+            """,
+            arguments: ["md": "# Title\n\nSome more text."], in: nil, contentWorld: .page
+        ) as? Bool
+
+        // Assert
+        XCTAssertEqual(held, false)
+    }
+
+    /// A render that throws part-way through leaves no height pinned on #content.
+    func test_setContent_throwsAfterReplacingContent_releasesHeight() async throws {
+        // Arrange: a lone surrogate in an image path makes encodeURIComponent throw while the
+        // relative paths are rewritten, after #content has been replaced. Only JS can build it.
+        // The page shows a drawn diagram, so the render holds the position.
+        try await render("# Title\n\n```mermaid\ngraph TD\n  A --> B\n```")
+        try await waitUntil("document.querySelector('.mermaid svg') !== null")
+        try await evaluate("MDViewer.setBaseURL('file:///tmp/')")
+
+        // Act
+        let held = try await evaluate(
+            """
+            const rendering = MDViewer.setContent('<img src="a' + String.fromCharCode(0xD800) + '.png">');
+            const held = document.getElementById('content').style.minHeight !== '';
+            await rendering;
+            return held;
+            """
+        ) as? Bool
+
+        // Assert
+        let src = try await evaluate("return document.querySelector('#content img').getAttribute('src')") as? String
+        XCTAssertEqual(held, true, "precondition: the render must hold the position")
+        XCTAssertEqual(src?.hasPrefix("a"), true, "precondition: the rewrite must have thrown")
+        let minHeight = try await evaluate("return document.getElementById('content').style.minHeight") as? String
+        XCTAssertEqual(minHeight, "")
+    }
+
     // MARK: Performance
 
     /// 描画にかかった時間（ミリ秒）。
@@ -1115,5 +1718,13 @@ private final class NotificationRecorder {
 
     deinit {
         if let observer { NotificationCenter.default.removeObserver(observer) }
+    }
+}
+
+@MainActor
+final class RendererWebViewBackgroundTests: XCTestCase {
+    func test_rendererWebView_doesNotDrawBackground() {
+        let wv = RendererWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        XCTAssertEqual(wv.value(forKey: "drawsBackground") as? Bool, false)
     }
 }

@@ -1,5 +1,16 @@
+import Combine
+import WebKit
 import XCTest
 @testable import MDViewer
+
+/// A WKWebView that only records the scripts passed to evaluateJavaScript.
+private final class ScriptRecordingWebView: WKWebView {
+    var scripts: [String] = []
+
+    override func evaluateJavaScript(_ javaScriptString: String, completionHandler: (@MainActor @Sendable (Any?, Error?) -> Void)? = nil) {
+        scripts.append(javaScriptString)
+    }
+}
 
 @MainActor
 final class RenderViewModelTests: XCTestCase {
@@ -15,7 +26,7 @@ final class RenderViewModelTests: XCTestCase {
         defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         // 前回の実行が途中で止まって残った値を消す
         defaults.removePersistentDomain(forName: suiteName)
-        sut = RenderViewModel(settings: defaults)
+        sut = RenderViewModel(settings: defaults, systemIsDark: false, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher())
     }
 
     override func tearDown() async throws {
@@ -169,72 +180,224 @@ final class RenderViewModelTests: XCTestCase {
         // Assert — no crash
     }
 
-    // MARK: - applySystemAppearance
+    // MARK: - Following the system appearance
 
-    func test_applySystemAppearance_lightThemeAndDarkMode_switchesToGithubDark() {
-        // Arrange
-        sut.setTheme(.githubLight)
+    private func makeVM(
+        systemIsDark: Bool,
+        changes: AnyPublisher<Bool, Never> = Empty<Bool, Never>().eraseToAnyPublisher()
+    ) -> RenderViewModel {
+        RenderViewModel(settings: defaults, systemIsDark: systemIsDark, systemAppearanceChanges: changes)
+    }
 
-        // Act
+    // MARK: - Theme of the first paint
+
+    func test_initialThemeScriptSource_nord() throws {
+        let nord = try XCTUnwrap(MarkdownTheme.withId("nord"))
+        XCTAssertEqual(
+            RenderViewModel.initialThemeScriptSource(for: nord),
+            "window.MDViewerInitialTheme = { css: 'nord', isDark: true, background: '#2e3440' };"
+        )
+    }
+
+    func test_setTheme_replacesInitialThemeUserScript() throws {
+        let wv = WKWebView()
+        sut.webView = wv
+
+        sut.setTheme(try XCTUnwrap(MarkdownTheme.withId("nord")))
+        sut.setTheme(try XCTUnwrap(MarkdownTheme.withId("dracula")))
+
+        let scripts = wv.configuration.userContentController.userScripts
+        XCTAssertEqual(scripts.count, 1)
+        XCTAssertTrue(scripts[0].source.contains("'dracula'"))
+        XCTAssertEqual(scripts[0].injectionTime, .atDocumentStart)
+    }
+
+    func test_installInitialThemeScript_withoutWebView_doesNothing() {
+        sut.installInitialThemeScript()
+    }
+
+    func test_needsRerenderForThemeChange() {
+        XCTAssertTrue(RenderViewModel.needsRerenderForThemeChange(
+            from: .githubLight, to: .githubDark, hasDiagrams: true, isRenderInFlight: false))
+        XCTAssertTrue(RenderViewModel.needsRerenderForThemeChange(
+            from: .githubDark, to: .githubLight, hasDiagrams: false, isRenderInFlight: true))
+        XCTAssertFalse(RenderViewModel.needsRerenderForThemeChange(
+            from: .githubLight, to: .githubLight, hasDiagrams: true, isRenderInFlight: true))
+        XCTAssertFalse(RenderViewModel.needsRerenderForThemeChange(
+            from: .githubDark, to: .githubLight, hasDiagrams: false, isRenderInFlight: false))
+    }
+
+    func test_systemAppearanceFlip_withDiagramOnScreen_rendersAgainAfterTheme() throws {
+        let recorder = ScriptRecordingWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        sut.webView = recorder
+        sut.rendererDidLoad()
+        sut.renderMarkdown("```mermaid\ngraph TD; A-->B\n```")
+        sut.noteRenderSucceeded(hasDiagrams: true)
+        recorder.scripts.removeAll()
+
         sut.applySystemAppearance(isDark: true)
 
-        // Assert
-        XCTAssertEqual(sut.theme, .githubDark)
+        let themeIndex = try XCTUnwrap(recorder.scripts.firstIndex { $0.contains("MDViewer.setTheme(") })
+        let renderIndex = try XCTUnwrap(recorder.scripts.lastIndex { $0.contains("MDViewer.setContent(") })
+        XCTAssertGreaterThan(renderIndex, themeIndex)
     }
 
-    func test_applySystemAppearance_darkThemeAndLightMode_switchesToGithubLight() {
-        // Arrange
-        sut.setTheme(.githubDark)
+    func test_systemAppearanceFlip_withoutDiagram_doesNotRenderAgain() {
+        let recorder = ScriptRecordingWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        sut.webView = recorder
+        sut.rendererDidLoad()
+        sut.renderMarkdown("# Title")
+        sut.noteRenderSucceeded(hasDiagrams: false)
+        recorder.scripts.removeAll()
 
-        // Act
-        sut.applySystemAppearance(isDark: false)
-
-        // Assert
-        XCTAssertEqual(sut.theme, .githubLight)
-    }
-
-    func test_applySystemAppearance_nonGithubThemeAndDarkMode_doesNotChangeTheme() throws {
-        // Arrange
-        try sut.setTheme(XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "dracula" })))
-
-        // Act
         sut.applySystemAppearance(isDark: true)
 
-        // Assert — non-GitHub theme should not be changed
-        XCTAssertEqual(sut.theme.id, "dracula")
+        XCTAssertTrue(recorder.scripts.contains { $0.contains("MDViewer.setTheme(") })
+        XCTAssertFalse(recorder.scripts.contains { $0.contains("MDViewer.setContent(") })
     }
 
-    func test_applySystemAppearance_nonGithubThemeAndLightMode_doesNotChangeTheme() throws {
-        // Arrange
-        try sut.setTheme(XCTUnwrap(MarkdownTheme.all.first(where: { $0.id == "nord" })))
+    func test_systemAppearanceFlip_wordMermaidWithoutDiagram_doesNotRenderAgain() {
+        let recorder = ScriptRecordingWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        sut.webView = recorder
+        sut.rendererDidLoad()
+        sut.renderMarkdown("Notes about `mermaid` and Mermaid syntax.")
+        sut.noteRenderSucceeded(hasDiagrams: false)
+        recorder.scripts.removeAll()
 
-        // Act
-        sut.applySystemAppearance(isDark: false)
-
-        // Assert
-        XCTAssertEqual(sut.theme.id, "nord")
-    }
-
-    func test_applySystemAppearance_lightThemeAndLightMode_doesNotChangeTheme() {
-        // Arrange
-        sut.setTheme(.githubLight)
-
-        // Act
-        sut.applySystemAppearance(isDark: false)
-
-        // Assert
-        XCTAssertEqual(sut.theme, .githubLight)
-    }
-
-    func test_applySystemAppearance_darkThemeAndDarkMode_doesNotChangeTheme() {
-        // Arrange
-        sut.setTheme(.githubDark)
-
-        // Act
         sut.applySystemAppearance(isDark: true)
 
-        // Assert
-        XCTAssertEqual(sut.theme, .githubDark)
+        XCTAssertFalse(recorder.scripts.contains { $0.contains("MDViewer.setContent(") })
+    }
+
+    func test_systemAppearanceFlip_whileRenderInFlight_rendersAgain() {
+        let recorder = ScriptRecordingWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        sut.webView = recorder
+        sut.rendererDidLoad()
+        sut.renderMarkdown("# Title")
+        sut.noteRenderSucceeded(hasDiagrams: false)
+        sut.renderMarkdown("```mermaid\ngraph TD; A-->B\n```")
+        recorder.scripts.removeAll()
+
+        sut.applySystemAppearance(isDark: true)
+
+        XCTAssertTrue(recorder.scripts.contains { $0.contains("MDViewer.setContent(") })
+    }
+
+    func test_setTheme_sameAsResolvedTheme_stillPins() {
+        let vm = makeVM(systemIsDark: true)
+        XCTAssertEqual(vm.theme, .githubDark)
+
+        vm.setTheme(.githubDark)
+        vm.applySystemAppearance(isDark: false)
+
+        XCTAssertEqual(vm.theme, .githubDark)
+        XCTAssertEqual(vm.windowThemeOverride, .githubDark)
+    }
+
+    func test_init_followOn_darkSystem_usesDarkSlot() {
+        defaults.set("nord", forKey: "darkThemeId")
+
+        let vm = makeVM(systemIsDark: true)
+
+        XCTAssertEqual(vm.theme.id, "nord")
+    }
+
+    func test_init_followOff_ignoresSystem() {
+        defaults.set(false, forKey: "followSystemAppearance")
+        defaults.set("solarized-light", forKey: "selectedThemeId")
+
+        let vm = makeVM(systemIsDark: true)
+
+        XCTAssertEqual(vm.theme.id, "solarized-light")
+    }
+
+    func test_applySystemAppearance_followOn_switchesSlot() {
+        defaults.set(true, forKey: "followSystemAppearance")
+        defaults.set("solarized-light", forKey: "lightThemeId")
+        defaults.set("dracula", forKey: "darkThemeId")
+        let vm = makeVM(systemIsDark: false)
+        XCTAssertEqual(vm.theme.id, "solarized-light")
+
+        vm.applySystemAppearance(isDark: true)
+        XCTAssertEqual(vm.theme.id, "dracula")
+
+        vm.applySystemAppearance(isDark: false)
+        XCTAssertEqual(vm.theme.id, "solarized-light")
+    }
+
+    func test_applySystemAppearance_followOff_keepsFixedTheme() {
+        defaults.set(false, forKey: "followSystemAppearance")
+        defaults.set("solarized-light", forKey: "selectedThemeId")
+        let vm = makeVM(systemIsDark: false)
+
+        vm.applySystemAppearance(isDark: true)
+
+        XCTAssertEqual(vm.theme.id, "solarized-light")
+    }
+
+    func test_systemAppearancePublisher_appliesChange() {
+        let subject = PassthroughSubject<Bool, Never>()
+        let vm = makeVM(systemIsDark: false, changes: subject.eraseToAnyPublisher())
+
+        subject.send(true)
+
+        let applied = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in vm.theme.isDark },
+            object: nil
+        )
+        wait(for: [applied], timeout: 2)
+    }
+
+    func test_setTheme_pinsWindow_ignoresAppearanceChange() {
+        let vm = makeVM(systemIsDark: false)
+
+        vm.setTheme(.githubLight)
+        vm.applySystemAppearance(isDark: true)
+
+        XCTAssertEqual(vm.theme, .githubLight)
+    }
+
+    func test_setTheme_pinsWindow_ignoresPreviewThemeChanged() {
+        let vm = makeVM(systemIsDark: false)
+        vm.setTheme(.githubLight)
+
+        defaults.set("solarized-light", forKey: "lightThemeId")
+        NotificationCenter.default.post(name: .previewThemeChanged, object: nil)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+        XCTAssertEqual(vm.theme, .githubLight)
+    }
+
+    func test_useSettingsTheme_afterAppearanceChangedWhilePinned_usesCurrentAppearance() throws {
+        defaults.set(true, forKey: "followSystemAppearance")
+        defaults.set("dracula", forKey: "darkThemeId")
+        let vm = makeVM(systemIsDark: false)
+
+        try vm.setTheme(XCTUnwrap(MarkdownTheme.withId("solarized-light")))
+        vm.applySystemAppearance(isDark: true)
+        XCTAssertEqual(vm.theme.id, "solarized-light")
+
+        vm.useSettingsTheme()
+
+        XCTAssertEqual(vm.theme.id, "dracula")
+        XCTAssertNil(vm.windowThemeOverride)
+    }
+
+    func test_previewThemeChanged_followTurnedOn_appliesSlotForCurrentAppearance() {
+        defaults.set(false, forKey: "followSystemAppearance")
+        defaults.set("github-light", forKey: "selectedThemeId")
+        let vm = makeVM(systemIsDark: true)
+        XCTAssertEqual(vm.theme, .githubLight)
+
+        defaults.set(true, forKey: "followSystemAppearance")
+        defaults.set("dracula", forKey: "darkThemeId")
+        NotificationCenter.default.post(name: .previewThemeChanged, object: nil)
+
+        let applied = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in vm.theme.id == "dracula" },
+            object: nil
+        )
+        wait(for: [applied], timeout: 2)
     }
 
     // MARK: - Crash-loop guard
@@ -764,27 +927,6 @@ final class RenderViewModelTests: XCTestCase {
 
     // MARK: - 設定画面のテーマ変更（#19）
 
-    func test_previewThemeChanged_appliesThemeToOpenWindow() throws {
-        sut.setTheme(.githubLight)
-
-        NotificationCenter.default.post(name: .previewThemeChanged, object: "nord")
-
-        let applied = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in self.sut.theme.id == "nord" },
-            object: nil
-        )
-        wait(for: [applied], timeout: 2)
-    }
-
-    func test_previewThemeChanged_unknownTheme_keepsCurrentTheme() {
-        sut.setTheme(.githubDark)
-
-        NotificationCenter.default.post(name: .previewThemeChanged, object: "no-such-theme")
-        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
-
-        XCTAssertEqual(sut.theme, .githubDark)
-    }
-
     // MARK: - 設定画面の文字サイズ変更
 
     func test_previewFontSizeChanged_appliesFontSizeWithoutWritingSettings() {
@@ -848,7 +990,7 @@ final class RenderViewModelTests: XCTestCase {
         defaults.set("nord", forKey: "selectedThemeId")
         defaults.set(20.0, forKey: "fontSize")
 
-        let vm = RenderViewModel(settings: defaults)
+        let vm = RenderViewModel(settings: defaults, systemIsDark: true, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher())
 
         XCTAssertEqual(vm.theme.id, "nord")
         XCTAssertEqual(vm.fontSize, 20)
@@ -864,7 +1006,7 @@ final class RenderViewModelTests: XCTestCase {
     func test_init_fontSizeStoredAsString_isRead() {
         defaults.set("20", forKey: "fontSize")
 
-        let vm = RenderViewModel(settings: defaults)
+        let vm = RenderViewModel(settings: defaults, systemIsDark: false, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher())
 
         XCTAssertEqual(vm.fontSize, 20)
     }
@@ -873,7 +1015,7 @@ final class RenderViewModelTests: XCTestCase {
     func test_init_unreadableFontSize_usesDefault() {
         defaults.set("abc", forKey: "fontSize")
 
-        let vm = RenderViewModel(settings: defaults)
+        let vm = RenderViewModel(settings: defaults, systemIsDark: false, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher())
 
         XCTAssertEqual(vm.fontSize, 16)
     }
@@ -881,22 +1023,22 @@ final class RenderViewModelTests: XCTestCase {
     func test_init_zeroFontSize_usesDefault() {
         defaults.set(0.0, forKey: "fontSize")
 
-        let vm = RenderViewModel(settings: defaults)
+        let vm = RenderViewModel(settings: defaults, systemIsDark: false, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher())
 
         XCTAssertEqual(vm.fontSize, 16)
     }
 
     func test_init_fontSizeOutOfRange_clamped() {
         defaults.set(100.0, forKey: "fontSize")
-        XCTAssertEqual(RenderViewModel(settings: defaults).fontSize, 32)
+        XCTAssertEqual(RenderViewModel(settings: defaults, systemIsDark: false, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher()).fontSize, 32)
 
         defaults.set(4.0, forKey: "fontSize")
-        XCTAssertEqual(RenderViewModel(settings: defaults).fontSize, 10)
+        XCTAssertEqual(RenderViewModel(settings: defaults, systemIsDark: false, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher()).fontSize, 10)
     }
 
     /// ツールバーや ⌘+ の変更はそのウィンドウだけに効く。同じ保存先を使う他のウィンドウには広がらない
     func test_setFontSize_doesNotChangeOtherWindowSharingSettings() {
-        let other = RenderViewModel(settings: defaults)
+        let other = RenderViewModel(settings: defaults, systemIsDark: false, systemAppearanceChanges: Empty<Bool, Never>().eraseToAnyPublisher())
 
         sut.setFontSize(20)
         RunLoop.main.run(until: Date().addingTimeInterval(0.2))

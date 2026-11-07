@@ -6,12 +6,11 @@ struct MarkdownRenderView: View {
     @ObservedObject var renderVM: RenderViewModel
     @ObservedObject var sidebarVM: SidebarViewModel
 
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
         ZStack(alignment: .top) {
             ZStack(alignment: .bottomLeading) {
                 WebRendererView(renderVM: renderVM, sidebarVM: sidebarVM)
+                    .background(renderVM.theme.backgroundColor)
 
                 if !renderVM.hoveredURL.isEmpty {
                     Text(renderVM.hoveredURL)
@@ -32,9 +31,6 @@ struct MarkdownRenderView: View {
                 }
                 renderVM.renderMarkdown(newText)
                 sidebarVM.extractTOC(from: newText)
-            }
-            .onChange(of: colorScheme) { _, newScheme in
-                renderVM.applySystemAppearance(isDark: newScheme == .dark)
             }
 
             // 検索バーは ContentView がエディタとプレビューの上に出すので、ここでは重ならない

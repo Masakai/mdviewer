@@ -5,6 +5,8 @@ import WebKit
 @MainActor
 final class RenderViewModel: ObservableObject {
     @Published var theme: MarkdownTheme = .githubLight
+    /// Theme chosen from the toolbar and pinned to this window. While nil, Settings and the system appearance decide.
+    @Published private(set) var windowThemeOverride: MarkdownTheme?
     @Published var fontSize: Double = 16
     @Published var hoveredURL: String = ""
 
@@ -41,7 +43,6 @@ final class RenderViewModel: ObservableObject {
     /// テーマ・文字サイズ・PDF の用紙サイズ・数式の区切りの保存先。テストでは使い捨ての保存先を渡し、
     /// 利用者の設定（テストホストは本番と同じバンドルID）を書き換えないようにする。
     private let settings: UserDefaults
-    private static let themeIdKey = "selectedThemeId"
     private static let fontSizeKey = "fontSize"
     private static let pdfPageSizeKey = "pdfPageSize"
     /// \(...\) と \[...\] を数式として扱うか（#31）。既定はオフ
@@ -58,6 +59,13 @@ final class RenderViewModel: ObservableObject {
     /// after reloading when recovering from a WebContent process crash.
     private var lastRenderedMarkdown: String?
     private var lastBaseURL: URL?
+
+    /// Whether the content on screen holds a Mermaid diagram, as the page last
+    /// reported it with renderComplete.
+    private var displayedContentHasDiagrams = false
+    /// Content was sent to the page and its renderComplete has not arrived yet,
+    /// so displayedContentHasDiagrams may describe the previous content.
+    private var isRenderInFlight = false
 
     /// Crash-loop guard: if the content itself crashes the WebContent process,
     /// re-rendering it on recovery would crash again indefinitely.
@@ -81,13 +89,21 @@ final class RenderViewModel: ObservableObject {
     var onPreviewReset: (() -> Void)?
     private var cancellables = Set<AnyCancellable>()
 
-    init(settings: UserDefaults = .standard) {
+    /// The system appearance as last seen.
+    private var currentSystemIsDark: Bool
+
+    /// - Parameters:
+    ///   - systemIsDark: The system appearance; nil reads it from NSApp (tests pass a fixed value).
+    ///   - systemAppearanceChanges: Where appearance changes come from; nil observes NSApp.
+    init(
+        settings: UserDefaults = .standard,
+        systemIsDark: Bool? = nil,
+        systemAppearanceChanges: AnyPublisher<Bool, Never>? = nil
+    ) {
         self.settings = settings
-        if let savedId = settings.string(forKey: Self.themeIdKey),
-           let saved = MarkdownTheme.all.first(where: { $0.id == savedId })
-        {
-            theme = saved
-        }
+        let isDark = systemIsDark ?? Self.readSystemIsDark()
+        currentSystemIsDark = isDark
+        theme = ThemePreference.load(from: settings).theme(systemIsDark: isDark)
         // 起動引数（-fontSize 20 など）では文字列で入るので、double(forKey:) で読む。
         // 数値として読めない値は 0 になり、文字が見えなくなるので既定の大きさにする
         if settings.object(forKey: Self.fontSizeKey) != nil {
@@ -119,13 +135,13 @@ final class RenderViewModel: ObservableObject {
         NotificationCenter.default
             .publisher(for: .previewThemeChanged)
             .receive(on: RunLoop.main)
-            .sink { [weak self] notification in
-                guard let id = notification.object as? String,
-                      let theme = MarkdownTheme.all.first(where: { $0.id == id }),
-                      theme != self?.theme
-                else { return }
-                self?.setTheme(theme)
-            }
+            .sink { [weak self] _ in self?.applySettingsTheme() }
+            .store(in: &cancellables)
+
+        // When the system appearance changes, pick the theme again for windows that are not pinned.
+        let appearanceChanges = systemAppearanceChanges ?? Self.systemAppearancePublisher()
+        appearanceChanges
+            .sink { [weak self] isDark in self?.applySystemAppearance(isDark: isDark) }
             .store(in: &cancellables)
 
         // 設定画面で文字サイズを変えたら、開いているウィンドウにもすぐ反映する。
@@ -144,9 +160,78 @@ final class RenderViewModel: ObservableObject {
 
     /// このウィンドウのテーマだけを切り替える。設定（selectedThemeId）には書かない。
     /// ツールバーからの個別変更が全体設定や他のウィンドウに波及しないようにするため。
+    /// From then on, Settings and appearance changes leave this window alone (useSettingsTheme() undoes it).
     func setTheme(_ newTheme: MarkdownTheme) {
+        // Pin even when it is the theme already shown: set the pin before apply compares.
+        windowThemeOverride = newTheme
+        apply(newTheme)
+    }
+
+    /// Unpins the window and goes back to the theme Settings and the current appearance decide.
+    func useSettingsTheme() {
+        windowThemeOverride = nil
+        applySettingsTheme()
+    }
+
+    /// Applies the theme Settings and the current appearance decide. Pinned windows are left alone.
+    private func applySettingsTheme() {
+        guard windowThemeOverride == nil else { return }
+        apply(ThemePreference.load(from: settings).theme(systemIsDark: currentSystemIsDark))
+    }
+
+    /// The one place that updates theme and sends it to the page.
+    private func apply(_ newTheme: MarkdownTheme) {
+        guard newTheme != theme else { return }
+        let oldTheme = theme
         theme = newTheme
+        // Pages loaded later (a reload, crash recovery) also start in this theme.
+        installInitialThemeScript()
         webView?.evaluateJavaScript(Self.setThemeScript(for: newTheme), completionHandler: nil)
+        // Mermaid bakes the colours into its SVG when it draws, so redraw when light/dark changes.
+        if Self.needsRerenderForThemeChange(
+            from: oldTheme, to: newTheme,
+            hasDiagrams: displayedContentHasDiagrams, isRenderInFlight: isRenderInFlight
+        ), isRendererReady, let markdown = lastRenderedMarkdown {
+            renderMarkdown(markdown)
+        }
+    }
+
+    /// Redraws only when light/dark changes and a Mermaid diagram is on screen, or
+    /// may be about to be: while a render is in flight the page has not said yet.
+    static func needsRerenderForThemeChange(
+        from old: MarkdownTheme, to new: MarkdownTheme, hasDiagrams: Bool, isRenderInFlight: Bool
+    ) -> Bool {
+        old.isDark != new.isDark && (hasDiagrams || isRenderInFlight)
+    }
+
+    /// Initial theme handed to mdviewer.js before the page loads: the stylesheet and background
+    /// are decided before the first paint, so there is no white flash.
+    static func initialThemeScriptSource(for theme: MarkdownTheme) -> String {
+        "window.MDViewerInitialTheme = { css: '\(theme.cssFileName)', isDark: \(theme.isDark), background: '\(theme.backgroundHex)' };"
+    }
+
+    /// Replaces the initial-theme script with the current theme's, leaving no stale one behind.
+    func installInitialThemeScript() {
+        guard let controller = webView?.configuration.userContentController else { return }
+        controller.removeAllUserScripts()
+        controller.addUserScript(WKUserScript(
+            source: Self.initialThemeScriptSource(for: theme),
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+    }
+
+    private static func readSystemIsDark() -> Bool {
+        NSApp?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+    }
+
+    private static func systemAppearancePublisher() -> AnyPublisher<Bool, Never> {
+        guard let app = NSApp else { return Empty<Bool, Never>().eraseToAnyPublisher() }
+        return app.publisher(for: \.effectiveAppearance)
+            .map { $0.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua }
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .eraseToAnyPublisher()
     }
 
     /// テーマを切り替える JS。ダークかどうかはテーマ名から判別できないので、明示的に渡す。
@@ -205,6 +290,7 @@ final class RenderViewModel: ObservableObject {
         }
         let escaped = escapeForJS(markdown)
         webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
+        isRenderInFlight = true
     }
 
     /// Once the guard has given up, new content — an edit, reloading the file,
@@ -275,12 +361,17 @@ final class RenderViewModel: ObservableObject {
         return true
     }
 
-    /// Clears the crash-loop counter once a render has demonstrably succeeded.
+    /// Clears the crash-loop counter once a render has demonstrably succeeded,
+    /// and records whether a Mermaid diagram is now on screen.
     ///
     /// This runs after every render, so it must stay a no-op in the common case:
     /// assigning to a @Published property publishes even when the value is
     /// unchanged, which would invalidate the view on every keystroke.
-    func noteRenderSucceeded() {
+    ///
+    /// - Parameter hasDiagrams: whether the page now shows a Mermaid diagram.
+    func noteRenderSucceeded(hasDiagrams: Bool = false) {
+        isRenderInFlight = false
+        displayedContentHasDiagrams = hasDiagrams
         guard consecutiveFailures != 0 || lastFailureTime != nil || renderFailureMessage != nil
             || isPreviewInterrupted
         else {
@@ -319,6 +410,9 @@ final class RenderViewModel: ObservableObject {
 
     func rendererDidLoad() {
         isRendererReady = true
+        // A fresh page shows nothing yet.
+        displayedContentHasDiagrams = false
+        isRenderInFlight = false
         if isRecoveryHalted {
             resumeRecovery()
         }
@@ -342,6 +436,7 @@ final class RenderViewModel: ObservableObject {
             pendingMarkdown = nil
             let escaped = escapeForJS(md)
             webView?.evaluateJavaScript("MDViewer.setContent('\(escaped)')", completionHandler: nil)
+            isRenderInFlight = true
         }
 
         // 入力が止まるのを待っている語があれば、そちらで検索する。確定済みの古い語で
@@ -492,12 +587,10 @@ final class RenderViewModel: ObservableObject {
         }
     }
 
+    /// Remembers the system appearance and picks the theme again for windows that are not pinned.
     func applySystemAppearance(isDark: Bool) {
-        if theme.id == MarkdownTheme.githubLight.id, isDark {
-            setTheme(.githubDark)
-        } else if theme.id == MarkdownTheme.githubDark.id, !isDark {
-            setTheme(.githubLight)
-        }
+        currentSystemIsDark = isDark
+        applySettingsTheme()
     }
 
     private func escapeForJS(_ text: String) -> String {

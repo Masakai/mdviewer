@@ -52,6 +52,10 @@
 "Replace All" = "Replace All";
 
 /* Preferences */
+"Follow System Appearance" = "Follow System Appearance";
+"Light Theme" = "Light Theme";
+"Dark Theme" = "Dark Theme";
+"Use Settings Theme" = "Use Settings Theme";
 "Select Theme" = "Select Theme";
 "Theme" = "Theme";
 "Font" = "Font";

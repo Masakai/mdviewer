@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AppearancePrefsView: View {
-    @AppStorage("selectedThemeId") private var selectedThemeId: String = MarkdownTheme.githubLight.id
+    @State private var themePreference = ThemePreference.load(from: .standard)
     @AppStorage("fontSize") private var fontSize: Double = 16
     @AppStorage(PreviewFont.bodyKey) private var bodyFont: String = ""
     @AppStorage(PreviewFont.headingKey) private var headingFont: String = ""
@@ -33,12 +33,30 @@ struct AppearancePrefsView: View {
     var body: some View {
         Form {
             Section("Theme") {
-                Picker("Theme", selection: $selectedThemeId) {
-                    ForEach(MarkdownTheme.all) { theme in
-                        Text(theme.displayName).tag(theme.id)
+                Toggle("Follow System Appearance", isOn: $themePreference.followsSystem)
+
+                if themePreference.followsSystem {
+                    Picker("Light Theme", selection: $themePreference.light) {
+                        ForEach(MarkdownTheme.lightThemes) { theme in
+                            Text(theme.displayName).tag(theme)
+                        }
                     }
+                    .pickerStyle(.menu)
+
+                    Picker("Dark Theme", selection: $themePreference.dark) {
+                        ForEach(MarkdownTheme.darkThemes) { theme in
+                            Text(theme.displayName).tag(theme)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } else {
+                    Picker("Theme", selection: $themePreference.fixed) {
+                        ForEach(MarkdownTheme.all) { theme in
+                            Text(theme.displayName).tag(theme)
+                        }
+                    }
+                    .pickerStyle(.menu)
                 }
-                .pickerStyle(.menu)
             }
 
             Section("Font") {
@@ -98,8 +116,12 @@ struct AppearancePrefsView: View {
         .onChange(of: [bodyFont, headingFont, codeFont]) { _ in
             NotificationCenter.default.post(name: .previewFontsChanged, object: nil)
         }
-        .onChange(of: selectedThemeId) { newValue in
-            NotificationCenter.default.post(name: .previewThemeChanged, object: newValue)
+        .onAppear {
+            themePreference = ThemePreference.load(from: .standard)
+        }
+        .onChange(of: themePreference) { newValue in
+            newValue.save(to: .standard)
+            NotificationCenter.default.post(name: .previewThemeChanged, object: nil)
         }
     }
 }
