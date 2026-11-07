@@ -30,10 +30,13 @@ struct MainToolbar: ToolbarContent {
             Button {
                 NotificationCenter.default.post(name: .toggleEditorMode, object: nil)
             } label: {
-                Label("Editor", systemImage: "pencil")
+                Label("Editor", systemImage: documentVM.isReadOnly ? "pencil.slash" : "pencil")
             }
             .foregroundColor(isEditorMode ? .accentColor : .primary)
-            .help("Toggle Editor Mode (⌘E)")
+            // 三項演算子に文字列リテラルを並べると String になり翻訳されないので、キーとして渡す
+            .help(documentVM.isReadOnly
+                ? LocalizedStringKey("Toggle Editor Mode (⌘E). This file is read-only and can't be edited.")
+                : LocalizedStringKey("Toggle Editor Mode (⌘E)"))
 
             // Save button
             Button {
@@ -41,7 +44,7 @@ struct MainToolbar: ToolbarContent {
             } label: {
                 Label("Save", systemImage: "externaldrive")
             }
-            .disabled(!documentVM.isDirty)
+            .disabled(!documentVM.isDirty || documentVM.isReadOnly)
             .help("Save (⌘S)")
 
             Divider()

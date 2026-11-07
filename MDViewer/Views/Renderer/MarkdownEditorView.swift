@@ -18,6 +18,8 @@ struct MarkdownEditorView: NSViewRepresentable {
         let (scrollView, textView) = Self.makeTextView()
         textView.font = Self.font(forPreviewFontSize: previewFontSize)
         textView.string = documentVM.text
+        // 読み取り専用のファイルは表示・選択・コピーだけできるようにする（置換も shouldChangeText で止まる）
+        textView.isEditable = !documentVM.isReadOnly
         context.coordinator.observe(textView)
         editorSearch.textView = textView
         return scrollView
@@ -60,6 +62,8 @@ struct MarkdownEditorView: NSViewRepresentable {
         if textView.font != font {
             textView.font = font
         }
+
+        textView.isEditable = !documentVM.isReadOnly
 
         // 再読み込みなど、エディタの外で本文が変わったときだけ入れ替える。変換中の文字が
         // あるときに入れ替えると、日本語入力が確定前に壊れる

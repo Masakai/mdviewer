@@ -10,6 +10,8 @@ final class DocumentViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isDirty: Bool = false
     @Published var hasDocument: Bool = false
+    /// 表示中のファイルに書き込めない（Finder でロック・書き込み権限なし）。新規ドキュメントでは false。
+    @Published private(set) var isReadOnly: Bool = false
 
     /// 設定 > 一般 のスイッチ。未設定のときはどちらもオン。
     nonisolated static let restoreOnLaunchKey = "restoreLastFile"
@@ -39,6 +41,8 @@ final class DocumentViewModel: ObservableObject {
     /// 表示中のファイルがディスク上で変わったとき。
     /// 自動再読み込みがオフなら表示を変えない（⌘R で読み直せる）。設定はその都度読むので、切り替えは即座に効く。
     func fileDidChange() {
+        // 読み込み直さない設定でも、保存できるかどうかは最新にしておく
+        refreshReadOnly()
         guard isEnabled(Self.autoReloadKey) else { return }
         reload()
     }
@@ -80,6 +84,7 @@ final class DocumentViewModel: ObservableObject {
             text = contents
             isDirty = false
             hasDocument = true
+            refreshReadOnly()
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
@@ -98,6 +103,7 @@ final class DocumentViewModel: ObservableObject {
         text = ""
         isDirty = false
         hasDocument = true
+        refreshReadOnly()
     }
 
     func reload() {
@@ -106,6 +112,7 @@ final class DocumentViewModel: ObservableObject {
             let contents = try String(contentsOf: url, encoding: .utf8)
             isDirty = false
             text = contents
+            refreshReadOnly()
             // 一時的に消えたファイルが戻ってきた場合など、直前の読み込み失敗の
             // アラートが残らないようにする（成功時は常に最新の内容を表示している）
             if errorMessage != nil { errorMessage = nil }
@@ -123,6 +130,16 @@ final class DocumentViewModel: ObservableObject {
     func save() {
         guard let url = fileURL else {
             saveAs()
+            return
+        }
+        // 書き込み権限のないファイルでも、フォルダに書き込めれば atomic な書き込み（一時ファイルを rename）は
+        // 成功して中身が置き換わってしまうので、書く前に確かめる。isDirty は残し、閉じるときの確認で失われないようにする
+        refreshReadOnly()
+        if isReadOnly {
+            errorMessage = String(
+                format: NSLocalizedString("read_only_save_failed_message", comment: ""),
+                url.lastPathComponent
+            )
             return
         }
         do {
@@ -144,12 +161,29 @@ final class DocumentViewModel: ObservableObject {
             try text.write(to: url, atomically: true, encoding: .utf8)
             fileURL = url
             isDirty = false
+            refreshReadOnly()
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
             recentDocuments.note(url: url)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 表示中のファイルに書き込めるかを調べ直す。Finder でのロックや権限の変更はファイル監視では
+    /// 届かないので、アプリが前面に戻ったときにも呼ぶ。調べられなかったときは書き込めるものとして扱う。
+    func refreshReadOnly() {
+        let readOnly: Bool
+        if var url = fileURL {
+            // URL は取得した値を run loop が1周するまで保持するので、変更直後でも読み直す
+            url.removeCachedResourceValue(forKey: .isWritableKey)
+            readOnly = (try? url.resourceValues(forKeys: [.isWritableKey]))?.isWritable == false
+        } else {
+            readOnly = false
+        }
+        if isReadOnly != readOnly {
+            isReadOnly = readOnly
         }
     }
 

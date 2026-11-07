@@ -11,8 +11,11 @@
 "Reload" = "再読み込み";
 "Close" = "閉じる";
 "Save" = "保存";
+"Save (⌘S)" = "保存 (⌘S)";
 "Open a Markdown file to get started" = "Markdownファイルを開いてください";
 "Toggle Editor Mode" = "エディタモード切替";
+"Toggle Editor Mode (⌘E)" = "エディタモード切替 (⌘E)";
+"Toggle Editor Mode (⌘E). This file is read-only and can't be edited." = "エディタモード切替 (⌘E)。このファイルは読み取り専用のため編集できません。";
 "Untitled" = "無題";
 
 /* Menu - View */
@@ -81,6 +84,9 @@
 "save_button" = "保存";
 "discard_button" = "保存しない";
 "cancel_button" = "キャンセル";
+
+/* Read-only files */
+"read_only_save_failed_message" = "「%@」は読み取り専用のため、変更を保存できませんでした。Finder でロックを外すか書き込みを許可してから、もう一度保存してください。";
 
 /* Preview recovery */
 "preview_error_title" = "プレビュー";

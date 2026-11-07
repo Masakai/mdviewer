@@ -45,6 +45,7 @@ struct ContentView: View {
                                     isVisible: $search.isVisible,
                                     target: search.target,
                                     focusRequest: search.focusRequest,
+                                    isReadOnly: documentVM.isReadOnly,
                                     renderVM: renderVM,
                                     editorSearch: editorSearch
                                 )
@@ -99,6 +100,10 @@ struct ContentView: View {
             guard isKeyWindow else { return }
             documentVM.save()
         }
+        // Finder でのロックや権限の変更はファイル監視に届かないので、前面に戻ったときに調べ直す（全ウィンドウ）
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            documentVM.refreshReadOnly()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .printDocument)) { _ in
             guard isKeyWindow, documentVM.hasDocument, let webView = renderVM.webView else { return }
             exportVM.print(webView: webView)
@@ -115,6 +120,11 @@ struct ContentView: View {
             documentVM: documentVM,
             renderVM: renderVM,
             exportVM: exportVM
+        ))
+        .modifier(KeyDocumentReporter(
+            windowBox: windowBox,
+            documentVM: documentVM,
+            isReadOnly: documentVM.isReadOnly
         ))
         .onReceive(NotificationCenter.default.publisher(for: .toggleEditorMode)) { _ in
             guard isKeyWindow else { return }
@@ -269,6 +279,38 @@ private struct FontSizeAndExportCommands: ViewModifier {
     }
 }
 
+// MARK: - Key document state
+
+/// このウィンドウがキーになった・外れた・読み取り専用が変わったときに、KeyDocumentState へ知らせる。
+/// ウィンドウを知る前（windowBox が空の間）の分は、WindowCloseInterceptor がウィンドウを受け取ったときに知らせる。
+private struct KeyDocumentReporter: ViewModifier {
+    let windowBox: WindowBox
+    let documentVM: DocumentViewModel
+    /// documentVM は参照なので、値の変化を onChange で拾えるよう別に受け取る
+    let isReadOnly: Bool
+
+    func body(content: Content) -> some View {
+        content
+            // 通知はすべてのウィンドウの分が届くので、自分のウィンドウの分だけ扱う
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
+                guard let window = windowBox.window, notification.object as? NSWindow === window else { return }
+                report(isKey: true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { notification in
+                guard let window = windowBox.window, notification.object as? NSWindow === window else { return }
+                report(isKey: false)
+            }
+            .onChange(of: isReadOnly) { _, _ in
+                guard let window = windowBox.window else { return }
+                report(isKey: window.isKeyWindow)
+            }
+    }
+
+    private func report(isKey: Bool) {
+        KeyDocumentState.shared.update(owner: documentVM, isKey: isKey, isReadOnly: documentVM.isReadOnly)
+    }
+}
+
 // MARK: - Window box
 
 /// ContentView が載っているウィンドウへの弱参照。キーウィンドウかどうかの判定に使う。
@@ -316,6 +358,12 @@ struct WindowCloseInterceptor: NSViewRepresentable {
             guard let window = nsView.window, !context.coordinator.didClose else { return }
             window.delegate = context.coordinator
             windowBox.window = window
+            // AppDelegate が作るウィンドウは windowBox に入る前にキーになりうるので、その分をここで知らせる
+            KeyDocumentState.shared.update(
+                owner: documentVM,
+                isKey: window.isKeyWindow,
+                isReadOnly: documentVM.isReadOnly
+            )
             // SwiftUI が WindowGroup のウィンドウに自前の識別子を付け直しても保てるよう、更新のたびに付け直す
             if window.tabbingIdentifier != DocumentWindowRegistry.tabbingIdentifier {
                 window.tabbingIdentifier = DocumentWindowRegistry.tabbingIdentifier
@@ -344,6 +392,8 @@ struct WindowCloseInterceptor: NSViewRepresentable {
             if let window = notification.object as? NSWindow {
                 DocumentWindowRegistry.shared.register(window: window, url: nil)
             }
+            // 閉じたウィンドウの読み取り専用でメニューの保存が無効のまま残らないようにする
+            KeyDocumentState.shared.windowClosed(owner: documentVM)
             NotificationCenter.default.post(
                 name: .documentWindowWillClose,
                 object: nil,

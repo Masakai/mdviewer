@@ -11,8 +11,11 @@
 "Reload" = "Reload";
 "Close" = "Close";
 "Save" = "Save";
+"Save (⌘S)" = "Save (⌘S)";
 "Open a Markdown file to get started" = "Open a Markdown file to get started";
 "Toggle Editor Mode" = "Toggle Editor Mode";
+"Toggle Editor Mode (⌘E)" = "Toggle Editor Mode (⌘E)";
+"Toggle Editor Mode (⌘E). This file is read-only and can't be edited." = "Toggle Editor Mode (⌘E). This file is read-only and can't be edited.";
 "Untitled" = "Untitled";
 
 /* Menu - View */
@@ -81,6 +84,9 @@
 "save_button" = "Save";
 "discard_button" = "Don't Save";
 "cancel_button" = "Cancel";
+
+/* Read-only files */
+"read_only_save_failed_message" = "“%@” is read-only, so your changes weren't saved. Unlock the file in Finder or allow writing to it, then save again.";
 
 /* Preview recovery */
 "preview_error_title" = "Preview";

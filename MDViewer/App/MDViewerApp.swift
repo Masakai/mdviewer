@@ -52,10 +52,7 @@ struct MDViewerApp: App {
                 }
                 .keyboardShortcut("w", modifiers: .command)
 
-                Button("Save") {
-                    NotificationCenter.default.post(name: .saveFile, object: nil)
-                }
-                .keyboardShortcut("s", modifiers: .command)
+                SaveMenuItem(keyDocument: KeyDocumentState.shared)
             }
 
             CommandGroup(replacing: .printItem) {
@@ -194,6 +191,21 @@ struct OpenRecentMenu: View {
             }
             .disabled(recentDocuments.urls.isEmpty)
         }
+    }
+}
+
+// MARK: - Save menu item
+
+/// File > Save。前面の文書が読み取り専用なら暗く表示して押せなくする（#37）。未編集かどうかでは無効にしない。
+struct SaveMenuItem: View {
+    @ObservedObject var keyDocument: KeyDocumentState
+
+    var body: some View {
+        Button("Save") {
+            NotificationCenter.default.post(name: .saveFile, object: nil)
+        }
+        .keyboardShortcut("s", modifiers: .command)
+        .disabled(keyDocument.isReadOnly)
     }
 }
 

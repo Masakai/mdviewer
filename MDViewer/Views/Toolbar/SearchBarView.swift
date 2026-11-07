@@ -10,6 +10,8 @@ struct SearchBarView: View {
     let target: SearchTarget
     /// ⌘F が押された回数。開いたまま押し直したときに、検索欄へ入力を戻す。
     let focusRequest: Int
+    /// 書き込めないファイル（#37）。置換の行は隠さず、押せないことが分かるよう暗く表示する。
+    let isReadOnly: Bool
     @ObservedObject var renderVM: RenderViewModel
     @ObservedObject var editorSearch: EditorSearchController
 
@@ -87,6 +89,7 @@ struct SearchBarView: View {
                     }
                     .disabled(total == 0)
                 }
+                .disabled(isReadOnly)
             }
         }
         .padding(.horizontal, 12)
