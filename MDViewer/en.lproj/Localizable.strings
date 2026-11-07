@@ -103,3 +103,25 @@
 "up_to_date_message" = "MDViewer %@ is the latest version.";
 "update_check_failed_title" = "Couldn't check for updates";
 "update_check_failed_message" = "Check your network connection, or see the release page for the latest version.";
+
+/* Window title - Welcome screen */
+"Welcome" = "Welcome";
+
+/* Menu - File: duplicate, rename, move */
+"Duplicate" = "Duplicate";
+"Save As…" = "Save As…";
+"Rename…" = "Rename…";
+"Move To…" = "Move To…";
+"%@ copy" = "%@ copy";
+"rename_title" = "Rename";
+"rename_message" = "Enter a new name for the file.";
+"rename_button" = "Rename";
+"move_button" = "Move";
+"rename_invalid_name" = "The name is empty or contains characters that can't be used in a file name.";
+"relocate_already_exists %@" = "An item named “%@” already exists in this location.";
+
+/* Menu - Edit > Find */
+"Find" = "Find";
+"Find and Replace…" = "Find and Replace…";
+"Find Next" = "Find Next";
+"Find Previous" = "Find Previous";

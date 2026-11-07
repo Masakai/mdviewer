@@ -103,3 +103,25 @@
 "up_to_date_message" = "MDViewer %@ が最新の版です。";
 "update_check_failed_title" = "アップデートを確認できませんでした";
 "update_check_failed_message" = "ネットワークの接続を確かめるか、リリースページで最新の版を確認してください。";
+
+/* Window title - Welcome screen */
+"Welcome" = "ようこそ";
+
+/* Menu - File: duplicate, rename, move */
+"Duplicate" = "複製";
+"Save As…" = "別名で保存…";
+"Rename…" = "名称変更…";
+"Move To…" = "移動…";
+"%@ copy" = "%@ のコピー";
+"rename_title" = "名称変更";
+"rename_message" = "ファイルの新しい名前を入力してください。";
+"rename_button" = "名称変更";
+"move_button" = "移動";
+"rename_invalid_name" = "名前が空か、ファイル名に使えない文字が含まれています。";
+"relocate_already_exists %@" = "この場所には「%@」という名前の項目がすでにあります。";
+
+/* Menu - Edit > Find */
+"Find" = "検索";
+"Find and Replace…" = "検索と置換…";
+"Find Next" = "次を検索";
+"Find Previous" = "前を検索";

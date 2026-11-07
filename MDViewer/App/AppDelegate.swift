@@ -11,6 +11,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         super.init()
         // SwiftUI は applicationDidFinishLaunching より先に最初のウィンドウを表示する。
         // 起動時の復元で送られる通知を取りこぼさないよう、生成時点で受信登録しておく。
+        // 単体テストのホストとして動いているときは、テストが送るファイルを開く通知で本物のウィンドウを開かない
+        // （テストが消した一時ファイルを開こうとして、「ファイルが見つからない」ウィンドウが大量に出るため）
+        if !Self.isRunningUnitTests {
+            registerWindowOpeningObservers()
+        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleDocumentWindowWillClose(_:)),
+            name: .documentWindowWillClose,
+            object: nil
+        )
+    }
+
+    /// XCTest のテストホストとして起動されているか。
+    static var isRunningUnitTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
+    private func registerWindowOpeningObservers() {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleOpenLocalDocument(_:)),
@@ -19,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleOpenNewDocumentWindow),
+            selector: #selector(handleOpenNewDocumentWindow(_:)),
             name: .openNewDocumentWindow,
             object: nil
         )
@@ -27,12 +46,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self,
             selector: #selector(handleOpenDocumentInWindow(_:)),
             name: .openDocumentInWindow,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleDocumentWindowWillClose(_:)),
-            name: .documentWindowWillClose,
             object: nil
         )
     }
@@ -116,8 +129,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func handleOpenNewDocumentWindow() {
-        openNewDocumentWindow()
+    @objc private func handleOpenNewDocumentWindow(_ notification: Notification) {
+        // File > Duplicate は userInfo に複製する内容と保存パネルの初期名を載せる
+        openNewDocumentWindow(
+            initialText: notification.userInfo?["text"] as? String,
+            suggestedFileName: notification.userInfo?["suggestedFileName"] as? String
+        )
     }
 
     @objc private func handleDocumentWindowWillClose(_ notification: Notification) {
@@ -134,14 +151,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// ウェルカム画面のウィンドウを開く。前回終了時のファイルは復元しない。
     private func openWelcomeWindow() {
-        let window = makeDocumentWindow(rootView: ContentView(restoresLastOpened: false), title: "MDViewer")
+        let window = makeDocumentWindow(
+            rootView: ContentView(restoresLastOpened: false),
+            title: NSLocalizedString("Welcome", comment: "")
+        )
         place(window)
         window.makeKeyAndOrderFront(nil)
     }
 
     /// 空の新規ドキュメントを新しいウィンドウで開く（システム設定によってはタブになる）。
-    private func openNewDocumentWindow() {
-        let window = makeDocumentWindow(rootView: ContentView(startsAsNewDocument: true), title: "Untitled")
+    private func openNewDocumentWindow(initialText: String? = nil, suggestedFileName: String? = nil) {
+        let window = makeDocumentWindow(
+            rootView: ContentView(
+                startsAsNewDocument: true,
+                initialText: initialText,
+                suggestedFileName: suggestedFileName
+            ),
+            title: "Untitled"
+        )
         place(window)
         window.makeKeyAndOrderFront(nil)
     }

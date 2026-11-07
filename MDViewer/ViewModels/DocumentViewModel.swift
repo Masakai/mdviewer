@@ -12,6 +12,8 @@ final class DocumentViewModel: ObservableObject {
     @Published var hasDocument: Bool = false
     /// 表示中のファイルに書き込めない（Finder でロック・書き込み権限なし）。新規ドキュメントでは false。
     @Published private(set) var isReadOnly: Bool = false
+    /// 未保存のドキュメントを初めて保存するときに、保存パネルへ入れておく名前（複製したドキュメント用）。
+    var suggestedFileName: String?
 
     /// 設定 > 一般 のスイッチ。未設定のときはどちらもオン。
     nonisolated static let restoreOnLaunchKey = "restoreLastFile"
@@ -102,6 +104,7 @@ final class DocumentViewModel: ObservableObject {
         fileURL = nil
         text = ""
         isDirty = false
+        suggestedFileName = nil
         hasDocument = true
         refreshReadOnly()
     }
@@ -153,7 +156,8 @@ final class DocumentViewModel: ObservableObject {
     func saveAs() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.markdown]
-        panel.nameFieldStringValue = "Untitled.md"
+        // 保存済みのファイルがあればその名前を、複製した未保存の書類なら複製用の名前を初期値にする
+        panel.nameFieldStringValue = fileURL?.lastPathComponent ?? suggestedFileName ?? "Untitled.md"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
@@ -162,6 +166,7 @@ final class DocumentViewModel: ObservableObject {
             fileURL = url
             isDirty = false
             refreshReadOnly()
+            suggestedFileName = nil
             fileWatcher.start(url: url)
             BookmarkManager.shared.save(url: url)
             saveLastOpened(url: url)
@@ -201,5 +206,138 @@ final class DocumentViewModel: ObservableObject {
 
     private func saveLastOpened(url: URL) {
         openDocumentStore.add(url: url)
+    }
+}
+
+// MARK: - Duplicate, rename, move
+
+enum DocumentRelocationError: LocalizedError, Equatable {
+    case invalidName
+    case alreadyExists(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidName:
+            return NSLocalizedString("rename_invalid_name", comment: "")
+        case let .alreadyExists(name):
+            return String(format: NSLocalizedString("relocate_already_exists %@", comment: ""), name)
+        }
+    }
+}
+
+extension DocumentViewModel {
+    /// 複製したドキュメントとして、このウィンドウを未保存の新規ドキュメントにする。
+    func newDocument(duplicating contents: String, suggestedFileName: String?) {
+        newDocument()
+        text = contents
+        isDirty = true
+        self.suggestedFileName = suggestedFileName
+    }
+
+    /// 複製の保存パネルに出す名前。「a.md」なら「a copy.md」。ファイルが無ければ「Untitled copy.md」。
+    nonisolated static func duplicateFileName(for url: URL?) -> String {
+        let base = url?.deletingPathExtension().lastPathComponent ?? NSLocalizedString("Untitled", comment: "")
+        let ext = url?.pathExtension ?? ""
+        let name = String(format: NSLocalizedString("%@ copy", comment: ""), base)
+        return name + "." + (ext.isEmpty ? "md" : ext)
+    }
+
+    /// 同じフォルダ内で名前を変えた先の URL。拡張子を省いた名前には元の拡張子を付ける。
+    /// 空の名前や、フォルダをまたぐ名前（/ や : を含む、. や ..）は nil。
+    nonisolated static func renamedURL(from url: URL, newName: String) -> URL? {
+        let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name != ".", name != "..",
+              !name.contains("/"), !name.contains(":") else { return nil }
+        let folder = url.deletingLastPathComponent()
+        let ext = url.pathExtension
+        if (name as NSString).pathExtension.isEmpty, !ext.isEmpty {
+            return folder.appendingPathComponent(name).appendingPathExtension(ext)
+        }
+        return folder.appendingPathComponent(name)
+    }
+
+    /// 別のフォルダへ同じ名前のまま移した先の URL。
+    nonisolated static func movedURL(from url: URL, toFolder folder: URL) -> URL {
+        folder.appendingPathComponent(url.lastPathComponent)
+    }
+
+    /// 表示中のファイルを newURL へ移し（改名を含む）、監視・復元一覧・最近使った項目を新しい場所に合わせる。
+    /// 同じ場所なら何もしない。移動先に別のファイルがあれば上書きせずエラーにする。
+    func relocate(to newURL: URL) throws {
+        guard let oldURL = fileURL else { return }
+        let newURL = newURL.standardizedFileURL
+        guard newURL != oldURL.standardizedFileURL else { return }
+        if FileManager.default.fileExists(atPath: newURL.path),
+           !Self.isSameFile(oldURL, newURL) {
+            throw DocumentRelocationError.alreadyExists(newURL.lastPathComponent)
+        }
+        // 移動で古いパスの監視が反応して読み直さないよう、先に止める
+        fileWatcher.stop()
+        do {
+            try FileManager.default.moveItem(at: oldURL, to: newURL)
+        } catch {
+            fileWatcher.start(url: oldURL)
+            throw error
+        }
+        fileURL = newURL
+        // 移動先の権限で書き込めるかが変わりうるので読み直す
+        refreshReadOnly()
+        fileWatcher.start(url: newURL)
+        BookmarkManager.shared.save(url: newURL)
+        openDocumentStore.remove(url: oldURL)
+        openDocumentStore.add(url: newURL)
+        recentDocuments.note(url: newURL)
+    }
+
+    /// 大文字・小文字を区別しないボリュームで大文字小文字だけを変える改名を、衝突と見なさないための判定。
+    /// URL はリソース値をキャッシュするので、パスから作り直して比べる。
+    private nonisolated static func isSameFile(_ lhs: URL, _ rhs: URL) -> Bool {
+        let key: Set<URLResourceKey> = [.fileResourceIdentifierKey]
+        guard
+            let left = try? URL(fileURLWithPath: lhs.path).resourceValues(forKeys: key).fileResourceIdentifier,
+            let right = try? URL(fileURLWithPath: rhs.path).resourceValues(forKeys: key).fileResourceIdentifier
+        else { return false }
+        return left.isEqual(right)
+    }
+
+    /// File > Rename…。名前を尋ねて同じフォルダ内で改名する。
+    func renameFile() {
+        guard let url = fileURL else { return }
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("rename_title", comment: "")
+        alert.informativeText = NSLocalizedString("rename_message", comment: "")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        field.stringValue = url.lastPathComponent
+        alert.accessoryView = field
+        alert.addButton(withTitle: NSLocalizedString("rename_button", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("cancel_button", comment: ""))
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            guard let newURL = Self.renamedURL(from: url, newName: field.stringValue) else {
+                throw DocumentRelocationError.invalidName
+            }
+            try relocate(to: newURL)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// File > Move To…。フォルダを選んで同じ名前のまま移す。
+    func moveFile() {
+        guard let url = fileURL else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = url.deletingLastPathComponent()
+        panel.prompt = NSLocalizedString("move_button", comment: "")
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        do {
+            try relocate(to: Self.movedURL(from: url, toFolder: folder))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

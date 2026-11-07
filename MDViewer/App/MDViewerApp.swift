@@ -53,9 +53,23 @@ struct MDViewerApp: App {
                 .keyboardShortcut("w", modifiers: .command)
 
                 SaveMenuItem(keyDocument: KeyDocumentState.shared)
+
+                DocumentFileMenuItems()
             }
 
             CommandGroup(replacing: .printItem) {
+                Menu("Export") {
+                    Button("Export as PDF…") {
+                        NotificationCenter.default.post(name: .exportPDF, object: nil)
+                    }
+                    .keyboardShortcut("p", modifiers: [.command, .shift])
+
+                    Button("Export as HTML…") {
+                        NotificationCenter.default.post(name: .exportHTML, object: nil)
+                    }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                }
+
                 // ドキュメントを表示していないウィンドウでは、受け取った ContentView 側で何もしない
                 Button("Print…") {
                     NotificationCenter.default.post(name: .printDocument, object: nil)
@@ -76,12 +90,9 @@ struct MDViewerApp: App {
                 Button("Toggle Sidebar") {
                     NotificationCenter.default.post(name: .toggleSidebar, object: nil)
                 }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .keyboardShortcut("s", modifiers: [.command, .control])
 
-                Button("Find…") {
-                    NotificationCenter.default.post(name: .showSearchBar, object: nil)
-                }
-                .keyboardShortcut("f", modifiers: .command)
+                ThemeMenu()
 
                 Divider()
 
@@ -101,16 +112,8 @@ struct MDViewerApp: App {
                 .keyboardShortcut("0", modifiers: .command)
             }
 
-            CommandMenu("Export") {
-                Button("Export as PDF…") {
-                    NotificationCenter.default.post(name: .exportPDF, object: nil)
-                }
-                .keyboardShortcut("p", modifiers: [.command, .shift])
-
-                Button("Export as HTML…") {
-                    NotificationCenter.default.post(name: .exportHTML, object: nil)
-                }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
+            CommandGroup(after: .textEditing) {
+                FindMenu()
             }
         }
 
@@ -249,5 +252,96 @@ struct HelpView: View {
             return "# Help content not found"
         }
         return contents
+    }
+}
+
+// MARK: - File menu items
+
+/// File > Duplicate / Save As… / Rename… / Move To…。
+/// 名前の変更と移動はファイルのあるときだけ使える。前面のウィンドウのビューモデルが取れないとき
+/// （AppDelegate が作るウィンドウでは届かない場合がある）は有効にしておき、受け取った側で何もしない。
+struct DocumentFileMenuItems: View {
+    @FocusedObject private var documentVM: DocumentViewModel?
+
+    var body: some View {
+        Button("Duplicate") {
+            NotificationCenter.default.post(name: .duplicateDocument, object: nil)
+        }
+        .keyboardShortcut("s", modifiers: [.command, .shift])
+
+        // SwiftUI のメニューでは Option で入れ替わる代替項目にできないので、「複製」と並べて表示する
+        Button("Save As…") {
+            NotificationCenter.default.post(name: .saveFileAs, object: nil)
+        }
+        .keyboardShortcut("s", modifiers: [.command, .shift, .option])
+
+        Button("Rename…") {
+            NotificationCenter.default.post(name: .renameFile, object: nil)
+        }
+        .disabled(documentVM.map { $0.fileURL == nil } ?? false)
+
+        Button("Move To…") {
+            NotificationCenter.default.post(name: .moveFile, object: nil)
+        }
+        .disabled(documentVM.map { $0.fileURL == nil } ?? false)
+    }
+}
+
+// MARK: - Theme menu
+
+/// View > Theme。ツールバーのテーマのメニューと同じ項目を、前面のウィンドウに対して選ぶ。
+/// チェックは前面のウィンドウのビューモデルが取れたときだけ付く。選んだ値は通知で前面のウィンドウに送る。
+struct ThemeMenu: View {
+    @FocusedObject private var renderVM: RenderViewModel?
+
+    var body: some View {
+        Menu("Theme") {
+            Toggle("Use Settings Theme", isOn: Binding(
+                get: { renderVM.map { $0.windowThemeOverride == nil } ?? false },
+                set: { isOn in
+                    if isOn { NotificationCenter.default.post(name: .selectWindowTheme, object: nil) }
+                }
+            ))
+
+            Divider()
+
+            ForEach(MarkdownTheme.all) { theme in
+                Toggle(theme.displayName, isOn: Binding(
+                    get: { renderVM?.windowThemeOverride == theme },
+                    set: { isOn in
+                        if isOn { NotificationCenter.default.post(name: .selectWindowTheme, object: theme) }
+                    }
+                ))
+            }
+        }
+    }
+}
+
+// MARK: - Find menu
+
+/// Edit > Find。
+struct FindMenu: View {
+    var body: some View {
+        Menu("Find") {
+            Button("Find…") {
+                NotificationCenter.default.post(name: .showSearchBar, object: nil)
+            }
+            .keyboardShortcut("f", modifiers: .command)
+
+            Button("Find and Replace…") {
+                NotificationCenter.default.post(name: .showFindAndReplace, object: nil)
+            }
+            .keyboardShortcut("f", modifiers: [.command, .option])
+
+            Button("Find Next") {
+                NotificationCenter.default.post(name: .findNextMatch, object: nil)
+            }
+            .keyboardShortcut("g", modifiers: .command)
+
+            Button("Find Previous") {
+                NotificationCenter.default.post(name: .findPreviousMatch, object: nil)
+            }
+            .keyboardShortcut("g", modifiers: [.command, .shift])
+        }
     }
 }
